@@ -26,10 +26,9 @@
 #include "lfo.h"
 #include "synth.h"
 #include "fm_core.h"
-#include "PluginFx.h"
+//#include "PluginFx.h"
 #include "EngineMkI.h"
 #include "EngineOpl.h"
-#include "dexed_ttl.h"
 
 #define PARAM_CHANGE_LEVEL 10 // when a sound change is recognized
 
@@ -52,7 +51,7 @@ enum DexedEngineResolution {
 
 //==============================================================================
 
-class DexedVoice : public lvtk::Voice
+class DexedVoice
 {
   public:
     explicit DexedVoice(double rate);
@@ -70,12 +69,12 @@ class DexedVoice : public lvtk::Voice
 
 //==============================================================================
 
-class Dexed : public lvtk::Synth<DexedVoice, Dexed>
+class Dexed
 {
   public:
     Dexed(double rate);
     ~Dexed();
-    void run(uint32_t sample_count);
+    void run(uint8_t* midi_data);
     void activate(void);
     void deactivate(void);
     uint8_t getEngineType();
@@ -83,14 +82,14 @@ class Dexed : public lvtk::Synth<DexedVoice, Dexed>
     bool isMonoMode(void);
     void setMonoMode(bool mode);
     void set_params(void);
-    void GetSamples(uint32_t n_samples, float *buffer);
+    void GetSamples(int16_t* buffer);
 
     Controllers controllers;
     VoiceStatus voiceStatus;
 
   protected:
-    bool ProcessMidiMessage(const uint8_t *buf, uint32_t buf_size);
-    void onParam(uint8_t param_num,float param_val);
+    bool ProcessMidiMessage(uint8_t* buf);
+    //void onParam(uint8_t param_num,float param_val);
     void keyup(uint8_t pitch);
     void keydown(uint8_t pitch, uint8_t velo);
     void panic(void);
@@ -104,7 +103,7 @@ class Dexed : public lvtk::Synth<DexedVoice, Dexed>
     bool monoMode;
     bool refreshVoice;
     uint8_t engineType;
-    PluginFx fx;
+    //PluginFx fx;
     Lfo lfo;
     FmCore* engineMsfa;
     EngineMkI* engineMkI;
@@ -115,10 +114,9 @@ class Dexed : public lvtk::Synth<DexedVoice, Dexed>
     uint32_t extra_buf_size_;
 
   private:
-    double _rate;
+    uint16_t _rate;
     uint8_t _k_rate_counter;
     uint8_t _param_change_counter;
-    float data_float[173];
     uint8_t data[173]={
       95, 29, 20, 50, 99, 95, 00, 00, 41, 00, 19, 00, 00, 03, 00, 06, 79, 00, 01, 00, 14,
       95, 20, 20, 50, 99, 95, 00, 00, 00, 00, 00, 00, 00, 03, 00, 00, 99, 00, 01, 00, 00,
