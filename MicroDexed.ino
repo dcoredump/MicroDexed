@@ -32,7 +32,7 @@ void setup()
   Serial.println(F("MicroDexed"));
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
-  
+
 #ifdef TEENSY
   // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
@@ -56,18 +56,18 @@ void loop()
   audio_buffer = queue1.getBuffer();
 #endif
 
-  //memset(buf, 0, 128);
-  
   // process midi->audio
-  while(MIDI.read())
+  while (MIDI.read())
   {
-        dexed->ProcessMidiMessage((byte)MIDI.getType(),(byte)MIDI.getData1(),(byte)MIDI.getData2());
+    dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
   }
 
   dexed->GetSamples(audio_buffer);
-  
+
 #ifdef TEENSY
   // play the current buffer
+  while(!queue1.available());
+  
   queue1.playBuffer();
 #endif
 }
