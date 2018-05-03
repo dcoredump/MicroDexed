@@ -51,7 +51,7 @@ public:
     uint8_t get_carrier_operators(uint8_t algorithm);
     virtual void render(int32_t *output, FmOpParams *params, int algorithm, int32_t *fb_buf, int32_t feedback_gain);
 protected:
-    AlignedBuf<int32_t, N>buf_[2];
+    AlignedBuf<int32_t, _N_>buf_[2];
     const static FmAlgorithm algorithms[32];
 };
 

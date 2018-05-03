@@ -20,7 +20,7 @@
 int PitchEnv::unit_;
 
 void PitchEnv::init(double sample_rate) {
-  unit_ = N * (1 << 24) / (21.3 * sample_rate) + 0.5;
+  unit_ = _N_ * (1 << 24) / (21.3 * sample_rate) + 0.5;
 }
 
 const uint8_t pitchenv_rate[] = {

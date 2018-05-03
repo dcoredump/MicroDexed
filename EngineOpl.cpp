@@ -28,7 +28,7 @@
 #ifdef _WIN32
     __declspec(align(16)) const int zeros[N] = {0};
 #else
-    const int32_t __attribute__ ((aligned(16))) zeros[N] = {0};
+    const int32_t __attribute__ ((aligned(16))) zeros[_N_] = {0};
 #endif
 
 uint16_t SignBit = 0x8000;
@@ -117,12 +117,12 @@ inline int16_t oplSin( uint16_t phase, uint16_t env ) {
 }
 
 void EngineOpl::compute(int32_t *output, const int32_t *input, int32_t phase0, int32_t freq, int32_t gain1, int32_t gain2, bool add) {
-    int32_t dgain = (gain2 - gain1 + (N >> 1)) >> LG_N;
+    int32_t dgain = (gain2 - gain1 + (_N_ >> 1)) >> LG_N;
     int32_t gain = gain1;
     int32_t phase = phase0;
     const int32_t *adder = add ? output : zeros;
 
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < _N_; i++) {
         gain += dgain;
         int32_t y = oplSin((phase+input[i]) >> 14, gain);
         output[i] = (y << 14) + adder[i];
@@ -131,12 +131,12 @@ void EngineOpl::compute(int32_t *output, const int32_t *input, int32_t phase0, i
 
 }
 void EngineOpl::compute_pure(int32_t *output, int32_t phase0, int32_t freq, int32_t gain1, int32_t gain2, bool add) {
-    int32_t dgain = (gain2 - gain1 + (N >> 1)) >> LG_N;
+    int32_t dgain = (gain2 - gain1 + (_N_ >> 1)) >> LG_N;
     int32_t gain = gain1;
     int32_t phase = phase0;
     const int32_t *adder = add ? output : zeros;
 
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < _N_; i++) {
         gain += dgain;
         int32_t y = oplSin(phase >> 14, gain);
         output[i] = (y << 14) + adder[i];
@@ -147,14 +147,14 @@ void EngineOpl::compute_pure(int32_t *output, int32_t phase0, int32_t freq, int3
 void EngineOpl::compute_fb(int32_t *output, int32_t phase0, int32_t freq,
                                     int32_t gain1, int32_t gain2,
                               int32_t *fb_buf, int fb_shift, bool add) {
-    int32_t dgain = (gain2 - gain1 + (N >> 1)) >> LG_N;
+    int32_t dgain = (gain2 - gain1 + (_N_ >> 1)) >> LG_N;
     int32_t gain = gain1;
     int32_t phase = phase0;
     const int32_t *adder = add ? output : zeros;
     int32_t y0 = fb_buf[0];
     int32_t y = fb_buf[1];
     
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < _N_; i++) {
         gain += dgain;
         int32_t scaled_fb = (y0 + y) >> (fb_shift + 1);
         y0 = y;

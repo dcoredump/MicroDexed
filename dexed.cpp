@@ -114,7 +114,7 @@ void Dexed::activate(void)
 
 void Dexed::deactivate(void)
 {
-	;
+	; // Nothing to do - please reboot ;-)
 }
 
 /*
@@ -337,8 +337,7 @@ void Dexed::set_params(void)
 }
 */
 
-// override the run() method
-void Dexed::run (uint8_t* midi_data)
+/*void Dexed::run (uint8_t* midi_data)
 {
     static int16_t buffer;
 
@@ -348,11 +347,11 @@ void Dexed::run (uint8_t* midi_data)
     GetSamples(&buffer);
       
     //fx.process(&buffer,_rate);
-}
+}*/
 
 void Dexed::GetSamples(int16_t* buffer)
 {
-  uint32_t i;
+  uint32_t i=0;
 
   if(refreshVoice) {
     for(i=0;i < max_notes;i++) {
@@ -364,11 +363,11 @@ void Dexed::GetSamples(int16_t* buffer)
   }
 
   // remaining buffer is still to be processed
-  for (; i < _rate; i += N) {
-    AlignedBuf<int32_t, N> audiobuf;
-    float sumbuf[N];
+  for (; i < _rate; i += _N_) {
+    AlignedBuf<int32_t, _N_> audiobuf;
+    float sumbuf[_N_];
       
-    for (uint32_t j = 0; j < N; ++j) {
+    for (uint32_t j = 0; j < _N_; ++j) {
       audiobuf.get()[j] = 0;
       sumbuf[j] = 0.0;
     }
@@ -379,7 +378,7 @@ void Dexed::GetSamples(int16_t* buffer)
     for (uint8_t note = 0; note < max_notes; ++note) {
       if (voices[note].live) {
         voices[note].dx7_note->compute(audiobuf.get(), lfovalue, lfodelay, &controllers);
-        for (uint32_t j=0; j < N; ++j) {
+        for (uint32_t j=0; j < _N_; ++j) {
           int32_t val = audiobuf.get()[j];
           val = val >> 4;
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9; 
@@ -392,7 +391,7 @@ void Dexed::GetSamples(int16_t* buffer)
       }
     }
 
-    for (uint32_t j = 0; j < N; ++j)
+    for (uint32_t j = 0; j < _N_; ++j)
       buffer[i + j] = sumbuf[j];
   }
 
@@ -434,43 +433,39 @@ void Dexed::GetSamples(int16_t* buffer)
   }
 }
 
-bool Dexed::ProcessMidiMessage(uint8_t *buf) {
-    uint8_t cmd = buf[0];
-
+bool Dexed::ProcessMidiMessage(uint8_t cmd,uint8_t data1,uint8_t data2)
+{
     switch(cmd & 0xf0) {
         case 0x80 :
             // TRACE("MIDI keyup event: %d",buf[1]);
-            keyup(buf[1]);
+            keyup(data1);
             return(false);
             break;
         case 0x90 :
             // TRACE("MIDI keydown event: %d %d",buf[1],buf[2]);
-            keydown(buf[1], buf[2]);
+            keydown(data1, data2);
             return(false);
             break;
         case 0xb0 : {
-            uint8_t ctrl = buf[1];
-            uint8_t value = buf[2];
-            
-            switch(ctrl) {
+            switch(data1) {
                 case 1:
                     // TRACE("MIDI modwheel event: %d %d",ctrl,value);
-                    controllers.modwheel_cc = value;
+                    controllers.modwheel_cc = data2;
                     controllers.refresh();
                     break;
                 case 2:
                     // TRACE("MIDI breath event: %d %d",ctrl,value);
-                    controllers.breath_cc = value;
+                    controllers.breath_cc = data2;
                     controllers.refresh();
                     break;
                 case 4:
                     // TRACE("MIDI footsw event: %d %d",ctrl,value);
-                    controllers.foot_cc = value;
+                    controllers.foot_cc = data2;
                     controllers.refresh();
                     break;
                 case 64:
                     // TRACE("MIDI sustain event: %d %d",ctrl,value);
-                    sustain = value > 63;
+                    sustain = data2 > 63;
                     if (!sustain) {
                         for (uint8_t note = 0; note < max_notes; note++) {
                             if (voices[note].sustained && !voices[note].keydown) {
@@ -495,23 +490,20 @@ bool Dexed::ProcessMidiMessage(uint8_t *buf) {
         }
 
 //        case 0xc0 :
-//            setCurrentProgram(buf[1]);
+//            setCurrentProgram(data1);
 //            break; 
 
         // channel aftertouch
         case 0xd0 :
-            // TRACE("MIDI aftertouch 0xd0 event: %d %d",buf[1]);
-            controllers.aftertouch_cc = buf[1];
+            controllers.aftertouch_cc = data1;
             controllers.refresh();
             break;
         // pitchbend
         case 0xe0 :
-            // TRACE("MIDI pitchbend 0xe0 event: %d %d",buf[1],buf[2]);
-            controllers.values_[kControllerPitch] = buf[1] | (buf[2] << 7);
+            controllers.values_[kControllerPitch] = data1 | (data2 << 7);
             break;
 
         default:
-            // TRACE("MIDI event unknown: cmd=%d, val1=%d, val2=%d",buf[0],buf[1],buf[2]);
             break;
     }
 

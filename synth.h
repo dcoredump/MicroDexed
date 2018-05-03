@@ -27,7 +27,7 @@ typedef __int16 SInt16;
 #endif
 
 #define LG_N 6
-#define N (1 << LG_N)
+#define _N_ (1 << LG_N)
 
 #if defined(__APPLE__)
 #include <libkern/OSAtomic.h>

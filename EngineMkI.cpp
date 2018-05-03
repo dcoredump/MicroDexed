@@ -44,9 +44,9 @@
     double round(double n) {
         return n < 0.0 ? ceil(n - 0.5) : floor(n + 0.5);
     }
-    __declspec(align(16)) const int zeros[N] = {0};
+    __declspec(align(16)) const int zeros[_N_] = {0};
 #else
-    const int32_t __attribute__ ((aligned(16))) zeros[N] = {0};
+    const int32_t __attribute__ ((aligned(16))) zeros[_N_] = {0};
 #endif
 
 static const uint16_t NEGATIVE_BIT = 0x8000;
@@ -147,12 +147,12 @@ inline int32_t mkiSin(int32_t phase, uint16_t env) {
 void EngineMkI::compute(int32_t *output, const int32_t *input,
                         int32_t phase0, int32_t freq,
                         int32_t gain1, int32_t gain2, bool add) {
-    int32_t dgain = (gain2 - gain1 + (N >> 1)) >> LG_N;
+    int32_t dgain = (gain2 - gain1 + (_N_ >> 1)) >> LG_N;
     int32_t gain = gain1;
     int32_t phase = phase0;
     const int32_t *adder = add ? output : zeros;
     
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < _N_; i++) {
         gain += dgain;
         int32_t y = mkiSin((phase+input[i]), gain);
         output[i] = y + adder[i];
@@ -163,12 +163,12 @@ void EngineMkI::compute(int32_t *output, const int32_t *input,
 
 void EngineMkI::compute_pure(int32_t *output, int32_t phase0, int32_t freq,
                              int32_t gain1, int32_t gain2, bool add) {
-    int32_t dgain = (gain2 - gain1 + (N >> 1)) >> LG_N;
+    int32_t dgain = (gain2 - gain1 + (_N_ >> 1)) >> LG_N;
     int32_t gain = gain1;
     int32_t phase = phase0;
     const int32_t *adder = add ? output : zeros;
     
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < _N_; i++) {
         gain += dgain;
         int32_t y = mkiSin(phase , gain);
         output[i] = y + adder[i];
@@ -179,14 +179,14 @@ void EngineMkI::compute_pure(int32_t *output, int32_t phase0, int32_t freq,
 void EngineMkI::compute_fb(int32_t *output, int32_t phase0, int32_t freq,
                            int32_t gain1, int32_t gain2,
                            int32_t *fb_buf, int fb_shift, bool add) {
-    int32_t dgain = (gain2 - gain1 + (N >> 1)) >> LG_N;
+    int32_t dgain = (gain2 - gain1 + (_N_ >> 1)) >> LG_N;
     int32_t gain = gain1;
     int32_t phase = phase0;
     const int32_t *adder = add ? output : zeros;
     int32_t y0 = fb_buf[0];
     int32_t y = fb_buf[1];
     
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < _N_; i++) {
         gain += dgain;
         int32_t scaled_fb = (y0 + y) >> (fb_shift + 1);
         y0 = y;
@@ -215,10 +215,10 @@ void EngineMkI::compute_fb2(int32_t *output, FmOpParams *parms, int32_t gain01, 
     gain[0] = gain01;
     gain[1] = parms[1].gain_out == 0 ? (ENV_MAX-1) : parms[1].gain_out;
 
-    dgain[0] = (gain02 - gain01 + (N >> 1)) >> LG_N;
+    dgain[0] = (gain02 - gain01 + (_N_ >> 1)) >> LG_N;
     dgain[1] = (parms[1].gain_out - (parms[1].gain_out == 0 ? (ENV_MAX-1) : parms[1].gain_out));
     
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < _N_; i++) {
         int32_t scaled_fb = (y0 + y) >> (fb_shift + 1);
         
         // op 0
@@ -257,12 +257,12 @@ void EngineMkI::compute_fb3(int32_t *output, FmOpParams *parms, int32_t gain01, 
     gain[1] = parms[1].gain_out == 0 ? (ENV_MAX-1) : parms[1].gain_out;
     gain[2] = parms[2].gain_out == 0 ? (ENV_MAX-1) : parms[2].gain_out;
 
-    dgain[0] = (gain02 - gain01 + (N >> 1)) >> LG_N;
+    dgain[0] = (gain02 - gain01 + (_N_ >> 1)) >> LG_N;
     dgain[1] = (parms[1].gain_out - (parms[1].gain_out == 0 ? (ENV_MAX-1) : parms[1].gain_out));
     dgain[2] = (parms[2].gain_out - (parms[2].gain_out == 0 ? (ENV_MAX-1) : parms[2].gain_out));
     
     
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < _N_; i++) {
         int32_t scaled_fb = (y0 + y) >> (fb_shift + 1);
         
         // op 0

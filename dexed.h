@@ -83,12 +83,12 @@ class Dexed
     void setMonoMode(bool mode);
     void set_params(void);
     void GetSamples(int16_t* buffer);
+    bool ProcessMidiMessage(uint8_t cmd,uint8_t data1,uint8_t data2);
 
     Controllers controllers;
     VoiceStatus voiceStatus;
 
   protected:
-    bool ProcessMidiMessage(uint8_t* buf);
     //void onParam(uint8_t param_num,float param_val);
     void keyup(uint8_t pitch);
     void keydown(uint8_t pitch, uint8_t velo);
@@ -110,7 +110,7 @@ class Dexed
     EngineOpl* engineOpl;
     float* outbuf_;
     uint32_t bufsize_;
-    float extra_buf_[N];
+    float extra_buf_[_N_];
     uint32_t extra_buf_size_;
 
   private:
