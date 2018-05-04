@@ -5,6 +5,7 @@
 
 #define RATE 128
 #define TEENSY 1
+#define TEST_MIDI
 
 #ifdef TEENSY
 #include <Audio.h>
@@ -16,8 +17,8 @@
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=811,259
 AudioOutputI2S           i2s1;           //xy=1185,252
-AudioConnection          patchCord2(queue1, 0, i2s1, 0);
-AudioConnection          patchCord3(queue1, 0, i2s1, 1);
+AudioConnection          patchCord1(queue1, 0, i2s1, 0);
+AudioConnection          patchCord2(queue1, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=830,376
 // GUItool: end automatically generated code
 #endif
@@ -44,8 +45,18 @@ void setup()
   // Initialize processor and memory measurements
   //AudioProcessorUsageMaxReset();
   //AudioMemoryUsageMaxReset();
+
+  // initial fill audio buffer
+  while (queue1.available())
+  {
+    queue1.getBuffer();
+    queue1.playBuffer();
+  }
 #endif
 
+#ifdef TEST_MIDI
+  dexed->ProcessMidiMessage(0x90, 64, 100);
+#endif
 }
 
 void loop()
@@ -66,8 +77,8 @@ void loop()
 
 #ifdef TEENSY
   // play the current buffer
-  while(!queue1.available());
-  
+  while (!queue1.available());
+
   queue1.playBuffer();
 #endif
 }
