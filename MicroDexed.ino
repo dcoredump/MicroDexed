@@ -79,24 +79,33 @@ void loop()
   {
     dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
   }
-/*  uint8_t i = 0;
-  Serial.println("Before:");
-  for (i = 0; i < 128; i++)
-  {
-    Serial.print(audio_buffer[i]);
-    Serial.print(",");
-  }
-  Serial.println();*/
+  uint8_t i = 0;
+  /*  Serial.println("Before:");
+    for (i = 0; i < 128; i++)
+    {
+      Serial.print(audio_buffer[i]);
+      Serial.print(",");
+    }
+    Serial.println();*/
 
   dexed->GetSamples(RATE, audio_buffer);
 
-/*  Serial.println("After:");
   for (i = 0; i < 128; i++)
   {
+    if ((i % 16) == 0)
+      Serial.println();
+
+    if (i < 10)
+      Serial.print("  ");
+    if (i > 9 && i < 100)
+      Serial.print(" ");
+    Serial.print("[");
+    Serial.print(i, DEC);
+    Serial.print("]:");
     Serial.print(audio_buffer[i]);
-    Serial.print(",");
+    Serial.print(" ");
   }
-  Serial.println();*/
+  Serial.println();
 
 #ifdef TEENSY
   // play the current buffer

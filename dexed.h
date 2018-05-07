@@ -51,30 +51,11 @@ enum DexedEngineResolution {
 
 //==============================================================================
 
-class DexedVoice
-{
-  public:
-    explicit DexedVoice(double rate);
-    ~DexedVoice();
-    void on(unsigned char key, unsigned char velocity);
-    void off(unsigned char velocity);
-    unsigned char get_key(void) const;
-
-  protected:
-    unsigned char m_key;
-    double m_rate;
-
-  private:
-};
-
-//==============================================================================
-
 class Dexed
 {
   public:
     Dexed(uint16_t rate);
     ~Dexed();
-    void run(uint8_t* midi_data);
     void activate(void);
     void deactivate(void);
     uint8_t getEngineType();
