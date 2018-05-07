@@ -23,6 +23,7 @@
 #include "fm_op_kernel.h"
 #include "fm_core.h"
 
+
 //using namespace std;
 
 const FmAlgorithm FmCore::algorithms[32] = {
@@ -77,6 +78,8 @@ uint8_t FmCore::get_carrier_operators(uint8_t algorithm)
   {
     if((alg.ops[i]&OUT_BUS_ADD)==OUT_BUS_ADD)
       op_out|=1<<i;
+//    TRACE("OP[%d]:",6-i);
+//    TRACE("OUT_BUS_ONE=%d OUT_BUS_TWO=%d OUT_BUS_ADD=%d IN_BUS_ONE=%d IN_BUS_TWO=%d FB_IN=%d FB_OUT=%d",alg.ops[i]&OUT_BUS_ONE?1:0,alg.ops[i]&OUT_BUS_TWO?1:0,alg.ops[i]&OUT_BUS_ADD?1:0,alg.ops[i]&IN_BUS_ONE?1:0,alg.ops[i]&IN_BUS_TWO?1:0,alg.ops[i]&FB_IN?1:0,alg.ops[i]&FB_OUT?1:0);
   }
 
   return op_out;
@@ -103,7 +106,7 @@ void FmCore::dump() {
 #endif
 }
 
-void FmCore::render(int32_t *output, FmOpParams *params, int algorithm, int32_t *fb_buf, int32_t feedback_shift) {
+void FmCore::render(int32_t *output, FmOpParams *params, int algorithm, int32_t *fb_buf, int feedback_shift) {
     const int kLevelThresh = 1120;
     const FmAlgorithm alg = algorithms[algorithm];
     bool has_contents[3] = { true, false, false };

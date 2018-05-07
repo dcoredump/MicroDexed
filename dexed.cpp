@@ -31,7 +31,7 @@
 #include <limits.h>
 #include <math.h>
 
-Dexed::Dexed(double num_samples)
+Dexed::Dexed(uint16_t num_samples)
 {
   uint8_t i;
 
@@ -78,7 +78,7 @@ Dexed::Dexed(double num_samples)
 
   memset(&voiceStatus, 0, sizeof(VoiceStatus));
 
-  setEngineType(DEXED_ENGINE_MODERN);
+  setEngineType(DEXED_ENGINE_MARKI);
 }
 
 Dexed::~Dexed()
@@ -337,21 +337,9 @@ void Dexed::deactivate(void)
   }
 */
 
-/*void Dexed::run (uint8_t* midi_data)
-  {
-    static int16_t buffer;
-
-    ProcessMidiMessage(midi_data);
-
-    // render audio from the last frame until the timestamp of this event
-    GetSamples(&buffer);
-
-    //fx.process(&buffer,_rate);
-  }*/
-
-void Dexed::GetSamples(int16_t* buffer)
+void Dexed::GetSamples(uint32_t n_samples, int16_t* buffer)
 {
-  uint32_t i = 0;
+  uint32_t i;
 
   if (refreshVoice) {
     for (i = 0; i < max_notes; i++) {
@@ -362,8 +350,7 @@ void Dexed::GetSamples(int16_t* buffer)
     refreshVoice = false;
   }
 
-  // remaining buffer is still to be processed
-  for (; i < _rate; i += _N_) {
+  for (i = 0; i < n_samples; i += _N_) {
     AlignedBuf<int32_t, _N_> audiobuf;
     float sumbuf[_N_];
 
@@ -376,9 +363,12 @@ void Dexed::GetSamples(int16_t* buffer)
     int32_t lfodelay = lfo.getdelay();
 
     for (uint8_t note = 0; note < max_notes; ++note) {
+
       if (voices[note].live) {
         voices[note].dx7_note->compute(audiobuf.get(), lfovalue, lfodelay, &controllers);
+
         for (uint32_t j = 0; j < _N_; ++j) {
+
           int32_t val = audiobuf.get()[j];
           val = val >> 4;
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
@@ -390,11 +380,12 @@ void Dexed::GetSamples(int16_t* buffer)
         }
       }
     }
-
-    for (uint32_t j = 0; j < _N_; ++j)
-      buffer[i + j] = sumbuf[j];
+    for (uint32_t j = 0; j < _N_; ++j) {
+      buffer[j + (i * _N_)] = sumbuf[j];
+    }
   }
 
+  // mark unused voice as not live
   if (++_k_rate_counter % 32 && !monoMode)
   {
     uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
@@ -410,7 +401,7 @@ void Dexed::GetSamples(int16_t* buffer)
 
         for (uint8_t op = 0; op < 6; op++)
         {
-          uint8_t op_bit = pow(2, op);
+          uint8_t op_bit = static_cast<uint8_t>(pow(2, op));
 
           if ((op_carrier & op_bit) > 0)
           {
@@ -442,7 +433,6 @@ bool Dexed::ProcessMidiMessage(uint8_t cmd, uint8_t data1, uint8_t data2)
       return (false);
       break;
     case 0x90 :
-      // TRACE("MIDI keydown event: %d %d",buf[1],buf[2]);
       keydown(data1, data2);
       return (false);
       break;

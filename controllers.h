@@ -20,7 +20,7 @@
 #include "synth.h"
 #include <stdio.h>
 #include <string.h>
-//#include <algorithm.h>
+#include "trace.h"
 
 #ifdef _WIN32
 #define snprintf _snprintf
@@ -48,46 +48,42 @@ struct FmMod {
 
     void setRange(uint8_t r) {
         range = r < 0 && r > 127 ? 0 : r;
+	TRACE("range=%d",range);
     }
 
     void setTarget(uint8_t assign) {
+	TRACE("Target: %d", assign);
         assign=assign < 0 && assign > 7 ? 0 : assign;
-        if(assign&1) // AMP
-		pitch=true;
-	if(assign&2) // PITCH
-		amp=true;
-	if(assign&4) // EG
-		eg=true;
+        pitch=assign&1; // AMP
+	amp=assign&2; // PITCH
+	eg=assign&4; // EG
+
+	TRACE("pitch[%d] amp[%d] eg[%d]", pitch,amp,eg);
     }
 };
 
 class Controllers {
     void applyMod(int cc, FmMod &mod) {
-        int total = float(cc) * 0.01 * float(mod.range);
-
-
-        if(mod.amp==true)
-	{
+        float range = 0.01 * mod.range;
+        uint8_t total = (float)cc * range;
+        TRACE("amp[%d]|pitch[%d]|eg[%d]",mod.amp,mod.pitch,mod.eg);
+        TRACE("range=%f mod.range=%d total=%d cc=%d",range,mod.range,total,cc);
+        if(mod.amp)
           amp_mod = max(amp_mod, total);
-	}
         
-        if(mod.pitch==true)
-	{
+        if(mod.pitch)
           pitch_mod = max(pitch_mod, total);
-	}
         
-        if(mod.eg==true)
-	{
+        if(mod.eg)
 	  eg_mod = max(eg_mod, total);
-	}
     }
     
 public:
     int32_t values_[3];
     
-    int amp_mod;
-    int pitch_mod;
-    int eg_mod;
+    uint8_t amp_mod;
+    uint8_t pitch_mod;
+    uint8_t eg_mod;
     
     uint8_t aftertouch_cc;
     uint8_t breath_cc;
@@ -119,7 +115,6 @@ public:
         
         if ( ! ((wheel.eg || foot.eg) || (breath.eg || at.eg)) )
             eg_mod = 127;
-        
     }
     
     FmCore *core;

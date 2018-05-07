@@ -5,7 +5,7 @@
 
 #define RATE 128
 #define TEENSY 1
-#define TEST_MIDI
+#define TEST_MIDI 1
 
 #ifdef TEENSY
 #include <Audio.h>
@@ -30,6 +30,8 @@ Dexed* dexed = new Dexed(RATE);
 void setup()
 {
   Serial.begin(115200);
+  //while (!Serial) ; // wait for Arduino Serial Monitor
+  delay(200);
   Serial.println(F("MicroDexed"));
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
@@ -40,7 +42,7 @@ void setup()
   AudioMemory(8);
 
   sgtl5000_1.enable();
-  sgtl5000_1.volume(0.5);
+  sgtl5000_1.volume(0.2);
 
   // Initialize processor and memory measurements
   //AudioProcessorUsageMaxReset();
@@ -54,9 +56,14 @@ void setup()
   }
 #endif
 
+  dexed->activate();
+
 #ifdef TEST_MIDI
   dexed->ProcessMidiMessage(0x90, 64, 100);
 #endif
+
+  Serial.println(dexed->getEngineType(), DEC);
+  Serial.println("Go");
 }
 
 void loop()
@@ -68,18 +75,35 @@ void loop()
 #endif
 
   // process midi->audio
-  while (MIDI.read())
+  if (MIDI.read())
   {
     dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
   }
+/*  uint8_t i = 0;
+  Serial.println("Before:");
+  for (i = 0; i < 128; i++)
+  {
+    Serial.print(audio_buffer[i]);
+    Serial.print(",");
+  }
+  Serial.println();*/
 
-  dexed->GetSamples(audio_buffer);
+  dexed->GetSamples(RATE, audio_buffer);
+
+/*  Serial.println("After:");
+  for (i = 0; i < 128; i++)
+  {
+    Serial.print(audio_buffer[i]);
+    Serial.print(",");
+  }
+  Serial.println();*/
 
 #ifdef TEENSY
   // play the current buffer
-  while (!queue1.available());
-
+  while (!queue1.available())
+    Serial.println("Block");
   queue1.playBuffer();
 #endif
+  delay(500);
 }
 
