@@ -17,10 +17,10 @@
 #ifndef __CONTROLLERS_H
 #define __CONTROLLERS_H
 
+#include <Arduino.h>
 #include "synth.h"
 #include <stdio.h>
 #include <string.h>
-#include "trace.h"
 
 #ifdef _WIN32
 #define snprintf _snprintf
@@ -48,17 +48,14 @@ struct FmMod {
 
     void setRange(uint8_t r) {
         range = r < 0 && r > 127 ? 0 : r;
-	TRACE("range=%d",range);
     }
 
     void setTarget(uint8_t assign) {
-	TRACE("Target: %d", assign);
         assign=assign < 0 && assign > 7 ? 0 : assign;
         pitch=assign&1; // AMP
 	amp=assign&2; // PITCH
 	eg=assign&4; // EG
 
-	TRACE("pitch[%d] amp[%d] eg[%d]", pitch,amp,eg);
     }
 };
 
@@ -66,8 +63,6 @@ class Controllers {
     void applyMod(int cc, FmMod &mod) {
         float range = 0.01 * mod.range;
         uint8_t total = (float)cc * range;
-        TRACE("amp[%d]|pitch[%d]|eg[%d]",mod.amp,mod.pitch,mod.eg);
-        TRACE("range=%f mod.range=%d total=%d cc=%d",range,mod.range,total,cc);
         if(mod.amp)
           amp_mod = max(amp_mod, total);
         

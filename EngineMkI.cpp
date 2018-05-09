@@ -21,7 +21,6 @@
  *
  */
 
-#include <Arduino.h>
 #include "EngineMkI.h"
 #define _USE_MATH_DEFINES
 #include <cmath>

@@ -17,6 +17,7 @@
 #ifndef __FM_CORE_H
 #define __FM_CORE_H
 
+#include <Arduino.h>
 #include "aligned_buf.h"
 #include "fm_op_kernel.h"
 #include "synth.h"

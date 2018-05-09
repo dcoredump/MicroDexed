@@ -6,6 +6,7 @@
 #define RATE 128
 #define TEENSY 1
 #define TEST_MIDI 1
+#define TEST_NOTE 32
 
 #ifdef TEENSY
 #include <Audio.h>
@@ -42,7 +43,7 @@ void setup()
   AudioMemory(8);
 
   sgtl5000_1.enable();
-  sgtl5000_1.volume(0.2);
+  sgtl5000_1.volume(0.3);
 
   // Initialize processor and memory measurements
   //AudioProcessorUsageMaxReset();
@@ -59,10 +60,10 @@ void setup()
   dexed->activate();
 
 #ifdef TEST_MIDI
-  dexed->ProcessMidiMessage(0x90, 64, 100);
+  dexed->ProcessMidiMessage(0x90, TEST_NOTE, 100);
+  //dexed->ProcessMidiMessage(0x90, 66, 127);
 #endif
 
-  Serial.println(dexed->getEngineType(), DEC);
   Serial.println("Go");
 }
 
@@ -70,8 +71,18 @@ void loop()
 {
   int16_t* audio_buffer; // pointer for 128 * int16_t
 
+#ifdef TEST_MIDI
+  if (millis() > 3000 && millis() < 3050)
+    dexed->ProcessMidiMessage(0x80, TEST_NOTE, 0);
+#endif
+
 #ifdef TEENSY
   audio_buffer = queue1.getBuffer();
+  if (audio_buffer == NULL)
+  {
+    Serial.println("audio_buffer allocation problems!");
+    return;
+  }
 #endif
 
   // process midi->audio
@@ -79,40 +90,29 @@ void loop()
   {
     dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
   }
-  uint8_t i = 0;
-  /*  Serial.println("Before:");
-    for (i = 0; i < 128; i++)
-    {
-      Serial.print(audio_buffer[i]);
-      Serial.print(",");
-    }
-    Serial.println();*/
 
   dexed->GetSamples(RATE, audio_buffer);
 
-  for (i = 0; i < 128; i++)
-  {
-    if ((i % 16) == 0)
-      Serial.println();
+ /*   uint8_t i = 0;
+    for (i = 0; i < 128; i++)
+    {
+      if ((i % 16) == 0)
+        Serial.println();
 
-    if (i < 10)
-      Serial.print("  ");
-    if (i > 9 && i < 100)
+      if (i < 10)
+        Serial.print("  ");
+      if (i > 9 && i < 100)
+        Serial.print(" ");
+      Serial.print("[");
+      Serial.print(i, DEC);
+      Serial.print("]:");
+      Serial.print(audio_buffer[i]);
       Serial.print(" ");
-    Serial.print("[");
-    Serial.print(i, DEC);
-    Serial.print("]:");
-    Serial.print(audio_buffer[i]);
-    Serial.print(" ");
-  }
-  Serial.println();
+    }
+    Serial.println();*/
 
 #ifdef TEENSY
-  // play the current buffer
-  while (!queue1.available())
-    Serial.println("Block");
   queue1.playBuffer();
 #endif
-  delay(500);
 }
 

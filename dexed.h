@@ -21,6 +21,7 @@
 #ifndef DEXED_H_INCLUDED
 #define DEXED_H_INCLUDED
 
+#include <Arduino.h>
 #include "controllers.h"
 #include "dx7note.h"
 #include "lfo.h"
@@ -54,7 +55,7 @@ enum DexedEngineResolution {
 class Dexed
 {
   public:
-    Dexed(uint16_t rate);
+    Dexed(uint8_t rate);
     ~Dexed();
     void activate(void);
     void deactivate(void);
@@ -63,7 +64,7 @@ class Dexed
     bool isMonoMode(void);
     void setMonoMode(bool mode);
     void set_params(void);
-    void GetSamples(uint32_t n_samples, int16_t* buffer);
+    void GetSamples(uint16_t n_samples, int16_t* buffer);
     bool ProcessMidiMessage(uint8_t cmd, uint8_t data1, uint8_t data2);
 
     Controllers controllers;
@@ -91,6 +92,8 @@ class Dexed
     EngineOpl* engineOpl;
     float* outbuf_;
     uint32_t bufsize_;
+    float extra_buf_[_N_];
+    uint32_t extra_buf_size_;
 
   private:
     uint16_t _rate;
