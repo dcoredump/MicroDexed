@@ -4,6 +4,7 @@
 #include "dexed.h"
 
 #define RATE 128
+#define SAMPLERATE 44100
 #define TEENSY 1
 #define TEST_MIDI 1
 #define TEST_NOTE1 59
@@ -18,11 +19,13 @@
 
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=266,484
-AudioEffectReverb        reverb1;        //xy=486,545
+//AudioEffectReverb        reverb1;        //xy=486,545
 AudioOutputI2S           i2s1;           //xy=739,486
-AudioConnection          patchCord1(queue1, reverb1);
-AudioConnection          patchCord2(reverb1, 0, i2s1, 0);
-AudioConnection          patchCord3(reverb1, 0, i2s1, 1);
+//AudioConnection          patchCord1(queue1, reverb1);
+//AudioConnection          patchCord2(reverb1, 0, i2s1, 0);
+//AudioConnection          patchCord3(reverb1, 0, i2s1, 1);
+AudioConnection          patchCord2(queue1, 0, i2s1, 0);
+AudioConnection          patchCord3(queue1, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=384,610
 // GUItool: end automatically generated code
 
@@ -40,7 +43,7 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=384,610
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
-Dexed* dexed = new Dexed(RATE);
+Dexed* dexed = new Dexed(SAMPLERATE);
 
 void setup()
 {
@@ -57,7 +60,7 @@ void setup()
   AudioMemory(16);
 
   sgtl5000_1.enable();
-  sgtl5000_1.volume(0.6);
+  sgtl5000_1.volume(0.3);
 
   // Initialize processor and memory measurements
   //AudioProcessorUsageMaxReset();
@@ -82,7 +85,7 @@ void setup()
   dexed->ProcessMidiMessage(0x90, TEST_NOTE2, 60);
 #endif
 
-  reverb1.reverbTime(5.0);
+  //reverb1.reverbTime(5.0);
 
   Serial.println("Go");
 }
@@ -110,17 +113,15 @@ void loop()
   // process midi->audio
   if (MIDI.read())
   {
-    Serial.print("Type: ");
+    /* Serial.print("Type: ");
     Serial.print(MIDI.getType(), DEC);
     Serial.print(" Data1: ");
     Serial.print(MIDI.getData1(), DEC);
     Serial.print(" Data2: ");
-    Serial.println(MIDI.getData2(), DEC);
+    Serial.println(MIDI.getData2(), DEC); */
     dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
   }
-  else
-
-    dexed->GetSamples(RATE, audio_buffer);
+  dexed->GetSamples(RATE, audio_buffer);
 
   /*   uint8_t i = 0;
      for (i = 0; i < 128; i++)

@@ -55,7 +55,7 @@ enum DexedEngineResolution {
 class Dexed
 {
   public:
-    Dexed(uint8_t rate);
+    Dexed(int rate);
     ~Dexed();
     void activate(void);
     void deactivate(void);
@@ -96,7 +96,6 @@ class Dexed
     uint32_t extra_buf_size_;
 
   private:
-    uint16_t _rate;
     uint8_t _k_rate_counter;
     uint8_t _param_change_counter;
 

@@ -18,6 +18,7 @@
 #define __SYNTH_H
 
 #include <Arduino.h>
+#define SUPER_PRECISE
 
 // This IS not be present on MSVC.
 // See http://stackoverflow.com/questions/126279/c99-stdint-h-header-and-ms-visual-studio

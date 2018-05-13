@@ -31,7 +31,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-Dexed::Dexed(uint8_t rate)
+Dexed::Dexed(int rate)
 {
   uint8_t i;
 
@@ -177,12 +177,11 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
           voices[note].dx7_note->compute(audiobuf.get(), lfovalue, lfodelay, &controllers);
           for (uint8_t j = 0; j < _N_; ++j) {
             int32_t val = audiobuf.get()[j];
-            //val = val >> 4;
+            val = val >> 4;
             int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
-            /* float f = static_cast<float>(clip_val >> 1) / static_cast<float>(0x8000);
-              if (f > 1) f = 1;
-              if (f < -1) f = -1;
-              sumbuf[j] += f;*/
+            float f = static_cast<float>(clip_val >> 1) / static_cast<float>(0x8000);
+            if (f > 1) f = 1;
+            if (f < -1) f = -1;
             sumbuf[j] += clip_val;
             audiobuf.get()[j] = 0;
           }
