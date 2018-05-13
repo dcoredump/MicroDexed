@@ -195,7 +195,7 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
         {
           //buffer[i + j] = static_cast<int16_t>(sumbuf[j]*0x8000);
           buffer[i + j] = sumbuf[j];
-          Serial.println(buffer[i + j], DEC);
+          //Serial.println(buffer[i + j], DEC);
         }
         else
           extra_buf_[j - jmax] = sumbuf[j];
@@ -350,7 +350,7 @@ void Dexed::keydown(uint8_t pitch, uint8_t velo) {
       voices[note].velocity = velo;
       voices[note].sustained = sustain;
       voices[note].keydown = true;
-      voices[note].dx7_note->init(data, pitch, velo);
+      voices[note].dx7_note->init(data, (int)pitch, (int)velo);
       if ( data[136] )
         voices[note].dx7_note->oscSync();
       break;

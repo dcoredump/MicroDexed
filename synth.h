@@ -17,6 +17,8 @@
 #ifndef __SYNTH_H
 #define __SYNTH_H
 
+#include <Arduino.h>
+
 // This IS not be present on MSVC.
 // See http://stackoverflow.com/questions/126279/c99-stdint-h-header-and-ms-visual-studio
 #include <stdint.h>
@@ -47,6 +49,7 @@ typedef __int16 SInt16;
 #define SynthMemoryBarrier()
 #endif
 
+/*
 template<typename T>
 inline static T min(const T& a, const T& b) {
     return a < b ? a : b;
@@ -56,6 +59,7 @@ template<typename T>
 inline static T max(const T& a, const T& b) {
     return a > b ? a : b;
 }
+*/
 
 #define QER(n,b) ( ((float)n)/(1<<b) )
 

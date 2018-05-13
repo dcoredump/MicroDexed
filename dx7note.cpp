@@ -144,7 +144,8 @@ Dx7Note::Dx7Note() {
     }
 }
 
-void Dx7Note::init(const uint8_t patch[156], int midinote, int velocity) {
+//void Dx7Note::init(const uint8_t patch[156], int midinote, int velocity) {
+void Dx7Note::init(const uint8_t patch[173], int midinote, int velocity) {
     int rates[4];
     int levels[4];
     for (int op = 0; op < 6; op++) {
