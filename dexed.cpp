@@ -125,6 +125,7 @@ void Dexed::activate(void)
   panic();
   controllers.values_[kControllerPitchRange] = data[155];
   controllers.values_[kControllerPitchStep] = data[156];
+  controllers.refresh();
 }
 
 void Dexed::deactivate(void)

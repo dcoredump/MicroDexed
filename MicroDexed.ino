@@ -49,7 +49,8 @@ void setup()
   Serial.begin(115200);
   //while (!Serial) ; // wait for Arduino Serial Monitor
   delay(300);
-  Serial.println(F("MicroDexed"));
+  Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
+  Serial.println(F("(c)2018 H. Wirtz"));
   Serial.println(F("setup start"));
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
@@ -59,7 +60,7 @@ void setup()
   AudioMemory(16);
 
   sgtl5000_1.enable();
-  sgtl5000_1.volume(0.5);
+  sgtl5000_1.volume(0.4);
 
   // Initialize processor and memory measurements
   //AudioProcessorUsageMaxReset();
@@ -71,7 +72,7 @@ void setup()
     int16_t* audio_buffer = queue1.getBuffer();
     if (audio_buffer != NULL)
     {
-      memset(audio_buffer, 0, AUDIO_BUFFER_SIZE);
+      memset(audio_buffer, 0, sizeof(int16_t)*AUDIO_BUFFER_SIZE);
       queue1.playBuffer();
     }
   }
@@ -86,6 +87,7 @@ void setup()
   midi_queue.enqueue(m);
   m.data1 = TEST_NOTE2;
   midi_queue.enqueue(m);
+  m.cmd = 0xb0;
 #endif
 
   threads.addThread(audio_thread, 1);
@@ -120,11 +122,12 @@ void loop()
 
 void audio_thread(void)
 {
-  int16_t* audio_buffer; // pointer for 128 * int16_t
-
+  int16_t* audio_buffer; // pointer to 128 * int16_t
+  bool break_for_calculation;
+  
   Serial.println(F("audio thread start"));
 
-  while (42 == 42)
+  while (42 == 42) // Don't panic!
   {
     audio_buffer = queue1.getBuffer();
     if (audio_buffer == NULL)
@@ -137,8 +140,10 @@ void audio_thread(void)
       if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
       {
         midi_queue_t m = midi_queue.dequeue();
-        dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
+        break_for_calculation=dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
         midi_queue_lock.unlock();
+        if(break_for_calculation==true)
+          break;
       }
       else
         break;
