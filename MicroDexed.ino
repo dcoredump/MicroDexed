@@ -5,25 +5,26 @@
 // (c)2018 H. Wirtz <wirtz@parasitstudio.de>
 //
 
-#include <QueueArray.h>
-#include <MIDI.h>
-#include "dexed.h"
-
-#define AUDIO_MEM 16
-#define AUDIO_BUFFER_SIZE 128
-#define SAMPLEAUDIO_BUFFER_SIZE 44100
-#define MIDI_QUEUE_LOCK_TIMEOUT_MS 5
-
-#define TEST_MIDI 1
-#define TEST_NOTE1 60
-#define TEST_NOTE2 68
-
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
 #include <TeensyThreads.h>
+#include <QueueArray.h>
+#include <MIDI.h>
+#include <looper.h>
+#include "dexed.h"
+
+#define AUDIO_MEM 8
+#define AUDIO_BUFFER_SIZE 128
+#define SAMPLEAUDIO_BUFFER_SIZE 44100
+#define MIDI_QUEUE_LOCK_TIMEOUT_MS 5
+//#define INIT_AUDIO_QUEUE 1
+
+#define TEST_MIDI 1
+#define TEST_NOTE1 60
+#define TEST_NOTE2 68
 
 typedef struct
 {
@@ -44,12 +45,12 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLEAUDIO_BUFFER_SIZE);
 QueueArray <midi_queue_t> midi_queue;
 Threads::Mutex midi_queue_lock;
+looper sched;
 
 void setup()
 {
+  while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(115200);
-  //while (!Serial) ; // wait for Arduino Serial Monitor
-  delay(300);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz"));
   Serial.println(F("setup start"));
@@ -64,10 +65,11 @@ void setup()
   sgtl5000_1.volume(0.4);
 
   // Initialize processor and memory measurements
-  //AudioProcessorUsageMaxReset();
-  //AudioMemoryUsageMaxReset();
+  AudioProcessorUsageMaxReset();
+  AudioMemoryUsageMaxReset();
 
-  // initial fill audio buffer
+#ifdef INIT_AUDIO_QUEUE
+  // initial fill audio buffer with empty data
   while (queue1.available())
   {
     int16_t* audio_buffer = queue1.getBuffer();
@@ -77,6 +79,7 @@ void setup()
       queue1.playBuffer();
     }
   }
+#endif
 
   dexed->activate();
 
@@ -92,6 +95,8 @@ void setup()
 #endif
 
   threads.addThread(audio_thread, 1);
+
+  sched.addJob(cpu_and_mem_usage, 1000);
 
   Serial.println(F("setup end"));
 }
@@ -119,13 +124,15 @@ void loop()
       midi_queue_lock.unlock();
     }
   }
+
+  sched.scheduler();
 }
 
 void audio_thread(void)
 {
   int16_t* audio_buffer; // pointer to 128 * int16_t
   bool break_for_calculation;
-  
+
   Serial.println(F("audio thread start"));
 
   while (42 == 42) // Don't panic!
@@ -141,9 +148,9 @@ void audio_thread(void)
       if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
       {
         midi_queue_t m = midi_queue.dequeue();
-        break_for_calculation=dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
+        break_for_calculation = dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
         midi_queue_lock.unlock();
-        if(break_for_calculation==true)
+        if (break_for_calculation == true)
           break;
       }
       else
@@ -154,3 +161,17 @@ void audio_thread(void)
     queue1.playBuffer();
   }
 }
+
+void cpu_and_mem_usage(void)
+{
+  Serial.print(F("CPU:"));
+  Serial.print(AudioProcessorUsage(), DEC);
+  Serial.print(F("   CPU MAX:"));
+  Serial.print(AudioProcessorUsageMax(), DEC);
+  Serial.print(F("  MEM:"));
+  Serial.print(AudioMemoryUsage(), DEC);
+  Serial.print(F("   MEM MAX:"));
+  Serial.print(AudioMemoryUsageMax(), DEC);
+  Serial.println();
+}
+
