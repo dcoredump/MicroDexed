@@ -260,7 +260,8 @@ void Dx7Note::keyup() {
   pitchenv_.keydown(false);
 }
 
-void Dx7Note::update(const uint8_t patch[156], int midinote, int velocity) {
+//void Dx7Note::update(const uint8_t patch[156], int midinote, int velocity) {
+void Dx7Note::update(const uint8_t patch[173], int midinote, int velocity) {
   int rates[4];
   int levels[4];
   for (int op = 0; op < 6; op++) {

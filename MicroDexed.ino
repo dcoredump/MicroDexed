@@ -11,6 +11,8 @@
 
 #define AUDIO_BUFFER_SIZE 128
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
+#define MIDI_QUEUE_LOCK_TIMEOUT_MS 5
+
 #define TEST_MIDI 1
 #define TEST_NOTE1 60
 #define TEST_NOTE2 68
@@ -77,8 +79,13 @@ void setup()
   dexed->activate();
 
 #ifdef TEST_MIDI
-  dexed->ProcessMidiMessage(0x90, TEST_NOTE1, 100);
-  dexed->ProcessMidiMessage(0x90, TEST_NOTE2, 60);
+  midi_queue_t m;
+  m.cmd = 0x90;
+  m.data1 = TEST_NOTE1;
+  m.data2 = 100;
+  midi_queue.enqueue(m);
+  m.data1 = TEST_NOTE2;
+  midi_queue.enqueue(m);
 #endif
 
   threads.addThread(audio_thread, 1);
@@ -103,9 +110,11 @@ void loop()
     m.data1 = MIDI.getData1();
     m.data2 = MIDI.getData2();
 
-    while (!midi_queue_lock.try_lock());
-    midi_queue.enqueue(m);
-    midi_queue_lock.unlock();
+    if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
+    {
+      midi_queue.enqueue(m);
+      midi_queue_lock.unlock();
+    }
   }
 }
 
@@ -120,15 +129,19 @@ void audio_thread(void)
     audio_buffer = queue1.getBuffer();
     if (audio_buffer == NULL)
     {
-      Serial.println("audio_buffer allocation problems!");
-      return;
+      Serial.println(F("audio_buffer allocation problems!"));
+      continue;
     }
-    while (!midi_queue.isEmpty ())
+    while (!midi_queue.isEmpty())
     {
-      while (!midi_queue_lock.try_lock());
-      midi_queue_t m = midi_queue.dequeue();
-      dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
-      midi_queue_lock.unlock();
+      if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
+      {
+        midi_queue_t m = midi_queue.dequeue();
+        dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
+        midi_queue_lock.unlock();
+      }
+      else
+        break;
     }
 
     dexed->GetSamples(AUDIO_BUFFER_SIZE, audio_buffer);
