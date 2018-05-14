@@ -9,6 +9,7 @@
 #include <MIDI.h>
 #include "dexed.h"
 
+#define AUDIO_MEM 16
 #define AUDIO_BUFFER_SIZE 128
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
 #define MIDI_QUEUE_LOCK_TIMEOUT_MS 5
@@ -31,13 +32,13 @@ typedef struct
   uint8_t data2;
 } midi_queue_t;
 
-// GUItool: begin automatically geneAUDIO_BUFFER_SIZEd code
+// GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=266,484
 AudioOutputI2S           i2s1;           //xy=739,486
 AudioConnection          patchCord2(queue1, 0, i2s1, 0);
 AudioConnection          patchCord3(queue1, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=384,610
-// GUItool: end automatically geneAUDIO_BUFFER_SIZEd code
+// GUItool: end automatically generated code
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLEAUDIO_BUFFER_SIZE);
@@ -57,7 +58,7 @@ void setup()
 
   // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
-  AudioMemory(16);
+  AudioMemory(AUDIO_MEM);
 
   sgtl5000_1.enable();
   sgtl5000_1.volume(0.4);
