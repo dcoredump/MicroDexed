@@ -18,10 +18,13 @@
 #define AUDIO_BUFFER_SIZE 128
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
 #define INIT_AUDIO_QUEUE 1
-#define SHOW_DEXED_TIMING 1
+//#define SHOW_DEXED_TIMING 1
+#define SHOW_XRUN 1
 #define SHOW_CPU_LOAD
+#define SHOW_CPU_LOAD_MSEC 5000
 #define TEST_MIDI 1
-#define TEST_NOTE 60
+#define TEST_NOTE 40
+#define TEST_VEL 60
 
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=266,484
@@ -74,18 +77,27 @@ void setup()
   dexed->activate();
 
 #ifdef TEST_MIDI
-  queue_midi_event(0x90, TEST_NOTE, 100);
-  queue_midi_event(0x90, TEST_NOTE + 5, 100);
-  queue_midi_event(0x90, TEST_NOTE + 8, 100);
-  queue_midi_event(0x90, TEST_NOTE + 12, 100);
-  queue_midi_event(0x90, TEST_NOTE + 12, 100);
-  queue_midi_event(0x90, TEST_NOTE + 17, 100);
-  queue_midi_event(0x90, TEST_NOTE + 20, 100);
-  queue_midi_event(0x90, TEST_NOTE + 24, 100);
+
+  queue_midi_event(0x90, TEST_NOTE, TEST_VEL);            // 1
+  queue_midi_event(0x90, TEST_NOTE + 5, TEST_VEL);        // 2
+  queue_midi_event(0x90, TEST_NOTE + 8, TEST_VEL);        // 3
+  queue_midi_event(0x90, TEST_NOTE + 12, TEST_VEL);       // 4
+  queue_midi_event(0x90, TEST_NOTE + 17, TEST_VEL);       // 5
+  queue_midi_event(0x90, TEST_NOTE + 20, TEST_VEL);       // 6
+  queue_midi_event(0x90, TEST_NOTE + 24, TEST_VEL);       // 7
+  queue_midi_event(0x90, TEST_NOTE + 29, TEST_VEL);       // 8
+  queue_midi_event(0x90, TEST_NOTE + 32, TEST_VEL);       // 9
+  queue_midi_event(0x90, TEST_NOTE + 37, TEST_VEL);       // 10
+  queue_midi_event(0x90, TEST_NOTE + 40, TEST_VEL);       // 11
+  //queue_midi_event(0x90, TEST_NOTE + 44, TEST_VEL);       // 12
+  //queue_midi_event(0x90, TEST_NOTE + 49, TEST_VEL);       // 13
+  //queue_midi_event(0x90, TEST_NOTE + 52, TEST_VEL);     // 14
+  //queue_midi_event(0x90, TEST_NOTE + 57, TEST_VEL);     // 15
+  //queue_midi_event(0x90, TEST_NOTE + 60, TEST_VEL);     // 16
 #endif
 
 #ifdef SHOW_CPU_LOAD
-  sched.begin(cpu_and_mem_usage, 1000000);
+  sched.begin(cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC*1000);
 #endif
   Serial.println(F("setup end"));
 }
@@ -100,7 +112,7 @@ void loop()
   {
     Serial.println(F("audio_buffer allocation problems!"));
   }
-  
+
   while (MIDI.read())
   {
     break_for_calculation = dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
@@ -108,14 +120,18 @@ void loop()
       break;
   }
 
-#ifdef SHOW_DEXED_TIMING
+#if defined(SHOW_DEXED_TIMING) || defined(SHOW_XRUN)
   elapsedMicros t1;
 #endif
   dexed->GetSamples(AUDIO_BUFFER_SIZE, audio_buffer);
+#ifdef SHOW_XRUN
+  uint32_t t2 = t1;
+  if (t2 > 2900)
+    Serial.println(F("xrun"));
+#endif
 #ifdef SHOW_DEXED_TIMING
   Serial.println(t1, DEC);
 #endif
-
   queue1.playBuffer();
 }
 

@@ -195,7 +195,7 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
     extra_buf_size_ = i - n_samples;
   }
 
-  if (++_k_rate_counter % 32 && !monoMode)
+/*  if (++_k_rate_counter == 0 && !monoMode)
   {
     uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
 
@@ -233,7 +233,7 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
         }
       }
     }
-  }
+  } */
 }
 
 bool Dexed::ProcessMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
