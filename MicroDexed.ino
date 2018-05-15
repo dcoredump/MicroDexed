@@ -10,7 +10,6 @@
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
-#include <TeensyThreads.h>
 #include <QueueArray.h>
 #include <MIDI.h>
 #include "dexed.h"
@@ -18,20 +17,11 @@
 #define AUDIO_MEM 32
 #define AUDIO_BUFFER_SIZE 128
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
-#define MIDI_QUEUE_LOCK_TIMEOUT_MS 0
 #define INIT_AUDIO_QUEUE 1
 #define SHOW_DEXED_TIMING 1
-
+#define SHOW_CPU_LOAD
 #define TEST_MIDI 1
-#define TEST_NOTE1 60
-#define TEST_NOTE2 68
-
-typedef struct
-{
-  uint8_t cmd;
-  uint8_t data1;
-  uint8_t data2;
-} midi_queue_t;
+#define TEST_NOTE 60
 
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=266,484
@@ -63,8 +53,10 @@ void setup()
   sgtl5000_1.volume(0.2);
 
   // Initialize processor and memory measurements
+#ifdef SHOW_CPU_LOAD
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
+#endif
 
 #ifdef INIT_AUDIO_QUEUE
   // initial fill audio buffer with empty data
@@ -82,10 +74,19 @@ void setup()
   dexed->activate();
 
 #ifdef TEST_MIDI
-  threads.addThread(midi_test_thread, 1);
+  queue_midi_event(0x90, TEST_NOTE, 100);
+  queue_midi_event(0x90, TEST_NOTE + 5, 100);
+  queue_midi_event(0x90, TEST_NOTE + 8, 100);
+  queue_midi_event(0x90, TEST_NOTE + 12, 100);
+  queue_midi_event(0x90, TEST_NOTE + 12, 100);
+  queue_midi_event(0x90, TEST_NOTE + 17, 100);
+  queue_midi_event(0x90, TEST_NOTE + 20, 100);
+  queue_midi_event(0x90, TEST_NOTE + 24, 100);
 #endif
 
+#ifdef SHOW_CPU_LOAD
   sched.begin(cpu_and_mem_usage, 1000000);
+#endif
   Serial.println(F("setup end"));
 }
 
@@ -98,13 +99,13 @@ void loop()
   if (audio_buffer == NULL)
   {
     Serial.println(F("audio_buffer allocation problems!"));
-    return;
   }
+  
   while (MIDI.read())
   {
-      break_for_calculation = dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
-      if (break_for_calculation == true)
-        break;
+    break_for_calculation = dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
+    if (break_for_calculation == true)
+      break;
   }
 
 #ifdef SHOW_DEXED_TIMING
@@ -118,34 +119,12 @@ void loop()
   queue1.playBuffer();
 }
 
-void midi_test_thread(void)
-{
-  delay(100);
-  /*queue_midi_event(0x90, TEST_NOTE1, 100);
-    queue_midi_event(0x90, TEST_NOTE2, 100);
-    delay(1000);
-    queue_midi_event(0x80, TEST_NOTE1, 100);
-    delay(1000);
-    queue_midi_event(0x80, TEST_NOTE2, 100);
-    delay(500);*/
-  for (uint8_t i = 0; i < 16; i++)
-  {
-    queue_midi_event(0x90, 55 + i, 100);
-    delay(1000);
-  }
-  delay(1000);
-  for (uint8_t i = 0; i < 16; i++)
-  {
-    queue_midi_event(0x80, 55 + i, 100);
-  }
-  threads.yield();
-}
-
 bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
-  return dexed->ProcessMidiMessage(type, data1, data2);
+  return (dexed->ProcessMidiMessage(type, data1, data2));
 }
 
+#ifdef SHOW_CPU_LOAD
 void cpu_and_mem_usage(void)
 {
   Serial.print(F("CPU:"));
@@ -157,5 +136,8 @@ void cpu_and_mem_usage(void)
   Serial.print(F("   MEM MAX:"));
   Serial.print(AudioMemoryUsageMax(), DEC);
   Serial.println();
+  AudioProcessorUsageMaxReset();
+  AudioMemoryUsageMaxReset();
 }
+#endif
 

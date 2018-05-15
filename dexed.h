@@ -65,7 +65,7 @@ class Dexed
     void setMonoMode(bool mode);
     void set_params(void);
     void GetSamples(uint16_t n_samples, int16_t* buffer);
-    bool ProcessMidiMessage(uint8_t cmd, uint8_t data1, uint8_t data2);
+    bool ProcessMidiMessage(uint8_t type, uint8_t data1, uint8_t data2);
 
     Controllers controllers;
     VoiceStatus voiceStatus;
@@ -85,13 +85,10 @@ class Dexed
     bool monoMode;
     bool refreshVoice;
     uint8_t engineType;
-    //PluginFx fx;
     Lfo lfo;
     FmCore* engineMsfa;
     EngineMkI* engineMkI;
     EngineOpl* engineOpl;
-    float* outbuf_;
-    uint32_t bufsize_;
     int16_t extra_buf_[_N_];
     uint32_t extra_buf_size_;
 

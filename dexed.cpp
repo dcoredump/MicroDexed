@@ -89,10 +89,6 @@ Dexed::Dexed(int rate)
   controllers.opSwitch = 0x3f; // enable all operators
   //controllers.opSwitch=0x00;
 
-  bufsize_ = 256;
-
-  outbuf_ = new float[bufsize_];
-
   lfo.reset(data + 137);
 
   setMonoMode(false);
@@ -108,8 +104,6 @@ Dexed::Dexed(int rate)
 
 Dexed::~Dexed()
 {
-  delete [] outbuf_;
-
   currentNote = -1;
 
   for (uint8_t note = 0; note < MAX_ACTIVE_NOTES; ++note)
@@ -238,14 +232,13 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
           TRACE("Shutted down Voice[%2d]", i);
         }
       }
-      //    TRACE("Voice[%2d] live=%d keydown=%d",i,voices[i].live,voices[i].keydown);
     }
   }
 }
 
-bool Dexed::ProcessMidiMessage(uint8_t cmd, uint8_t data1, uint8_t data2)
+bool Dexed::ProcessMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
 {
-  switch (cmd & 0xf0) {
+  switch (type & 0xf0) {
     case 0x80 :
       //TRACE("MIDI keyup event: %d", data1);
       keyup(data1);
