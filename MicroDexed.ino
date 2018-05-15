@@ -13,7 +13,6 @@
 #include <TeensyThreads.h>
 #include <QueueArray.h>
 #include <MIDI.h>
-#include <looper.h>
 #include "dexed.h"
 
 #define AUDIO_MEM 32
@@ -21,7 +20,7 @@
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
 #define MIDI_QUEUE_LOCK_TIMEOUT_MS 0
 #define INIT_AUDIO_QUEUE 1
-#define SHOW_DEXED_TIMING 1
+//#define SHOW_DEXED_TIMING 1
 
 #define TEST_MIDI 1
 #define TEST_NOTE1 60
@@ -46,7 +45,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLEAUDIO_BUFFER_SIZE);
 QueueArray <midi_queue_t> midi_queue;
 Threads::Mutex midi_queue_lock;
-looper sched;
+IntervalTimer sched;
 
 void setup()
 {
@@ -89,9 +88,7 @@ void setup()
 #endif
 
   threads.addThread(midi_thread, 1);
-
-  sched.addJob(cpu_and_mem_usage, 1000);
-
+  sched.begin(cpu_and_mem_usage, 1000000);
   Serial.println(F("setup end"));
 }
 
@@ -127,9 +124,8 @@ void loop()
 #ifdef SHOW_DEXED_TIMING
   Serial.println(t1, DEC);
 #endif
-  queue1.playBuffer();
 
-  sched.scheduler();
+  queue1.playBuffer();
 }
 
 void midi_test_thread(void)

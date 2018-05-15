@@ -162,12 +162,11 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
   {
     for (; i < n_samples; i += _N_) {
       AlignedBuf<int32_t, _N_> audiobuf;
-      int16_t sumbuf[_N_];
+      float sumbuf[_N_];
 
       for (uint8_t j = 0; j < _N_; ++j) {
         audiobuf.get()[j] = 0;
-        //sumbuf[j] = 0.0;
-        sumbuf[j] = 0;
+        sumbuf[j] = 0.0;
       }
 
       int32_t lfovalue = lfo.getsample();
@@ -180,10 +179,10 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
             int32_t val = audiobuf.get()[j];
             val = val >> 4;
             int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
-            float f = static_cast<float>(clip_val >> 1) / static_cast<float>(0x8000);
+            float f = static_cast<float>(clip_val >> 1) / 0x8000;
             if (f > 1) f = 1;
             if (f < -1) f = -1;
-            sumbuf[j] += clip_val;
+            sumbuf[j] += f;
             audiobuf.get()[j] = 0;
           }
         }
@@ -193,12 +192,10 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
       for (uint8_t j = 0; j < _N_; ++j) {
         if (j < jmax)
         {
-          //buffer[i + j] = static_cast<int16_t>(sumbuf[j]*0x8000);
-          buffer[i + j] = sumbuf[j];
-          //Serial.println(buffer[i + j], DEC);
+          buffer[i + j] = static_cast<int16_t>(sumbuf[j] * 0x8000);
         }
         else
-          extra_buf_[j - jmax] = sumbuf[j];
+          extra_buf_[j - jmax] = static_cast<int16_t>(sumbuf[j] * 0x8000);
       }
     }
     extra_buf_size_ = i - n_samples;

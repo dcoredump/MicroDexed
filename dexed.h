@@ -92,7 +92,7 @@ class Dexed
     EngineOpl* engineOpl;
     float* outbuf_;
     uint32_t bufsize_;
-    float extra_buf_[_N_];
+    int16_t extra_buf_[_N_];
     uint32_t extra_buf_size_;
 
   private:
