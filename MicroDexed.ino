@@ -21,6 +21,7 @@
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
 #define MIDI_QUEUE_LOCK_TIMEOUT_MS 0
 #define INIT_AUDIO_QUEUE 1
+#define SHOW_DEXED_TIMING 1
 
 #define TEST_MIDI 1
 #define TEST_NOTE1 60
@@ -119,7 +120,13 @@ void loop()
       break;
   }
 
+#ifdef SHOW_DEXED_TIMING
+  elapsedMicros t1;
+#endif
   dexed->GetSamples(AUDIO_BUFFER_SIZE, audio_buffer);
+#ifdef SHOW_DEXED_TIMING
+  Serial.println(t1, DEC);
+#endif
   queue1.playBuffer();
 
   sched.scheduler();
@@ -127,21 +134,21 @@ void loop()
 
 void midi_test_thread(void)
 {
-  delay(500);
-  queue_midi_event(0x90, TEST_NOTE1, 100);
-  queue_midi_event(0x90, TEST_NOTE2, 100);
-  delay(1000);
-  queue_midi_event(0x80, TEST_NOTE1, 100);
-  delay(1000);
-  queue_midi_event(0x80, TEST_NOTE2, 100);
-  delay(500);
-  for (uint8_t i = 0; i < 16; i++)
+  delay(100);
+  /*queue_midi_event(0x90, TEST_NOTE1, 100);
+    queue_midi_event(0x90, TEST_NOTE2, 100);
+    delay(1000);
+    queue_midi_event(0x80, TEST_NOTE1, 100);
+    delay(1000);
+    queue_midi_event(0x80, TEST_NOTE2, 100);
+    delay(500);*/
+  for (uint8_t i = 0; i < 3; i++)
   {
     queue_midi_event(0x90, 55 + i, 100);
-    delay(100);
+    delay(2000);
   }
   delay(1000);
-  for (uint8_t i = 0; i < 16; i++)
+  for (uint8_t i = 0; i < 3; i++)
   {
     queue_midi_event(0x80, 55 + i, 100);
   }
