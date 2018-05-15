@@ -20,7 +20,7 @@
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
 #define MIDI_QUEUE_LOCK_TIMEOUT_MS 0
 #define INIT_AUDIO_QUEUE 1
-//#define SHOW_DEXED_TIMING 1
+#define SHOW_DEXED_TIMING 1
 
 #define TEST_MIDI 1
 #define TEST_NOTE1 60
@@ -43,8 +43,6 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=384,610
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLEAUDIO_BUFFER_SIZE);
-QueueArray <midi_queue_t> midi_queue;
-Threads::Mutex midi_queue_lock;
 IntervalTimer sched;
 
 void setup()
@@ -87,7 +85,6 @@ void setup()
   threads.addThread(midi_test_thread, 1);
 #endif
 
-  threads.addThread(midi_thread, 1);
   sched.begin(cpu_and_mem_usage, 1000000);
   Serial.println(F("setup end"));
 }
@@ -103,18 +100,11 @@ void loop()
     Serial.println(F("audio_buffer allocation problems!"));
     return;
   }
-  while (!midi_queue.isEmpty())
+  while (MIDI.read())
   {
-    if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
-    {
-      midi_queue_t m = midi_queue.dequeue();
-      break_for_calculation = dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
-      midi_queue_lock.unlock();
+      break_for_calculation = dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
       if (break_for_calculation == true)
         break;
-    }
-    else
-      break;
   }
 
 #ifdef SHOW_DEXED_TIMING
@@ -138,46 +128,22 @@ void midi_test_thread(void)
     delay(1000);
     queue_midi_event(0x80, TEST_NOTE2, 100);
     delay(500);*/
-  for (uint8_t i = 0; i < 3; i++)
+  for (uint8_t i = 0; i < 16; i++)
   {
     queue_midi_event(0x90, 55 + i, 100);
-    delay(2000);
+    delay(1000);
   }
   delay(1000);
-  for (uint8_t i = 0; i < 3; i++)
+  for (uint8_t i = 0; i < 16; i++)
   {
     queue_midi_event(0x80, 55 + i, 100);
   }
   threads.yield();
 }
 
-void midi_thread(void)
-{
-  Serial.println(F("midi thread start"));
-
-  while (42 == 42) // Don't panic!
-  {
-    while (MIDI.read())
-    {
-      queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
-    }
-  }
-}
-
 bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
-  midi_queue_t m;
-  m.cmd = type;
-  m.data1 = data1;
-  m.data2 = data2;
-
-  if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
-  {
-    midi_queue.enqueue(m);
-    midi_queue_lock.unlock();
-    return (true);
-  }
-  return (false);
+  return dexed->ProcessMidiMessage(type, data1, data2);
 }
 
 void cpu_and_mem_usage(void)
