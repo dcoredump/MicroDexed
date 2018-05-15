@@ -16,11 +16,11 @@
 #include <looper.h>
 #include "dexed.h"
 
-#define AUDIO_MEM 8
+#define AUDIO_MEM 32
 #define AUDIO_BUFFER_SIZE 128
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
-#define MIDI_QUEUE_LOCK_TIMEOUT_MS 5
-//#define INIT_AUDIO_QUEUE 1
+#define MIDI_QUEUE_LOCK_TIMEOUT_MS 0
+#define INIT_AUDIO_QUEUE 1
 
 #define TEST_MIDI 1
 #define TEST_NOTE1 60
@@ -62,7 +62,7 @@ void setup()
   AudioMemory(AUDIO_MEM);
 
   sgtl5000_1.enable();
-  sgtl5000_1.volume(0.4);
+  sgtl5000_1.volume(0.2);
 
   // Initialize processor and memory measurements
   AudioProcessorUsageMaxReset();
@@ -84,17 +84,10 @@ void setup()
   dexed->activate();
 
 #ifdef TEST_MIDI
-  midi_queue_t m;
-  m.cmd = 0x90;
-  m.data1 = TEST_NOTE1;
-  m.data2 = 100;
-  midi_queue.enqueue(m);
-  m.data1 = TEST_NOTE2;
-  midi_queue.enqueue(m);
-  m.cmd = 0xb0;
+  threads.addThread(midi_test_thread, 1);
 #endif
 
-  threads.addThread(audio_thread, 1);
+  threads.addThread(midi_thread, 1);
 
   sched.addJob(cpu_and_mem_usage, 1000);
 
@@ -103,63 +96,85 @@ void setup()
 
 void loop()
 {
-#ifdef TEST_MIDI
-  if (millis() > 3000 && millis() < 3050)
-    dexed->ProcessMidiMessage(0x80, TEST_NOTE1, 0);
-  if (millis() > 5000 && millis() < 5050)
-    dexed->ProcessMidiMessage(0x80, TEST_NOTE2, 0);
-#endif
+  int16_t* audio_buffer; // pointer to 128 * int16_t
+  bool break_for_calculation;
 
-  // process midi->audio
-  while (MIDI.read())
+  audio_buffer = queue1.getBuffer();
+  if (audio_buffer == NULL)
   {
-    midi_queue_t m;
-    m.cmd = MIDI.getType();
-    m.data1 = MIDI.getData1();
-    m.data2 = MIDI.getData2();
-
+    Serial.println(F("audio_buffer allocation problems!"));
+    return;
+  }
+  while (!midi_queue.isEmpty())
+  {
     if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
     {
-      midi_queue.enqueue(m);
+      midi_queue_t m = midi_queue.dequeue();
+      break_for_calculation = dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
       midi_queue_lock.unlock();
+      if (break_for_calculation == true)
+        break;
     }
+    else
+      break;
   }
+
+  dexed->GetSamples(AUDIO_BUFFER_SIZE, audio_buffer);
+  queue1.playBuffer();
 
   sched.scheduler();
 }
 
-void audio_thread(void)
+void midi_test_thread(void)
 {
-  int16_t* audio_buffer; // pointer to 128 * int16_t
-  bool break_for_calculation;
+  delay(500);
+  queue_midi_event(0x90, TEST_NOTE1, 100);
+  queue_midi_event(0x90, TEST_NOTE2, 100);
+  delay(1000);
+  queue_midi_event(0x80, TEST_NOTE1, 100);
+  delay(1000);
+  queue_midi_event(0x80, TEST_NOTE2, 100);
+  delay(500);
+  for (uint8_t i = 0; i < 16; i++)
+  {
+    queue_midi_event(0x90, 55 + i, 100);
+    delay(100);
+  }
+  delay(1000);
+  for (uint8_t i = 0; i < 16; i++)
+  {
+    queue_midi_event(0x80, 55 + i, 100);
+  }
+  threads.yield();
+}
 
-  Serial.println(F("audio thread start"));
+void midi_thread(void)
+{
+  Serial.println(F("midi thread start"));
 
   while (42 == 42) // Don't panic!
   {
-    audio_buffer = queue1.getBuffer();
-    if (audio_buffer == NULL)
+    while (MIDI.read())
     {
-      Serial.println(F("audio_buffer allocation problems!"));
-      continue;
+      queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
     }
-    while (!midi_queue.isEmpty())
-    {
-      if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
-      {
-        midi_queue_t m = midi_queue.dequeue();
-        break_for_calculation = dexed->ProcessMidiMessage(m.cmd, m.data1, m.data2);
-        midi_queue_lock.unlock();
-        if (break_for_calculation == true)
-          break;
-      }
-      else
-        break;
-    }
-
-    dexed->GetSamples(AUDIO_BUFFER_SIZE, audio_buffer);
-    queue1.playBuffer();
   }
+}
+
+bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
+{
+  midi_queue_t m;
+  m.cmd = type;
+  m.data1 = data1;
+  m.data2 = data2;
+
+  if (midi_queue_lock.lock(MIDI_QUEUE_LOCK_TIMEOUT_MS))
+  {
+    midi_queue.enqueue(m);
+    midi_queue_lock.unlock();
+    return (true);
+  }
+  return (false);
 }
 
 void cpu_and_mem_usage(void)
