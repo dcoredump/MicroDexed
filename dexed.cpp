@@ -71,11 +71,6 @@ Dexed::Dexed(int rate)
     voices[i].live = false;
   }
 
-  /*  for(i=0;i<sizeof(data);++i)
-    {
-      data_float[i]=static_cast<float>(data[i]);
-    }*/
-
   max_notes = 16;
   currentNote = 0;
   controllers.values_[kControllerPitch] = 0x2000;
@@ -95,11 +90,11 @@ Dexed::Dexed(int rate)
 
   sustain = false;
 
-  extra_buf_size_ = 0;
-
   memset(&voiceStatus, 0, sizeof(VoiceStatus));
 
   setEngineType(DEXED_ENGINE_MODERN);
+  //setEngineType(DEXED_ENGINE_MARKI);
+  //setEngineType(DEXED_ENGINE_OPL);
 }
 
 Dexed::~Dexed()
@@ -140,100 +135,38 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
     refreshVoice = false;
   }
 
-  // flush first events
-  for (i = 0; i < n_samples && i < extra_buf_size_; i++) {
-    buffer[i] = extra_buf_[i];
-  }
+  for (i = 0; i < n_samples; i += _N_) {
+    AlignedBuf<int32_t, _N_> audiobuf;
+    float sumbuf[_N_];
 
-  // remaining buffer is still to be processed
-  if (extra_buf_size_ > n_samples) {
-    for (uint16_t j = 0; j < extra_buf_size_ - n_samples; j++) {
-      extra_buf_[j] = extra_buf_[j + n_samples];
+    for (uint8_t j = 0; j < _N_; ++j) {
+      audiobuf.get()[j] = 0;
+      sumbuf[j] = 0.0;
     }
-    extra_buf_size_ -= n_samples;
-  }
-  else
-  {
-    for (; i < n_samples; i += _N_) {
-      AlignedBuf<int32_t, _N_> audiobuf;
-      float sumbuf[_N_];
 
-      for (uint8_t j = 0; j < _N_; ++j) {
-        audiobuf.get()[j] = 0;
-        sumbuf[j] = 0.0;
-      }
+    int32_t lfovalue = lfo.getsample();
+    int32_t lfodelay = lfo.getdelay();
 
-      int32_t lfovalue = lfo.getsample();
-      int32_t lfodelay = lfo.getdelay();
-
-      for (uint8_t note = 0; note < max_notes; ++note) {
-        if (voices[note].live) {
-          voices[note].dx7_note->compute(audiobuf.get(), lfovalue, lfodelay, &controllers);
-          for (uint8_t j = 0; j < _N_; ++j) {
-            int32_t val = audiobuf.get()[j];
-            val = val >> 4;
-            int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
-            float f = static_cast<float>(clip_val >> 1) / 0x8000;
-            if (f > 1) f = 1;
-            if (f < -1) f = -1;
-            sumbuf[j] += f;
-            audiobuf.get()[j] = 0;
-          }
+    for (uint8_t note = 0; note < max_notes; ++note) {
+      if (voices[note].live) {
+        voices[note].dx7_note->compute(audiobuf.get(), lfovalue, lfodelay, &controllers);
+        for (uint8_t j = 0; j < _N_; ++j) {
+          int32_t val = audiobuf.get()[j];
+          val = val >> 4;
+          int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
+          float f = static_cast<float>(clip_val >> 1) / 0x8000;
+          if (f > 1) f = 1;
+          if (f < -1) f = -1;
+          sumbuf[j] += f;
+          audiobuf.get()[j] = 0;
         }
-      }
-
-      uint16_t jmax = n_samples - i;
-      for (uint8_t j = 0; j < _N_; ++j) {
-        if (j < jmax)
-        {
-          buffer[i + j] = static_cast<int16_t>(sumbuf[j] * 0x8000);
-        }
-        else
-          extra_buf_[j - jmax] = static_cast<int16_t>(sumbuf[j] * 0x8000);
       }
     }
-    extra_buf_size_ = i - n_samples;
+
+    for (uint8_t j = 0; j < _N_; ++j) {
+      buffer[i + j] = static_cast<int16_t>(sumbuf[j] * 0x8000);
+    }
   }
-
-  /*  if (++_k_rate_counter == 0 && !monoMode)
-    {
-      uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
-
-      for (i = 0; i < max_notes; i++)
-      {
-        if (voices[i].live == true)
-        {
-          uint8_t op_amp = 0;
-          uint8_t op_carrier_num = 0;
-
-          voices[i].dx7_note->peekVoiceStatus(voiceStatus);
-
-          for (uint8_t op = 0; op < 6; op++)
-          {
-            uint8_t op_bit = static_cast<uint8_t>(pow(2, op));
-
-            if ((op_carrier & op_bit) > 0)
-            {
-              // this voice is a carrier!
-              op_carrier_num++;
-
-              //TRACE("Voice[%2d] OP [%d] amp=%ld,amp_step=%d,pitch_step=%d",i,op,voiceStatus.amp[op],voiceStatus.ampStep[op],voiceStatus.pitchStep);
-
-              if (voiceStatus.amp[op] <= 1069 && voiceStatus.ampStep[op] == 4) // this voice produces no audio output
-                op_amp++;
-            }
-          }
-          if (op_amp == op_carrier_num)
-          {
-            // all carrier-operators are silent -> disable the voice
-            voices[i].live = false;
-            voices[i].sustained = false;
-            voices[i].keydown = false;
-            TRACE("Shutted down Voice[%2d]", i);
-          }
-        }
-      }
-    } */
 }
 
 bool Dexed::ProcessMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)

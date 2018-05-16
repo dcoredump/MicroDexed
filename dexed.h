@@ -90,8 +90,6 @@ class Dexed
     FmCore* engineMsfa;
     EngineMkI* engineMkI;
     EngineOpl* engineOpl;
-    int16_t extra_buf_[_N_];
-    uint32_t extra_buf_size_;
 
   private:
     uint8_t _k_rate_counter;

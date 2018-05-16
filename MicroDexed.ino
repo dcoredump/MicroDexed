@@ -21,7 +21,7 @@
 //#define SHOW_DEXED_TIMING 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
-#define MAX_NOTES 10
+#define MAX_NOTES 11
 #define TEST_MIDI 1
 #define TEST_NOTE 40
 #define TEST_VEL 60
@@ -76,7 +76,7 @@ void setup()
 
   dexed->activate();
   dexed->setMaxNotes(MAX_NOTES);
-  
+
 #ifdef TEST_MIDI
 
   queue_midi_event(0x90, TEST_NOTE, TEST_VEL);            // 1
