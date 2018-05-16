@@ -66,7 +66,9 @@ class Dexed
     void set_params(void);
     void GetSamples(uint16_t n_samples, int16_t* buffer);
     bool ProcessMidiMessage(uint8_t type, uint8_t data1, uint8_t data2);
-
+    void panic(void);
+    void notes_off(void);
+    void setMaxNotes(uint8_t n);
     Controllers controllers;
     VoiceStatus voiceStatus;
 
@@ -74,10 +76,9 @@ class Dexed
     //void onParam(uint8_t param_num,float param_val);
     void keyup(uint8_t pitch);
     void keydown(uint8_t pitch, uint8_t velo);
-    void panic(void);
-    void notes_off(void);
 
-    static const uint8_t MAX_ACTIVE_NOTES = 32;
+
+    static const uint8_t MAX_ACTIVE_NOTES = 16;
     uint8_t max_notes = MAX_ACTIVE_NOTES;
     ProcessorVoice voices[MAX_ACTIVE_NOTES];
     uint8_t currentNote;

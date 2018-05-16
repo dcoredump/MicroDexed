@@ -106,7 +106,7 @@ Dexed::~Dexed()
 {
   currentNote = -1;
 
-  for (uint8_t note = 0; note < MAX_ACTIVE_NOTES; ++note)
+  for (uint8_t note = 0; note < MAX_ACTIVE_NOTES; note++)
     delete voices[note].dx7_note;
 
   delete(engineMsfa);
@@ -195,45 +195,45 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
     extra_buf_size_ = i - n_samples;
   }
 
-/*  if (++_k_rate_counter == 0 && !monoMode)
-  {
-    uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
-
-    for (i = 0; i < max_notes; i++)
+  /*  if (++_k_rate_counter == 0 && !monoMode)
     {
-      if (voices[i].live == true)
+      uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
+
+      for (i = 0; i < max_notes; i++)
       {
-        uint8_t op_amp = 0;
-        uint8_t op_carrier_num = 0;
-
-        voices[i].dx7_note->peekVoiceStatus(voiceStatus);
-
-        for (uint8_t op = 0; op < 6; op++)
+        if (voices[i].live == true)
         {
-          uint8_t op_bit = static_cast<uint8_t>(pow(2, op));
+          uint8_t op_amp = 0;
+          uint8_t op_carrier_num = 0;
 
-          if ((op_carrier & op_bit) > 0)
+          voices[i].dx7_note->peekVoiceStatus(voiceStatus);
+
+          for (uint8_t op = 0; op < 6; op++)
           {
-            // this voice is a carrier!
-            op_carrier_num++;
+            uint8_t op_bit = static_cast<uint8_t>(pow(2, op));
 
-            //TRACE("Voice[%2d] OP [%d] amp=%ld,amp_step=%d,pitch_step=%d",i,op,voiceStatus.amp[op],voiceStatus.ampStep[op],voiceStatus.pitchStep);
+            if ((op_carrier & op_bit) > 0)
+            {
+              // this voice is a carrier!
+              op_carrier_num++;
 
-            if (voiceStatus.amp[op] <= 1069 && voiceStatus.ampStep[op] == 4) // this voice produces no audio output
-              op_amp++;
+              //TRACE("Voice[%2d] OP [%d] amp=%ld,amp_step=%d,pitch_step=%d",i,op,voiceStatus.amp[op],voiceStatus.ampStep[op],voiceStatus.pitchStep);
+
+              if (voiceStatus.amp[op] <= 1069 && voiceStatus.ampStep[op] == 4) // this voice produces no audio output
+                op_amp++;
+            }
+          }
+          if (op_amp == op_carrier_num)
+          {
+            // all carrier-operators are silent -> disable the voice
+            voices[i].live = false;
+            voices[i].sustained = false;
+            voices[i].keydown = false;
+            TRACE("Shutted down Voice[%2d]", i);
           }
         }
-        if (op_amp == op_carrier_num)
-        {
-          // all carrier-operators are silent -> disable the voice
-          voices[i].live = false;
-          voices[i].sustained = false;
-          voices[i].keydown = false;
-          TRACE("Shutted down Voice[%2d]", i);
-        }
       }
-    }
-  } */
+    } */
 }
 
 bool Dexed::ProcessMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
@@ -572,6 +572,16 @@ void Dexed::notes_off(void) {
     if (voices[i].live == true && voices[i].keydown == true) {
       voices[i].keydown = false;
     }
+  }
+}
+
+void Dexed::setMaxNotes(uint8_t n) {
+  if (n <= MAX_ACTIVE_NOTES)
+  {
+    notes_off();
+    max_notes = n;
+    panic();
+    controllers.refresh();
   }
 }
 

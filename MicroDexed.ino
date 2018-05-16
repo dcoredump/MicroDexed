@@ -14,14 +14,14 @@
 #include <MIDI.h>
 #include "dexed.h"
 
-#define AUDIO_MEM 32
+#define AUDIO_MEM 2
 #define AUDIO_BUFFER_SIZE 128
 #define SAMPLEAUDIO_BUFFER_SIZE 44100
 #define INIT_AUDIO_QUEUE 1
 //#define SHOW_DEXED_TIMING 1
 #define SHOW_XRUN 1
-#define SHOW_CPU_LOAD
 #define SHOW_CPU_LOAD_MSEC 5000
+#define MAX_NOTES 10
 #define TEST_MIDI 1
 #define TEST_NOTE 40
 #define TEST_VEL 60
@@ -40,7 +40,7 @@ IntervalTimer sched;
 
 void setup()
 {
-  while (!Serial) ; // wait for Arduino Serial Monitor
+  //while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(115200);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz"));
@@ -56,7 +56,7 @@ void setup()
   sgtl5000_1.volume(0.2);
 
   // Initialize processor and memory measurements
-#ifdef SHOW_CPU_LOAD
+#ifdef SHOW_CPU_LOAD_MSEC
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
 #endif
@@ -75,7 +75,8 @@ void setup()
 #endif
 
   dexed->activate();
-
+  dexed->setMaxNotes(MAX_NOTES);
+  
 #ifdef TEST_MIDI
 
   queue_midi_event(0x90, TEST_NOTE, TEST_VEL);            // 1
@@ -89,17 +90,18 @@ void setup()
   queue_midi_event(0x90, TEST_NOTE + 32, TEST_VEL);       // 9
   queue_midi_event(0x90, TEST_NOTE + 37, TEST_VEL);       // 10
   queue_midi_event(0x90, TEST_NOTE + 40, TEST_VEL);       // 11
-  //queue_midi_event(0x90, TEST_NOTE + 44, TEST_VEL);       // 12
-  //queue_midi_event(0x90, TEST_NOTE + 49, TEST_VEL);       // 13
-  //queue_midi_event(0x90, TEST_NOTE + 52, TEST_VEL);     // 14
-  //queue_midi_event(0x90, TEST_NOTE + 57, TEST_VEL);     // 15
-  //queue_midi_event(0x90, TEST_NOTE + 60, TEST_VEL);     // 16
+  queue_midi_event(0x90, TEST_NOTE + 44, TEST_VEL);       // 12
+  queue_midi_event(0x90, TEST_NOTE + 49, TEST_VEL);       // 13
+  queue_midi_event(0x90, TEST_NOTE + 52, TEST_VEL);       // 14
+  queue_midi_event(0x90, TEST_NOTE + 57, TEST_VEL);       // 15
+  queue_midi_event(0x90, TEST_NOTE + 60, TEST_VEL);       // 16
 #endif
 
-#ifdef SHOW_CPU_LOAD
-  sched.begin(cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC*1000);
+#ifdef SHOW_CPU_LOAD_MSEC
+  sched.begin(cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
 #endif
   Serial.println(F("setup end"));
+  cpu_and_mem_usage();
 }
 
 void loop()
@@ -107,32 +109,35 @@ void loop()
   int16_t* audio_buffer; // pointer to 128 * int16_t
   bool break_for_calculation;
 
-  audio_buffer = queue1.getBuffer();
-  if (audio_buffer == NULL)
+  while (42 == 42) // DON'T PANIC!
   {
-    Serial.println(F("audio_buffer allocation problems!"));
-  }
+    audio_buffer = queue1.getBuffer();
+    if (audio_buffer == NULL)
+    {
+      Serial.println(F("audio_buffer allocation problems!"));
+    }
 
-  while (MIDI.read())
-  {
-    break_for_calculation = dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
-    if (break_for_calculation == true)
-      break;
-  }
+    while (MIDI.read())
+    {
+      break_for_calculation = dexed->ProcessMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
+      if (break_for_calculation == true)
+        break;
+    }
 
 #if defined(SHOW_DEXED_TIMING) || defined(SHOW_XRUN)
-  elapsedMicros t1;
+    elapsedMicros t1;
 #endif
-  dexed->GetSamples(AUDIO_BUFFER_SIZE, audio_buffer);
+    dexed->GetSamples(AUDIO_BUFFER_SIZE, audio_buffer);
 #ifdef SHOW_XRUN
-  uint32_t t2 = t1;
-  if (t2 > 2900)
-    Serial.println(F("xrun"));
+    uint32_t t2 = t1;
+    if (t2 > 2900)
+      Serial.println(F("xrun"));
 #endif
 #ifdef SHOW_DEXED_TIMING
-  Serial.println(t1, DEC);
+    Serial.println(t1, DEC);
 #endif
-  queue1.playBuffer();
+    queue1.playBuffer();
+  }
 }
 
 bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
@@ -140,7 +145,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   return (dexed->ProcessMidiMessage(type, data1, data2));
 }
 
-#ifdef SHOW_CPU_LOAD
+#ifdef SHOW_CPU_LOAD_MSEC
 void cpu_and_mem_usage(void)
 {
   Serial.print(F("CPU:"));
