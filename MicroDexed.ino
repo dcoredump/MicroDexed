@@ -10,33 +10,46 @@
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
-#include <QueueArray.h>
 #include <MIDI.h>
 #include "dexed.h"
 
 #define AUDIO_MEM 2
-#define AUDIO_BUFFER_SIZE 128
-#define SAMPLEAUDIO_BUFFER_SIZE 44100
-#define INIT_AUDIO_QUEUE 1
+#define SAMPLE_RATE 44100
+//#define INIT_AUDIO_QUEUE 1
 //#define SHOW_DEXED_TIMING 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
-#define MAX_NOTES 11
+#define MAX_NOTES 10
 #define TEST_MIDI 1
 #define TEST_NOTE 40
 #define TEST_VEL 60
+//#define ADD_EFFECT_CHORUS 1
 
 // GUItool: begin automatically generated code
-AudioPlayQueue           queue1;         //xy=266,484
-AudioOutputI2S           i2s1;           //xy=739,486
+AudioPlayQueue           queue1;         //xy=84,294
+AudioOutputI2S           i2s1;           //xy=961,276
+#ifdef ADD_EFFECT_CHORUS
+AudioEffectChorus        chorus1;        //xy=328,295
+AudioConnection          patchCord1(queue1, chorus1);
+AudioConnection          patchCord2(chorus1, 0, i2s1, 0);
+AudioConnection          patchCord3(chorus1, 0, i2s1, 1);
+#else
 AudioConnection          patchCord2(queue1, 0, i2s1, 0);
 AudioConnection          patchCord3(queue1, 0, i2s1, 1);
-AudioControlSGTL5000     sgtl5000_1;     //xy=384,610
+#endif
+AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 // GUItool: end automatically generated code
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
-Dexed* dexed = new Dexed(SAMPLEAUDIO_BUFFER_SIZE);
+Dexed* dexed = new Dexed(SAMPLE_RATE);
 IntervalTimer sched;
+
+#ifdef ADD_EFFECT_CHORUS
+// Number of samples in each delay line
+#define CHORUS_DELAY_LENGTH (16*AUDIO_BLOCK_SAMPLES)
+// Allocate the delay lines for left and right channels
+short delayline[CHORUS_DELAY_LENGTH];
+#endif
 
 void setup()
 {
@@ -68,7 +81,7 @@ void setup()
     int16_t* audio_buffer = queue1.getBuffer();
     if (audio_buffer != NULL)
     {
-      memset(audio_buffer, 0, sizeof(int16_t)*AUDIO_BUFFER_SIZE);
+      memset(audio_buffer, 0, sizeof(int16_t)*AUDIO_BLOCK_SAMPLES);
       queue1.playBuffer();
     }
   }
@@ -77,8 +90,11 @@ void setup()
   dexed->activate();
   dexed->setMaxNotes(MAX_NOTES);
 
-#ifdef TEST_MIDI
+#ifdef ADD_EFFECT_CHORUS
+  chorus1.begin(delayline, CHORUS_DELAY_LENGTH, 8);
+#endif
 
+#ifdef TEST_MIDI
   queue_midi_event(0x90, TEST_NOTE, TEST_VEL);            // 1
   queue_midi_event(0x90, TEST_NOTE + 5, TEST_VEL);        // 2
   queue_midi_event(0x90, TEST_NOTE + 8, TEST_VEL);        // 3
@@ -100,6 +116,8 @@ void setup()
 #ifdef SHOW_CPU_LOAD_MSEC
   sched.begin(cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
 #endif
+  Serial.print(F("AUDIO_BLOCK_SAMPLES="));
+  Serial.println(AUDIO_BLOCK_SAMPLES);
   Serial.println(F("setup end"));
   cpu_and_mem_usage();
 }
@@ -127,7 +145,7 @@ void loop()
 #if defined(SHOW_DEXED_TIMING) || defined(SHOW_XRUN)
     elapsedMicros t1;
 #endif
-    dexed->GetSamples(AUDIO_BUFFER_SIZE, audio_buffer);
+    dexed->GetSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
 #ifdef SHOW_XRUN
     uint32_t t2 = t1;
     if (t2 > 2900)
@@ -161,4 +179,3 @@ void cpu_and_mem_usage(void)
   AudioMemoryUsageMaxReset();
 }
 #endif
-
