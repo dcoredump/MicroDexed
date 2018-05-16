@@ -9,7 +9,6 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
-#include <SerialFlash.h>
 #include <MIDI.h>
 #include "dexed.h"
 
@@ -24,6 +23,16 @@
 #define TEST_NOTE 40
 #define TEST_VEL 60
 //#define ADD_EFFECT_CHORUS 1
+
+// Use these with the Teensy Audio Shield
+#define SDCARD_CS_PIN    10
+#define SDCARD_MOSI_PIN  7
+#define SDCARD_SCK_PIN   14
+
+// Use these with the Teensy 3.5 & 3.6 SD card
+//#define SDCARD_CS_PIN    BUILTIN_SDCARD
+//#define SDCARD_MOSI_PIN  11  // not actually used
+//#define SDCARD_SCK_PIN   13  // not actually used
 
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=84,294
@@ -43,6 +52,8 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 IntervalTimer sched;
+Sd2Card card;
+SdVolume volume;
 
 #ifdef ADD_EFFECT_CHORUS
 // Number of samples in each delay line
@@ -53,11 +64,38 @@ short delayline[CHORUS_DELAY_LENGTH];
 
 void setup()
 {
+
   //while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(115200);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz"));
   Serial.println(F("setup start"));
+
+  SPI.setMOSI(SDCARD_MOSI_PIN);
+  SPI.setSCK(SDCARD_SCK_PIN);
+  if (card.init(SPI_FULL_SPEED, SDCARD_CS_PIN)) {
+    Serial.println(F("SD card found."));
+  }
+  else
+  {
+    Serial.println(F("No SD card found."));
+  }
+
+  switch (card.type())
+  {
+    case SD_CARD_TYPE_SD1:
+    case SD_CARD_TYPE_SD2:
+      Serial.println(F("Card type is SD"));
+      break;
+    case SD_CARD_TYPE_SDHC:
+      Serial.println(F("Card type is SDHC"));
+      break;
+    default:
+      Serial.println(F("Card is an unknown type (maybe SDXC?)"));
+  }
+  if (!volume.init(card)) {
+    Serial.println(F("Unable to access the filesystem"));
+  }
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
@@ -179,3 +217,9 @@ void cpu_and_mem_usage(void)
   AudioMemoryUsageMaxReset();
 }
 #endif
+
+void spaces(int num) {
+  for (int i = 0; i < num; i++) {
+    Serial.print(" ");
+  }
+}
