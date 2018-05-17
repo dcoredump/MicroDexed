@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+#include "synth.h"
+
 class Freqlut {
  public:
-  static void init(double sample_rate);
+  static void init(FRAC_NUM sample_rate);
   static int32_t lookup(int32_t logfreq);
 };

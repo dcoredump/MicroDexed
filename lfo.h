@@ -18,7 +18,7 @@
 
 class Lfo {
  public:
-  static void init(double sample_rate);
+  static void init(FRAC_NUM sample_rate);
   void reset(const uint8_t params[6]);
 
   // result is 0..1 in Q24

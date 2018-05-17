@@ -23,7 +23,7 @@
 
 uint32_t Lfo::unit_;
 
-void Lfo::init(double sample_rate) {
+void Lfo::init(FRAC_NUM sample_rate) {
     // constant is 1 << 32 / 15.5s / 11
     Lfo::unit_ = (int32_t)(_N_ * 25190424 / sample_rate + 0.5);
 }

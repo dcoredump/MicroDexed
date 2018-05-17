@@ -21,7 +21,7 @@
 
 class PitchEnv {
  public:
-  static void init(double sample_rate);
+  static void init(FRAC_NUM sample_rate);
 
   // The rates and levels arrays are calibrated to match the Dx7 parameters
   // (ie, value 0..99).

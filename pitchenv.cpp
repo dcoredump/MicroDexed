@@ -19,7 +19,7 @@
 
 int PitchEnv::unit_;
 
-void PitchEnv::init(double sample_rate) {
+void PitchEnv::init(FRAC_NUM sample_rate) {
   unit_ = _N_ * (1 << 24) / (21.3 * sample_rate) + 0.5;
 }
 

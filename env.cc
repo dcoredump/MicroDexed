@@ -39,11 +39,11 @@ const int statics[] = {
     6615, 6615, 5512, 5512, 4410, 3969, 3969, 3439, 2866, 2690, 2249,
     1984, 1896, 1808, 1411, 1367, 1234, 1146, 926, 837, 837, 705,
     573, 573, 529, 441, 441
-    // and so on, I stopped measuring after R=76 (needs to be double-checked anyway)
+    // and so on, I stopped measuring after R=76 (needs to be FRAC_NUM-checked anyway)
 };
 #endif
 
-void Env::init_sr(double sampleRate) {
+void Env::init_sr(FRAC_NUM sampleRate) {
     sr_multiplier = (44100.0 / sampleRate) * (1<<24);
 }
 
@@ -128,7 +128,7 @@ void Env::advance(int newix) {
 #ifdef ACCURATE_ENVELOPE
         if (targetlevel_ == level_) {
             // approximate number of samples at 44.100 kHz to achieve the time
-            // empirically gathered using 2 TF1s, could probably use some double-checking
+            // empirically gathered using 2 TF1s, could probably use some FRAC_NUM-checking
             // and cleanup, but it's pretty close for now.
             int staticrate = rates_[ix_];
             staticrate += rate_scaling_; // needs to be checked, as well, but seems correct

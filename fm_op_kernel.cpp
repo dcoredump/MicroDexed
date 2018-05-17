@@ -212,7 +212,7 @@ void FmOpKernel::compute_pure(int32_t *output, int32_t phase0, int32_t freq,
 
 #if 0
 // Results: accuracy 370.0 mean, 15480 worst case (near freq = 0.5)
-// with double accuracy initialization: mean 1.55, worst 58 (near freq = 0)
+// with FRAC_NUM accuracy initialization: mean 1.55, worst 58 (near freq = 0)
 // with high accuracy: mean 4.2, worst 292 (near freq = 0.5)
 void FmOpKernel::compute_pure(int32_t *output, int32_t phase0, int32_t freq,
                               int32_t gain1, int32_t gain2, bool add) {
@@ -221,7 +221,7 @@ void FmOpKernel::compute_pure(int32_t *output, int32_t phase0, int32_t freq,
     int32_t phase = phase0;
 #ifdef DOUBLE_ACCURACY
     int32_t u = floor((1 << 30) * sin(phase * (M_PI / (1 << 23))) + 0.5);
-    double a_d = sin(freq * (M_PI / (1 << 24)));
+    FRAC_NUM a_d = sin(freq * (M_PI / (1 << 24)));
     int32_t v = floor((1LL << 31) * a_d * cos((phase - freq * 0.5) *
                                               (M_PI / (1 << 23))) + 0.5);
     int32_t aa = floor((1LL << 31) * a_d * a_d + 0.5);

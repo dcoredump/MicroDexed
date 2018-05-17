@@ -21,7 +21,7 @@
 #define MAX_NOTES 10
 #define TEST_MIDI 1
 #define TEST_NOTE 40
-#define TEST_VEL 60
+#define TEST_VEL 127
 //#define ADD_EFFECT_CHORUS 1
 
 // Use these with the Teensy Audio Shield
@@ -180,6 +180,9 @@ void loop()
         break;
     }
 
+    if(!queue1.available())
+      continue;
+      
 #if defined(SHOW_DEXED_TIMING) || defined(SHOW_XRUN)
     elapsedMicros t1;
 #endif

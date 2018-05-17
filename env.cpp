@@ -28,7 +28,7 @@ const int levellut[] = {
     0, 5, 9, 13, 17, 20, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 42, 43, 45, 46
 };
 
-void Env::init_sr(double sampleRate) {
+void Env::init_sr(FRAC_NUM sampleRate) {
     sr_multiplier = (44100.0 / sampleRate) * (1<<24);
 }
 

@@ -48,7 +48,7 @@ class Env {
   static int scaleoutlevel(int outlevel);
   void getPosition(char *step);
     
-  static void init_sr(double sample_rate);
+  static void init_sr(FRAC_NUM sample_rate);
   void transfer(Env &src);
     
  private:

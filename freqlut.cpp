@@ -32,9 +32,9 @@
 
 int32_t lut[N_SAMPLES + 1];
 
-void Freqlut::init(double sample_rate) {
-  double y = (1LL << (24 + MAX_LOGFREQ_INT)) / sample_rate;
-  double inc = pow(2, 1.0 / N_SAMPLES);
+void Freqlut::init(FRAC_NUM sample_rate) {
+  FRAC_NUM y = (1LL << (24 + MAX_LOGFREQ_INT)) / sample_rate;
+  FRAC_NUM inc = pow(2, 1.0 / N_SAMPLES);
   for (int i = 0; i < N_SAMPLES + 1; i++) {
     lut[i] = (int32_t)floor(y + 0.5);
     y *= inc;

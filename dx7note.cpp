@@ -45,7 +45,7 @@ int32_t osc_freq(int midinote, int mode, int coarse, int fine, int detune) {
   if (mode == 0) {
     logfreq = midinote_to_logfreq(midinote);
     // could use more precision, closer enough for now. those numbers comes from my DX7
-    double detuneRatio = 0.0209 * exp(-0.396 * (((float)logfreq) / (1 << 24))) / 7;
+    FRAC_NUM detuneRatio = 0.0209 * exp(-0.396 * (((float)logfreq) / (1 << 24))) / 7;
     logfreq += detuneRatio * logfreq * (detune - 7);
 
     logfreq += coarsemul[coarse & 31];

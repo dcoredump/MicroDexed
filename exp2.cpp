@@ -31,8 +31,8 @@
 int32_t exp2tab[EXP2_N_SAMPLES << 1];
 
 void Exp2::init() {
-  double inc = exp2(1.0 / EXP2_N_SAMPLES);
-  double y = 1 << 30;
+  FRAC_NUM inc = exp2(1.0 / EXP2_N_SAMPLES);
+  FRAC_NUM y = 1 << 30;
   for (int i = 0; i < EXP2_N_SAMPLES; i++) {
     exp2tab[(i << 1) + 1] = (int32_t)floor(y + 0.5);
     y *= inc;
@@ -45,23 +45,23 @@ void Exp2::init() {
 
 int32_t tanhtab[TANH_N_SAMPLES << 1];
 
-static double dtanh(double y) {
+static FRAC_NUM dtanh(FRAC_NUM y) {
   return 1 - y * y;
 }
 
 void Tanh::init() {
-  double step = 4.0 / TANH_N_SAMPLES;
-  double y = 0;
+  FRAC_NUM step = 4.0 / TANH_N_SAMPLES;
+  FRAC_NUM y = 0;
   for (int i = 0; i < TANH_N_SAMPLES; i++) {
     tanhtab[(i << 1) + 1] = (1 << 24) * y + 0.5;
     //printf("%d\n", tanhtab[(i << 1) + 1]);
     // Use a basic 4th order Runge-Kutte to compute tanh from its
     // differential equation.
-    double k1 = dtanh(y);
-    double k2 = dtanh(y + 0.5 * step * k1);
-    double k3 = dtanh(y + 0.5 * step * k2);
-    double k4 = dtanh(y + step * k3);
-    double dy = (step / 6) * (k1 + k4 + 2 * (k2 + k3));
+    FRAC_NUM k1 = dtanh(y);
+    FRAC_NUM k2 = dtanh(y + 0.5 * step * k1);
+    FRAC_NUM k3 = dtanh(y + 0.5 * step * k2);
+    FRAC_NUM k4 = dtanh(y + step * k3);
+    FRAC_NUM dy = (step / 6) * (k1 + k4 + 2 * (k2 + k3));
     y += dy;
   }
   for (int i = 0; i < TANH_N_SAMPLES - 1; i++) {
