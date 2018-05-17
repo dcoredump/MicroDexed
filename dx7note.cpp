@@ -26,7 +26,8 @@
 const int FEEDBACK_BITDEPTH = 8;
 
 int32_t midinote_to_logfreq(int midinote) {
-  const int32_t base = 50857777;  // (1 << 24) * (log(440) / log(2) - 69/12)
+  //const int32_t base = 50857777;  // (1 << 24) * (log(440) / log(2) - 69/12)
+  const int32_t base = 50857777;  // (1 << 24) * (logf(440) / logf(2) - 69/12)
   const int32_t step = (1 << 24) / 12;
   return base + step * midinote;
 }
@@ -51,7 +52,8 @@ int32_t osc_freq(int midinote, int mode, int coarse, int fine, int detune) {
     logfreq += coarsemul[coarse & 31];
     if (fine) {
       // (1 << 24) / log(2)
-      logfreq += (int32_t)floor(24204406.323123 * log(1 + 0.01 * fine) + 0.5);
+      //logfreq += (int32_t)floor(24204406.323123 * log(1 + 0.01 * fine) + 0.5);
+      logfreq += (int32_t)floor(24204406.323123 * logf(1 + 0.01 * fine) + 0.5);
     }
 
     // // This was measured at 7.213Hz per count at 9600Hz, but the exact
