@@ -14,14 +14,15 @@
 
 #define AUDIO_MEM 2
 #define SAMPLE_RATE 44100
-//#define INIT_AUDIO_QUEUE 1
+#define INIT_AUDIO_QUEUE 1
 //#define SHOW_DEXED_TIMING 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
 #define MAX_NOTES 10
 #define TEST_MIDI 1
 #define TEST_NOTE 40
-#define TEST_VEL 127
+#define TEST_VEL_MIN 60
+#define TEST_VEL_MAX 110
 //#define ADD_EFFECT_CHORUS 1
 
 // Use these with the Teensy Audio Shield
@@ -133,22 +134,25 @@ void setup()
 #endif
 
 #ifdef TEST_MIDI
-  queue_midi_event(0x90, TEST_NOTE, TEST_VEL);            // 1
-  queue_midi_event(0x90, TEST_NOTE + 5, TEST_VEL);        // 2
-  queue_midi_event(0x90, TEST_NOTE + 8, TEST_VEL);        // 3
-  queue_midi_event(0x90, TEST_NOTE + 12, TEST_VEL);       // 4
-  queue_midi_event(0x90, TEST_NOTE + 17, TEST_VEL);       // 5
-  queue_midi_event(0x90, TEST_NOTE + 20, TEST_VEL);       // 6
-  queue_midi_event(0x90, TEST_NOTE + 24, TEST_VEL);       // 7
-  queue_midi_event(0x90, TEST_NOTE + 29, TEST_VEL);       // 8
-  queue_midi_event(0x90, TEST_NOTE + 32, TEST_VEL);       // 9
-  queue_midi_event(0x90, TEST_NOTE + 37, TEST_VEL);       // 10
-  queue_midi_event(0x90, TEST_NOTE + 40, TEST_VEL);       // 11
-  queue_midi_event(0x90, TEST_NOTE + 44, TEST_VEL);       // 12
-  queue_midi_event(0x90, TEST_NOTE + 49, TEST_VEL);       // 13
-  queue_midi_event(0x90, TEST_NOTE + 52, TEST_VEL);       // 14
-  queue_midi_event(0x90, TEST_NOTE + 57, TEST_VEL);       // 15
-  queue_midi_event(0x90, TEST_NOTE + 60, TEST_VEL);       // 16
+  delay(200);
+  randomSeed(analogRead(A0));
+  queue_midi_event(0x90, TEST_NOTE, random(TEST_VEL_MIN, TEST_VEL_MAX));           // 1
+  queue_midi_event(0x90, TEST_NOTE + 5, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 2
+  queue_midi_event(0x90, TEST_NOTE + 8, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 3
+  queue_midi_event(0x90, TEST_NOTE + 12, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 4
+  queue_midi_event(0x90, TEST_NOTE + 17, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 5
+  queue_midi_event(0x90, TEST_NOTE + 20, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 6
+  queue_midi_event(0x90, TEST_NOTE + 24, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 7
+  queue_midi_event(0x90, TEST_NOTE + 29, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 8
+  queue_midi_event(0x90, TEST_NOTE + 32, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 9
+  queue_midi_event(0x90, TEST_NOTE + 37, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 10
+  queue_midi_event(0x90, TEST_NOTE + 40, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 11
+  queue_midi_event(0x90, TEST_NOTE + 44, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 12
+  queue_midi_event(0x90, TEST_NOTE + 49, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 13
+  queue_midi_event(0x90, TEST_NOTE + 52, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 14
+  queue_midi_event(0x90, TEST_NOTE + 57, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 15
+  queue_midi_event(0x90, TEST_NOTE + 60, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 16
+  delay(200);
 #endif
 
 #ifdef SHOW_CPU_LOAD_MSEC
@@ -180,9 +184,9 @@ void loop()
         break;
     }
 
-    if(!queue1.available())
+    if (!queue1.available())
       continue;
-      
+
 #if defined(SHOW_DEXED_TIMING) || defined(SHOW_XRUN)
     elapsedMicros t1;
 #endif
