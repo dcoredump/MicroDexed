@@ -72,29 +72,6 @@ class Dexed
     Controllers controllers;
     VoiceStatus voiceStatus;
 
-  protected:
-    //void onParam(uint8_t param_num,float param_val);
-    void keyup(uint8_t pitch);
-    void keydown(uint8_t pitch, uint8_t velo);
-
-
-    static const uint8_t MAX_ACTIVE_NOTES = 16;
-    uint8_t max_notes = MAX_ACTIVE_NOTES;
-    ProcessorVoice voices[MAX_ACTIVE_NOTES];
-    uint8_t currentNote;
-    bool sustain;
-    bool monoMode;
-    bool refreshVoice;
-    uint8_t engineType;
-    Lfo lfo;
-    FmCore* engineMsfa;
-    EngineMkI* engineMkI;
-    EngineOpl* engineOpl;
-
-  private:
-    uint8_t _k_rate_counter;
-    uint8_t _param_change_counter;
-
     uint8_t data[173] = {
       95, 29, 20, 50, 99, 95, 00, 00, 41, 00, 19, 00, 00, 03, 00, 06, 79, 00, 01, 00, 14, // OP6 eg_rate_1-4, level_1-4, kbd_lev_scl_brk_pt, kbd_lev_scl_lft_depth, kbd_lev_scl_rht_depth, kbd_lev_scl_lft_curve, kbd_lev_scl_rht_curve, kbd_rate_scaling, amp_mod_sensitivity, key_vel_sensitivity, operator_output_level, osc_mode, osc_freq_coarse, osc_freq_fine, osc_detune 
       95, 20, 20, 50, 99, 95, 00, 00, 00, 00, 00, 00, 00, 03, 00, 00, 99, 00, 01, 00, 00, // OP5
@@ -111,8 +88,31 @@ class Dexed
       00,                                                                                 // master tune
       01, 01, 01, 01, 01, 01,                                                             // OP1-6 enable
       16                                                                                  // number of voices
-    }; // INIT
+    }; // FM-Piano
+    
+  protected:
+    //void onParam(uint8_t param_num,float param_val);
+    void keyup(uint8_t pitch);
+    void keydown(uint8_t pitch, uint8_t velo);
 
+    static const uint8_t MAX_ACTIVE_NOTES = 16;
+    uint8_t max_notes = MAX_ACTIVE_NOTES;
+    ProcessorVoice voices[MAX_ACTIVE_NOTES];
+    uint8_t currentNote;
+    bool sustain;
+    bool monoMode;
+    bool refreshVoice;
+    uint8_t engineType;
+    Lfo lfo;
+    FmCore* engineMsfa;
+    EngineMkI* engineMkI;
+    EngineOpl* engineOpl;
+
+
+    
+  private:
+    uint8_t _k_rate_counter;
+    uint8_t _param_change_counter;
 };
 
 #endif  // PLUGINPROCESSOR_H_INCLUDED
