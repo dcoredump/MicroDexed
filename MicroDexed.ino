@@ -12,6 +12,8 @@
 #include <MIDI.h>
 #include "dexed.h"
 
+#define DEBUG 1
+#define SERIAL_SPEED 38400
 #define VOLUME 0.5
 #define SAMPLE_RATE 44100
 //#define INIT_AUDIO_QUEUE 1
@@ -70,8 +72,8 @@ short delayline[CHORUS_DELAY_LENGTH];
 void setup()
 {
   //while (!Serial) ; // wait for Arduino Serial Monitor
-  Serial.begin(115200);
-  delay(50);
+  Serial.begin(SERIAL_SPEED);
+  delay(250);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz"));
   Serial.println(F("setup start"));
@@ -86,7 +88,10 @@ void setup()
   {
     sd_card_available = true;
   }
-  //load_sysex_file("ROM1A.SYX");
+  load_sysex_file("ROM1A.SYX");
+#ifdef DEBUG
+  show_patch();
+#endif
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
@@ -235,7 +240,7 @@ void load_sysex_file(char *name)
           {
             Serial.println(entry.name());
             check_sysex(entry);
-            load_sysex(entry, 2);
+            load_sysex(entry, 5);
             entry.close();
             break;
           }
@@ -246,10 +251,105 @@ void load_sysex_file(char *name)
   }
 }
 
+#ifdef DEBUG
+void show_patch(void)
+{
+  uint8_t i;
+  char voicename[11];
+
+  memset(voicename, 0, sizeof(voicename));
+  for (i = 0; i < 6; i++)
+  {
+    Serial.print(F("OP"));
+    Serial.print(6 - i, DEC);
+    Serial.println(F(":"));
+    Serial.println(F("R1|R2|R3|R4|L1|L2|L3|L4 LEV_SCL_BRK_PT|SCL_LEFT_DEPTH|SCL_RGHT_DEPTH"));
+    Serial.print(dexed->data[(i * 21) + 0], DEC);
+    Serial.print(F(" "));
+    Serial.print(dexed->data[(i * 21) + 1], DEC);
+    Serial.print(F(" "));
+    Serial.print(dexed->data[(i * 21) + 2], DEC);
+    Serial.print(F(" "));
+    Serial.print(dexed->data[(i * 21) + 3], DEC);
+    Serial.print(F(" "));
+    Serial.print(dexed->data[(i * 21) + 4], DEC);
+    Serial.print(F(" "));
+    Serial.print(dexed->data[(i * 21) + 5], DEC);
+    Serial.print(F(" "));
+    Serial.print(dexed->data[(i * 21) + 6], DEC);
+    Serial.print(F(" "));
+    Serial.print(dexed->data[(i * 21) + 7], DEC);
+    Serial.print(F("        "));
+    Serial.print(dexed->data[(i * 21) + 8], DEC);
+    Serial.print(F("             "));
+    Serial.print(dexed->data[(i * 21) + 9], DEC);
+    Serial.print(F("             "));
+    Serial.println(dexed->data[(i * 21) + 10], DEC);
+    Serial.println(F("SCL_L_CURVE|SCL_R_CURVE|OSC_DET|RT_SCALE|VEL_SENS|MOD_SENS|OUT_LEV|FRQ_C|FRQ_F|MOD"));
+    Serial.print(F("      "));
+    Serial.print(dexed->data[(i * 21) + 11], DEC);
+    Serial.print(F("         "));
+    Serial.print(dexed->data[(i * 21) + 12], DEC);
+    Serial.print(F("         "));
+    Serial.print(dexed->data[(i * 21) + 13], DEC);
+    Serial.print(F("        "));
+    Serial.print(dexed->data[(i * 21) + 14], DEC);
+    Serial.print(F("        "));
+    Serial.print(dexed->data[(i * 21) + 15], DEC);
+    Serial.print(F("        "));
+    Serial.print(dexed->data[(i * 21) + 16], DEC);
+    Serial.print(F("        "));
+    Serial.print(dexed->data[(i * 21) + 17], DEC);
+    Serial.print(F("    "));
+    Serial.print(dexed->data[(i * 21) + 18], DEC);
+    Serial.print(F("     "));
+    Serial.print(dexed->data[(i * 21) + 19], DEC);
+    Serial.print(F("     "));
+    Serial.println(dexed->data[(i * 21) + 20], DEC);
+  }
+  Serial.println(F("PR1|PR2|PR3|PR4|PL1|PL2|PL3|PL4"));
+  Serial.print(F(" "));
+  for (i = 0; i < 8; i++)
+  {
+    Serial.print(dexed->data[125 + i], DEC);
+    Serial.print(F("  "));
+  }
+  Serial.println();
+  Serial.print(F("ALG: "));
+  Serial.println(dexed->data[133], DEC);
+  Serial.print(F("OSC_SYNC: "));
+  Serial.println(dexed->data[134], DEC);
+  Serial.print(F("FB: "));
+  Serial.println(dexed->data[135], DEC);
+  Serial.print(F("LFO SPD: "));
+  Serial.println(dexed->data[136], DEC);
+  Serial.print(F("LFO_DLY: "));
+  Serial.println(dexed->data[137], DEC);
+  Serial.print(F("LFO PMD: "));
+  Serial.println(dexed->data[138], DEC);
+  Serial.print(F("LFO_AMD: "));
+  Serial.println(dexed->data[139], DEC);
+  Serial.print(F("PMS: "));
+  Serial.println(dexed->data[140], DEC);
+  Serial.print(F("LFO_WAVEFRM: "));
+  Serial.println(dexed->data[141], DEC);
+  Serial.print(F("LFO_SYNC: "));
+  Serial.println(dexed->data[142], DEC);
+  Serial.print(F("TRNSPSE: "));
+  Serial.println(dexed->data[143], DEC);
+  Serial.print(F("NAME: "));
+  strncpy(voicename, (char *)&dexed->data[144], sizeof(voicename) - 1);
+  Serial.print(F("["));
+  Serial.print(voicename);
+  Serial.println(F("]"));
+
+  Serial.println();
+}
+#endif
+
 bool load_sysex(File sysex, uint8_t voice_number)
 {
   File file;
-  char voice_name[11];
 
   if (file = SD.open(sysex.name()))
   {
@@ -260,7 +360,7 @@ bool load_sysex(File sysex, uint8_t voice_number)
     file.seek(6 + (voice_number * 128));
     for (i = 0; i < 6; i++)
     {
-      file.read(p_data + (i * 17), 11); // R1, R2, R3, R4, L1, L2, L3, L4, LEV SCL BRK PT, SCL LEFT DEPTH, SCL RGHT DEPTH
+      file.read(p_data + (i * 21), 11); // R1, R2, R3, R4, L1, L2, L3, L4, LEV SCL BRK PT, SCL LEFT DEPTH, SCL RGHT DEPTH
       tmp = file.read();
       *(p_data + 11 + (i * 21)) = (tmp & 0x0c) >> 2;
       *(p_data + 12 + (i * 21)) = (tmp & 0x3);
@@ -274,7 +374,7 @@ bool load_sysex(File sysex, uint8_t voice_number)
       tmp = file.read();
       *(p_data + 18 + (i * 21)) = (tmp & 0x3e) >> 1;
       *(p_data + 19 + (i * 21)) = (tmp & 0x01);
-      file.read(p_data + (i * 21), 1); // FREQ FINE
+      file.read(p_data + 20 + (i * 21), 1); // FREQ FINE
     }
     file.read(p_data + 125, 8); // PR1, PR2, PR3, PR4, PL1, PL2, PL3, PL4
     tmp = file.read();
@@ -284,24 +384,21 @@ bool load_sysex(File sysex, uint8_t voice_number)
     *(p_data + 135) = (tmp & 0x07);
     file.read(p_data + 136, 4); // LFS, LFD, LPMD, LAMD
     tmp = file.read();
-    *(p_data + 140) = (tmp & 0x60) >> 5;
-    *(p_data + 141) = (tmp & 0x1e) >> 1;
+    *(p_data + 140) = (tmp & 0x30) >> 4;
+    *(p_data + 141) = (tmp & 0x0e) >> 1;
     *(p_data + 142) = (tmp & 0x01);
     file.read(p_data + 143, 1); // TRNSP
-    file.read(p_data + 144, 10);
-    strncpy(voice_name, (char*)(p_data + 144), 10);
-    voice_name[10] = '\0';
-
+    file.read(p_data + 144, 10); // TRNSP
     *(p_data + 166) = 1;
     *(p_data + 167) = 1;
     *(p_data + 168) = 1;
     *(p_data + 169) = 1;
     *(p_data + 170) = 1;
     *(p_data + 171) = 1;
-    *(p_data + 172) = 16;
+    *(p_data + 172) = MAX_NOTES;
   }
-
-  Serial.println(voice_name);
+  dexed->activate();
+  dexed->setMaxNotes(dexed->data[172]);
   return (true);
 }
 
