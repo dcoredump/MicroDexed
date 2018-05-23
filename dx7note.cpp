@@ -27,7 +27,7 @@ const int FEEDBACK_BITDEPTH = 8;
 
 int32_t midinote_to_logfreq(int midinote) {
   //const int32_t base = 50857777;  // (1 << 24) * (log(440) / log(2) - 69/12)
-  const int32_t base = 50857777;  // (1 << 24) * (logf(440) / logf(2) - 69/12)
+  const int32_t base = 50857777;  // (1 << 24) * (LOG_FUNC(440) / LOG_FUNC(2) - 69/12)
   const int32_t step = (1 << 24) / 12;
   return base + step * midinote;
 }
@@ -46,14 +46,15 @@ int32_t osc_freq(int midinote, int mode, int coarse, int fine, int detune) {
   if (mode == 0) {
     logfreq = midinote_to_logfreq(midinote);
     // could use more precision, closer enough for now. those numbers comes from my DX7
-    FRAC_NUM detuneRatio = 0.0209 * exp(-0.396 * (((float)logfreq) / (1 << 24))) / 7;
+    //FRAC_NUM detuneRatio = 0.0209 * exp(-0.396 * (((float)logfreq) / (1 << 24))) / 7;
+    FRAC_NUM detuneRatio = 0.0209 * EXP_FUNC(-0.396 * (((float)logfreq) / (1 << 24))) / 7;
     logfreq += detuneRatio * logfreq * (detune - 7);
 
     logfreq += coarsemul[coarse & 31];
     if (fine) {
       // (1 << 24) / log(2)
       //logfreq += (int32_t)floor(24204406.323123 * log(1 + 0.01 * fine) + 0.5);
-      logfreq += (int32_t)floor(24204406.323123 * logf(1 + 0.01 * fine) + 0.5);
+      logfreq += (int32_t)floor(24204406.323123 * LOG_FUNC(1 + 0.01 * fine) + 0.5);
     }
 
     // // This was measured at 7.213Hz per count at 9600Hz, but the exact
@@ -245,7 +246,8 @@ void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Co
         uint32_t sensamp = (uint32_t)(((uint64_t) amd_mod) * ((uint64_t) ampmodsens_[op]) >> 24);
 
         // TODO: mehhh.. this needs some real tuning.
-        uint32_t pt = exp(((float)sensamp) / 262144 * 0.07 + 12.2);
+        //uint32_t pt = exp(((float)sensamp) / 262144 * 0.07 + 12.2);
+        uint32_t pt = EXP_FUNC(((float)sensamp) / 262144 * 0.07 + 12.2);
         uint32_t ldiff = (uint32_t)(((uint64_t)level) * (((uint64_t)pt << 4)) >> 28);
         level -= ldiff;
       }

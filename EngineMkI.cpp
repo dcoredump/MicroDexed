@@ -38,7 +38,7 @@
 #if _MSC_VER < 1800
     FRAC_NUM log2(FRAC_NUM n)  {  
         //return log(n) / log(2.0);  
-        return logf(n) / logf(2.0);  
+        return LOG_FUNC(n) / LOG_FUNC(2.0);  
     }
     FRAC_NUM round(FRAC_NUM n) {
         return n < 0.0 ? ceil(n - 0.5) : floor(n + 0.5);
@@ -83,7 +83,7 @@ EngineMkI::EngineMkI() {
     
     for(int i=0;i<SINLOG_TABLESIZE;i++) {
         //float x1 = sin(((0.5+i)/bitReso) * M_PI/2.0);
-        float x1 = sinf(((0.5+i)/bitReso) * M_PI/2.0);
+        float x1 = SIN_FUNC(((0.5+i)/bitReso) * M_PI/2.0);
         sinLogTable[i] = round(-1024 * log2(x1));
     }
     

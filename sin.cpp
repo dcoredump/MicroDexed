@@ -31,9 +31,9 @@ int32_t sintab[SIN_N_SAMPLES + 1];
 void Sin::init() {
   FRAC_NUM dphase = 2 * M_PI / SIN_N_SAMPLES;
   //int32_t c = (int32_t)floor(cos(dphase) * (1 << 30) + 0.5);
-  int32_t c = (int32_t)floor(cosf(dphase) * (1 << 30) + 0.5);
+  int32_t c = (int32_t)floor(COS_FUNC(dphase) * (1 << 30) + 0.5);
   //int32_t s = (int32_t)floor(sin(dphase) * (1 << 30) + 0.5);
-  int32_t s = (int32_t)floor(sinf(dphase) * (1 << 30) + 0.5);
+  int32_t s = (int32_t)floor(SIN_FUNC(dphase) * (1 << 30) + 0.5);
   int32_t u = 1 << 30;
   int32_t v = 0;
   for (int i = 0; i < SIN_N_SAMPLES / 2; i++) {

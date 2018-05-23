@@ -63,5 +63,9 @@ inline static T max(const T& a, const T& b) {
 #define QER(n,b) ( ((float)n)/(1<<b) )
 
 #define FRAC_NUM float
+#define SIN_FUNC sinf
+#define COS_FUNC cosf
+#define LOG_FUNC logf
+#define EXP_FUNC expf
 
 #endif  // __SYNTH_H
