@@ -12,7 +12,12 @@
 #include <MIDI.h>
 #include "dexed.h"
 
-#define DEBUG 1
+//#define TEST_MIDI 1
+#define TEST_NOTE 40
+#define TEST_VEL_MIN 60
+#define TEST_VEL_MAX 110
+
+//#define DEBUG 1
 #define SERIAL_SPEED 38400
 #define VOLUME 0.5
 #define SAMPLE_RATE 44100
@@ -21,10 +26,6 @@
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
 #define MAX_NOTES 10
-//#define TEST_MIDI 1
-#define TEST_NOTE 40
-#define TEST_VEL_MIN 60
-#define TEST_VEL_MAX 110
 //#define ADD_EFFECT_CHORUS 1
 #ifdef ADD_EFFECT_CHORUS
 #define AUDIO_MEM 6
@@ -88,10 +89,6 @@ void setup()
   {
     sd_card_available = true;
   }
-  load_sysex_file("ROM1A.SYX");
-#ifdef DEBUG
-  show_patch();
-#endif
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
@@ -121,12 +118,29 @@ void setup()
   }
 #endif
 
+  load_sysex("ROM1A.SYX", 5);
+#ifdef DEBUG
+  show_patch();
+#endif
   dexed->activate();
   dexed->setMaxNotes(MAX_NOTES);
 
 #ifdef ADD_EFFECT_CHORUS
   chorus1.begin(delayline, CHORUS_DELAY_LENGTH, 8);
 #endif
+
+#ifdef SHOW_CPU_LOAD_MSEC
+  sched.begin(cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
+#endif
+  Serial.print(F("AUDIO_BLOCK_SAMPLES="));
+  Serial.println(AUDIO_BLOCK_SAMPLES);
+  Serial.println(F("setup end"));
+  cpu_and_mem_usage();
+
+  //dexed->setEngineType(DEXED_ENGINE_MODERN);
+  //dexed->setEngineType(DEXED_ENGINE_MARKI);
+  //dexed->setEngineType(DEXED_ENGINE_OPL);
+
 
 #ifdef TEST_MIDI
   delay(200);
@@ -150,13 +164,6 @@ void setup()
   delay(200);
 #endif
 
-#ifdef SHOW_CPU_LOAD_MSEC
-  sched.begin(cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
-#endif
-  Serial.print(F("AUDIO_BLOCK_SAMPLES="));
-  Serial.println(AUDIO_BLOCK_SAMPLES);
-  Serial.println(F("setup end"));
-  cpu_and_mem_usage();
 }
 
 void loop()
@@ -220,7 +227,7 @@ void cpu_and_mem_usage(void)
 }
 #endif
 
-void load_sysex_file(char *name)
+void load_sysex(char *name, uint8_t voice_number)
 {
   File root;
 
@@ -240,7 +247,7 @@ void load_sysex_file(char *name)
           {
             Serial.println(entry.name());
             check_sysex(entry);
-            load_sysex(entry, 5);
+            load_sysex_voice(entry, voice_number);
             entry.close();
             break;
           }
@@ -342,12 +349,18 @@ void show_patch(void)
   Serial.print(F("["));
   Serial.print(voicename);
   Serial.println(F("]"));
+  for (i = 155; i < 173; i++)
+  {
+    Serial.print(i, DEC);
+    Serial.print(F(": "));
+    Serial.println(dexed->data[i]);
+  }
 
   Serial.println();
 }
 #endif
 
-bool load_sysex(File sysex, uint8_t voice_number)
+bool load_sysex_voice(File sysex, uint8_t voice_number)
 {
   File file;
 
@@ -357,13 +370,15 @@ bool load_sysex(File sysex, uint8_t voice_number)
     uint8_t i;
     uint8_t tmp;
 
+    dexed->notes_off();
+
     file.seek(6 + (voice_number * 128));
     for (i = 0; i < 6; i++)
     {
       file.read(p_data + (i * 21), 11); // R1, R2, R3, R4, L1, L2, L3, L4, LEV SCL BRK PT, SCL LEFT DEPTH, SCL RGHT DEPTH
       tmp = file.read();
-      *(p_data + 11 + (i * 21)) = (tmp & 0x0c) >> 2;
-      *(p_data + 12 + (i * 21)) = (tmp & 0x3);
+      *(p_data + 11 + (i * 21)) = (tmp & 0x3);
+      *(p_data + 12 + (i * 21)) = (tmp & 0x0c) >> 2;
       tmp = file.read();
       *(p_data + 13 + (i * 21)) = (tmp & 0x78) >> 3;
       *(p_data + 14 + (i * 21)) = (tmp & 0x07);
@@ -396,10 +411,23 @@ bool load_sysex(File sysex, uint8_t voice_number)
     *(p_data + 170) = 1;
     *(p_data + 171) = 1;
     *(p_data + 172) = MAX_NOTES;
+
+    dexed->setOPs((*(p_data + 166) << 5) | (*(p_data + 167) << 4) | (*(p_data + 168) << 3) | (*(p_data + 166) << 2) | (*(p_data + 170) << 1) | *(p_data + 171));
+    dexed->setMaxNotes(dexed->data[172]);
+    dexed->panic();
+    dexed->doRefreshVoice();
+
+    char voicename[11];
+    memset(voicename, 0, sizeof(voicename));
+    strncpy(voicename, (char *)&dexed->data[144], sizeof(voicename) - 1);
+    Serial.print(F("["));
+    Serial.print(voicename);
+    Serial.println(F("]"));
+
+    return (true);
   }
-  dexed->activate();
-  dexed->setMaxNotes(dexed->data[172]);
-  return (true);
+  else
+    return (false);
 }
 
 bool check_sysex(File sysex)

@@ -1,6 +1,6 @@
 /**
 
-   Copyright (c) 2016-2017 Holger Wirtz <dcoredump@googlemail.com>
+   Copyright (c) 2016-2018 Holger Wirtz <dcoredump@googlemail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -90,11 +90,7 @@ Dexed::Dexed(int rate)
 
   sustain = false;
 
-  memset(&voiceStatus, 0, sizeof(VoiceStatus));
-
   setEngineType(DEXED_ENGINE_MODERN);
-  //setEngineType(DEXED_ENGINE_MARKI);
-  //setEngineType(DEXED_ENGINE_OPL);
 }
 
 Dexed::~Dexed()
@@ -119,7 +115,7 @@ void Dexed::activate(void)
 
 void Dexed::deactivate(void)
 {
-  ; // nothing to do...
+  panic();
 }
 
 void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
@@ -352,6 +348,15 @@ void Dexed::keyup(uint8_t pitch) {
     voices[note].dx7_note->keyup();
   }
   TRACE("Bye");
+}
+
+void Dexed::doRefreshVoice(void)
+{
+  refreshVoice = true;
+}
+void Dexed::setOPs(uint8_t ops)
+{
+  controllers.opSwitch = ops;
 }
 
 /*

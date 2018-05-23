@@ -31,8 +31,6 @@
 #include "EngineMkI.h"
 #include "EngineOpl.h"
 
-#define PARAM_CHANGE_LEVEL 10 // when a sound change is recognized
-
 struct ProcessorVoice {
   uint8_t midi_note;
   uint8_t velocity;
@@ -69,8 +67,10 @@ class Dexed
     void panic(void);
     void notes_off(void);
     void setMaxNotes(uint8_t n);
+    void doRefreshVoice(void);
+    void setOPs(uint8_t ops);
+    
     Controllers controllers;
-    VoiceStatus voiceStatus;
 
     uint8_t data[173] = {
       95, 29, 20, 50, 99, 95, 00, 00, 41, 00, 19, 00, 00, 03, 00, 06, 79, 00, 01, 00, 14, // OP6 eg_rate_1-4, level_1-4, kbd_lev_scl_brk_pt, kbd_lev_scl_lft_depth, kbd_lev_scl_rht_depth, kbd_lev_scl_lft_curve, kbd_lev_scl_rht_curve, kbd_rate_scaling, amp_mod_sensitivity, key_vel_sensitivity, operator_output_level, osc_mode, osc_freq_coarse, osc_freq_fine, osc_detune 
@@ -107,12 +107,6 @@ class Dexed
     FmCore* engineMsfa;
     EngineMkI* engineMkI;
     EngineOpl* engineOpl;
-
-
-    
-  private:
-    uint8_t _k_rate_counter;
-    uint8_t _param_change_counter;
 };
 
 #endif  // PLUGINPROCESSOR_H_INCLUDED
