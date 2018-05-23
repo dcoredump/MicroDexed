@@ -61,7 +61,6 @@ class Dexed
     void setEngineType(uint8_t tp);
     bool isMonoMode(void);
     void setMonoMode(bool mode);
-    void set_params(void);
     void GetSamples(uint16_t n_samples, int16_t* buffer);
     bool ProcessMidiMessage(uint8_t type, uint8_t data1, uint8_t data2);
     void panic(void);

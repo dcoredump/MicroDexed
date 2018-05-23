@@ -19,25 +19,20 @@
 
 //#define DEBUG 1
 #define SERIAL_SPEED 38400
-#define VOLUME 0.5
+#define VOLUME 0.2
 #define SAMPLE_RATE 44100
+#define DEXED_ENGINE DEXED_ENGINE_MODERN
 //#define INIT_AUDIO_QUEUE 1
 //#define SHOW_DEXED_TIMING 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
 #define MAX_NOTES 10
-//#define ADD_EFFECT_CHORUS 1
-#ifdef ADD_EFFECT_CHORUS
-#define AUDIO_MEM 6
-#else
 #define AUDIO_MEM 2
-#endif
 
 // Use these with the Teensy Audio Shield
 #define SDCARD_CS_PIN    10
 #define SDCARD_MOSI_PIN  7
 #define SDCARD_SCK_PIN   14
-
 // Use these with the Teensy 3.5 & 3.6 SD card
 //#define SDCARD_CS_PIN    BUILTIN_SDCARD
 //#define SDCARD_MOSI_PIN  11  // not actually used
@@ -46,15 +41,8 @@
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=84,294
 AudioOutputI2S           i2s1;           //xy=961,276
-#ifdef ADD_EFFECT_CHORUS
-AudioEffectChorus        chorus1;        //xy=328,295
-AudioConnection          patchCord1(queue1, chorus1);
-AudioConnection          patchCord2(chorus1, 0, i2s1, 0);
-AudioConnection          patchCord3(chorus1, 0, i2s1, 1);
-#else
 AudioConnection          patchCord2(queue1, 0, i2s1, 0);
 AudioConnection          patchCord3(queue1, 0, i2s1, 1);
-#endif
 AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 // GUItool: end automatically generated code
 
@@ -62,13 +50,6 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 IntervalTimer sched;
 bool sd_card_available = false;
-
-#ifdef ADD_EFFECT_CHORUS
-// Number of samples in each delay line
-#define CHORUS_DELAY_LENGTH (16*AUDIO_BLOCK_SAMPLES)
-// Allocate the delay lines for left and right channels
-short delayline[CHORUS_DELAY_LENGTH];
-#endif
 
 void setup()
 {
@@ -124,10 +105,7 @@ void setup()
 #endif
   dexed->activate();
   dexed->setMaxNotes(MAX_NOTES);
-
-#ifdef ADD_EFFECT_CHORUS
-  chorus1.begin(delayline, CHORUS_DELAY_LENGTH, 8);
-#endif
+  dexed->setEngineType(DEXED_ENGINE);
 
 #ifdef SHOW_CPU_LOAD_MSEC
   sched.begin(cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
@@ -136,11 +114,6 @@ void setup()
   Serial.println(AUDIO_BLOCK_SAMPLES);
   Serial.println(F("setup end"));
   cpu_and_mem_usage();
-
-  //dexed->setEngineType(DEXED_ENGINE_MODERN);
-  //dexed->setEngineType(DEXED_ENGINE_MARKI);
-  //dexed->setEngineType(DEXED_ENGINE_OPL);
-
 
 #ifdef TEST_MIDI
   delay(200);
@@ -163,7 +136,6 @@ void setup()
   queue_midi_event(0x90, TEST_NOTE + 60, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 16
   delay(200);
 #endif
-
 }
 
 void loop()
@@ -412,10 +384,11 @@ bool load_sysex_voice(File sysex, uint8_t voice_number)
     *(p_data + 171) = 1;
     *(p_data + 172) = MAX_NOTES;
 
-    dexed->setOPs((*(p_data + 166) << 5) | (*(p_data + 167) << 4) | (*(p_data + 168) << 3) | (*(p_data + 166) << 2) | (*(p_data + 170) << 1) | *(p_data + 171));
-    dexed->setMaxNotes(dexed->data[172]);
     dexed->panic();
+    dexed->setOPs((*(p_data + 166) << 5) | (*(p_data + 167) << 4) | (*(p_data + 168) << 3) | (*(p_data + 166) << 2) | (*(p_data + 170) << 1) | *(p_data + 171));
+    dexed->setMaxNotes(*(p_data + 172));
     dexed->doRefreshVoice();
+    dexed->activate();
 
     char voicename[11];
     memset(voicename, 0, sizeof(voicename));
