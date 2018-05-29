@@ -118,7 +118,7 @@ void Dexed::deactivate(void)
   panic();
 }
 
-void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
+void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 {
   uint16_t i;
 
@@ -165,7 +165,7 @@ void Dexed::GetSamples(uint16_t n_samples, int16_t* buffer)
   }
 }
 
-bool Dexed::ProcessMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
+bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
 {
   switch (type & 0xf0) {
     case 0x80 :
