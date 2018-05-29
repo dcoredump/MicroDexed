@@ -12,12 +12,12 @@
 #include <MIDI.h>
 #include "dexed.h"
 
-//#define TEST_MIDI 1
+#define TEST_MIDI 1
 #define TEST_NOTE 40
 #define TEST_VEL_MIN 60
 #define TEST_VEL_MAX 110
 
-//#define DEBUG 1
+#define DEBUG 1
 #define SERIAL_SPEED 38400
 #define VOLUME 0.2
 #define SAMPLE_RATE 44100
@@ -26,7 +26,7 @@
 //#define SHOW_DEXED_TIMING 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
-#define MAX_NOTES 10
+#define MAX_NOTES 16
 #define AUDIO_MEM 2
 
 // Use these with the Teensy Audio Shield
@@ -99,7 +99,7 @@ void setup()
   }
 #endif
 
-  load_sysex("ROM1A.SYX", 5);
+  load_sysex("ROM1A.SYX", 20);
 #ifdef DEBUG
   show_patch();
 #endif
@@ -349,39 +349,50 @@ bool load_sysex_voice(File sysex, uint8_t voice_number)
     {
       file.read(p_data + (i * 21), 11); // R1, R2, R3, R4, L1, L2, L3, L4, LEV SCL BRK PT, SCL LEFT DEPTH, SCL RGHT DEPTH
       tmp = file.read();
-      *(p_data + 11 + (i * 21)) = (tmp & 0x3);
-      *(p_data + 12 + (i * 21)) = (tmp & 0x0c) >> 2;
+      *(p_data + 11 + (i * 21)) = (tmp & 0x3);        // SCL LEFT CURVE
+      *(p_data + 12 + (i * 21)) = (tmp & 0x0c) >> 2;  // SCL RGHT CURVE
       tmp = file.read();
-      *(p_data + 13 + (i * 21)) = (tmp & 0x78) >> 3;
-      *(p_data + 14 + (i * 21)) = (tmp & 0x07);
+      *(p_data + 20 + (i * 21)) = (tmp & 0x78) >> 3;  // DETUNE
+      *(p_data + 13 + (i * 21)) = (tmp & 0x07);       // RS
       tmp = file.read();
-      *(p_data + 15 + (i * 21)) = (tmp & 0x1c) >> 2;
-      *(p_data + 16 + (i * 21)) = (tmp & 0x03);
-      *(p_data + 17 + (i * 21)) = file.read();
+      *(p_data + 15 + (i * 21)) = (tmp & 0x1c) >> 2;  // KVS
+      *(p_data + 14 + (i * 21)) = (tmp & 0x03);       // AMS
+      *(p_data + 16 + (i * 21)) = file.read();        // OUTPUT LVL
       tmp = file.read();
-      *(p_data + 18 + (i * 21)) = (tmp & 0x3e) >> 1;
-      *(p_data + 19 + (i * 21)) = (tmp & 0x01);
-      file.read(p_data + 20 + (i * 21), 1); // FREQ FINE
+      *(p_data + 18 + (i * 21)) = (tmp & 0x3e) >> 1;  // FREQ_CORSE
+      *(p_data + 17 + (i * 21)) = (tmp & 0x01);       // OP MODE
+      file.read(p_data + 19 + (i * 21), 1);           // FREQ FINE
     }
     file.read(p_data + 125, 8); // PR1, PR2, PR3, PR4, PL1, PL2, PL3, PL4
     tmp = file.read();
-    *(p_data + 133) = (tmp & 0x1f);
+    *(p_data + 134) = (tmp & 0x1f);         // ALG
     tmp = file.read();
-    *(p_data + 134) = (tmp & 0x08) >> 3;
-    *(p_data + 135) = (tmp & 0x07);
-    file.read(p_data + 136, 4); // LFS, LFD, LPMD, LAMD
+    *(p_data + 136) = (tmp & 0x08) >> 3;    // OKS
+    *(p_data + 135) = (tmp & 0x07);         // FB
+    file.read(p_data + 137, 4);             // LFS, LFD, LPMD, LAMD
     tmp = file.read();
-    *(p_data + 140) = (tmp & 0x30) >> 4;
-    *(p_data + 141) = (tmp & 0x0e) >> 1;
-    *(p_data + 142) = (tmp & 0x01);
-    file.read(p_data + 143, 1); // TRNSP
-    file.read(p_data + 144, 10); // TRNSP
-    *(p_data + 166) = 1;
-    *(p_data + 167) = 1;
-    *(p_data + 168) = 1;
-    *(p_data + 169) = 1;
-    *(p_data + 170) = 1;
-    *(p_data + 171) = 1;
+    *(p_data + 143) = (tmp & 0x30) >> 4;    // LFO PITCH MOD DEP
+    *(p_data + 142) = (tmp & 0x0e) >> 1;    // LFO WAV
+    *(p_data + 141) = (tmp & 0x01);         // LFO SYNC
+    file.read(p_data + 144, 1);             // TRNSP
+    file.read(p_data + 145, 10);            // NAME
+    *(p_data + 155) = 1;        // PBEND RANGE
+    *(p_data + 156) = 0;        // PBEND STEP
+    *(p_data + 157) = 99;       // MOD RANGE
+    *(p_data + 158) = 0;        // MOD ASSIGN
+    *(p_data + 159) = 99;       // FOOT CTRL RANGE
+    *(p_data + 160) = 0;        // FOOT CTRL ASSIGN
+    *(p_data + 161) = 99;       // BREATH CTRL RANGE
+    *(p_data + 162) = 0;        // BREATH CTRL ASSIGN
+    *(p_data + 163) = 99;       // AT RANGE
+    *(p_data + 164) = 0;        // AT ASSIGN
+    *(p_data + 165) = 0;        // MASTER TUNE
+    *(p_data + 166) = 1;        // OP1 ENABLE
+    *(p_data + 167) = 1;        // OP2 ENABLE
+    *(p_data + 168) = 1;        // OP3 ENABLE
+    *(p_data + 169) = 1;        // OP4 ENABLE
+    *(p_data + 170) = 1;        // OP5 ENABLE
+    *(p_data + 171) = 1;        // OP6 ENABLE   
     *(p_data + 172) = MAX_NOTES;
 
     dexed->panic();
