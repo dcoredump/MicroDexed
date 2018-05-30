@@ -97,29 +97,22 @@ EngineMkI::EngineMkI() {
     char buffer[4096];
     int pos = 0;
     
-    TRACE("****************************************");
     for(int i=0;i<SINLOG_TABLESIZE;i++) {
         pos += sprintf(buffer+pos, "%d ", sinLogTable[i]);
         if ( pos > 90 ) {
-            TRACE("SINLOGTABLE: %s" ,buffer);
             buffer[0] = 0;
             pos = 0;
         }
     }
-    TRACE("SINLOGTABLE: %s", buffer);
     buffer[0] = 0;
     pos = 0;
-    TRACE("----------------------------------------");    
     for(int i=0;i<SINEXP_TABLESIZE;i++) {
         pos += sprintf(buffer+pos, "%d ", sinExpTable[i]);
         if ( pos > 90 ) {
-            TRACE("SINEXTTABLE: %s" ,buffer);
             buffer[0] = 0;
             pos = 0;
         }
     }
-    TRACE("SINEXTTABLE: %s", buffer);
-    TRACE("****************************************");
 #endif
 }
 
@@ -141,7 +134,6 @@ inline int32_t mkiSin(int32_t phase, uint16_t env) {
         if ( expValShow < 0 ) {
             expValShow = (expValShow + 0x7FFF) * -1;
         }
-        //TRACE(",%d,%d,%d,%d,%d,%d", phase >> (22 - SINLOG_BITDEPTH), env, expValShow, ( expVal & SINEXP_FILTER ) ^ SINEXP_FILTER, resultB4, result);
     }
 #endif
     

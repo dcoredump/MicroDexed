@@ -1,25 +1,30 @@
-/**
-
-   Copyright (c) 2016-2018 Holger Wirtz <dcoredump@googlemail.com>
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-
-*/
+/*
+ * MicroDexed
+ *
+ * MicroDexed is a port of the Dexed sound engine
+ * (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
+ * 
+ * (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+ *
+ */
 
 #include "synth.h"
 #include "dexed.h"
+#include "config.h"
 #include "EngineMkI.h"
 #include "EngineOpl.h"
 #include "fm_core.h"
@@ -27,7 +32,6 @@
 #include "sin.h"
 #include "freqlut.h"
 #include "controllers.h"
-#include "trace.h"
 #include <unistd.h>
 #include <limits.h>
 
@@ -47,22 +51,6 @@ Dexed::Dexed(int rate)
   engineMkI = new EngineMkI;
   engineOpl = new EngineOpl;
   engineMsfa = new FmCore;
-
-  /*
-    if(!(engineMkI=new (std::nothrow) EngineMkI))
-    TRACE("Cannot not create engine EngineMkI");
-    if(!(engineOpl=new (std::nothrow) EngineOpl))
-    {
-    delete(engineMkI);
-    TRACE("Cannot not create engine EngineOpl");
-    }
-    if(!(engineMsfa=new (std::nothrow) FmCore))
-    {
-    delete(engineMkI);
-    delete(engineOpl);
-    TRACE("Cannot create engine FmCore");
-    }
-  */
 
   for (i = 0; i < MAX_ACTIVE_NOTES; i++) {
     voices[i].dx7_note = new Dx7Note;
@@ -169,12 +157,10 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
 {
   switch (type & 0xf0) {
     case 0x80 :
-      //TRACE("MIDI keyup event: %d", data1);
       keyup(data1);
       return (false);
       break;
     case 0x90 :
-      //TRACE("MIDI keydown event: %d %d", data1, data2);
       keydown(data1, data2);
       return (false);
       break;
@@ -184,22 +170,18 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
 
         switch (ctrl) {
           case 1:
-            //TRACE("MIDI modwheel event: %d %d", ctrl, value);
             controllers.modwheel_cc = value;
             controllers.refresh();
             break;
           case 2:
-            //TRACE("MIDI breath event: %d %d", ctrl, value);
             controllers.breath_cc = value;
             controllers.refresh();
             break;
           case 4:
-            //TRACE("MIDI footsw event: %d %d", ctrl, value);
             controllers.foot_cc = value;
             controllers.refresh();
             break;
           case 64:
-            //TRACE("MIDI sustain event: %d %d", ctrl, value);
             sustain = value > 63;
             if (!sustain) {
               for (uint8_t note = 0; note < max_notes; note++) {
@@ -211,12 +193,10 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
             }
             break;
           case 120:
-            //TRACE("MIDI all-sound-off: %d %d", ctrl, value);
             panic();
             return (true);
             break;
           case 123:
-            //TRACE("MIDI all-notes-off: %d %d", ctrl, value);
             notes_off();
             return (true);
             break;
@@ -230,28 +210,22 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
 
     // channel aftertouch
     case 0xd0 :
-      //TRACE("MIDI aftertouch 0xd0 event: %d %d", data1);
       controllers.aftertouch_cc = data1;
       controllers.refresh();
       break;
     // pitchbend
     case 0xe0 :
-      //TRACE("MIDI pitchbend 0xe0 event: %d %d", data1, data2);
       controllers.values_[kControllerPitch] = data1 | (data2 << 7);
       break;
 
     default:
-      //TRACE("MIDI event unknown: cmd=%d, val1=%d, val2=%d", cmd, data1, data2);
       break;
   }
 
-  TRACE("Bye");
   return (false);
 }
 
 void Dexed::keydown(uint8_t pitch, uint8_t velo) {
-  TRACE("Hi");
-  TRACE("pitch=%d, velo=%d\n", pitch, velo);
   if ( velo == 0 ) {
     keyup(pitch);
     return;
@@ -302,13 +276,9 @@ void Dexed::keydown(uint8_t pitch, uint8_t velo) {
   }
 
   voices[note].live = true;
-  TRACE("Bye");
 }
 
 void Dexed::keyup(uint8_t pitch) {
-  TRACE("Hi");
-  TRACE("pitch=%d\n", pitch);
-
   pitch += data[144] - 24;
 
   uint8_t note;
@@ -321,7 +291,6 @@ void Dexed::keyup(uint8_t pitch) {
 
   // note not found ?
   if ( note >= max_notes ) {
-    TRACE("note-off not found???");
     return;
   }
 
@@ -347,7 +316,6 @@ void Dexed::keyup(uint8_t pitch) {
   } else {
     voices[note].dx7_note->keyup();
   }
-  TRACE("Bye");
 }
 
 void Dexed::doRefreshVoice(void)
@@ -366,7 +334,6 @@ void Dexed::setOPs(uint8_t ops)
 
   if (param_val != data_float[param_num])
   {
-    TRACE("Parameter %d change from %f to %f", param_num, data_float[param_num], param_val);
   #ifdef DEBUG
     uint8_t tmp = data[param_num];
   #endif
@@ -445,7 +412,6 @@ void Dexed::setOPs(uint8_t ops)
         break;
     }
 
-    TRACE("Done: Parameter %d changed from %d to %d", param_num, tmp, data[param_num]);
   }
   }
 */
@@ -455,22 +421,17 @@ uint8_t Dexed::getEngineType() {
 }
 
 void Dexed::setEngineType(uint8_t tp) {
-  TRACE("settings engine %d", tp);
-
   if (engineType == tp)
     return;
 
   switch (tp)  {
     case DEXED_ENGINE_MARKI:
-      TRACE("DEXED_ENGINE_MARKI:%d", DEXED_ENGINE_MARKI);
       controllers.core = engineMkI;
       break;
     case DEXED_ENGINE_OPL:
-      TRACE("DEXED_ENGINE_OPL:%d", DEXED_ENGINE_OPL);
       controllers.core = engineOpl;
       break;
     default:
-      TRACE("DEXED_ENGINE_MODERN:%d", DEXED_ENGINE_MODERN);
       controllers.core = engineMsfa;
       tp = DEXED_ENGINE_MODERN;
       break;
