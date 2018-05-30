@@ -19,7 +19,7 @@
 
 #define DEBUG 1
 #define SERIAL_SPEED 38400
-#define VOLUME 0.2
+#define VOLUME 0.1
 #define SAMPLE_RATE 44100
 #define DEXED_ENGINE DEXED_ENGINE_MODERN
 //#define SHOW_DEXED_TIMING 1
@@ -89,7 +89,7 @@ void setup()
   AudioMemoryUsageMaxReset();
 #endif
 
-  load_sysex("ROM1A.SYX", 20);
+  load_sysex("ROM1A.SYX", 6);
 #ifdef DEBUG
   show_patch();
 #endif
@@ -106,17 +106,32 @@ void setup()
 #ifdef TEST_MIDI
   Serial.println(F("MIDI test enabled"));
   sched_note_on.begin(note_on, 2000000);
-  sched_note_off.begin(note_off, 1333333);
+  sched_note_off.begin(note_off, 6333333);
 #endif
 
   Serial.println(F("setup end"));
   cpu_and_mem_usage();
+
+#ifdef TEST_MIDI
+  //dexed->data[139] = 99; // full pitch mod sense!
+  //dexed->data[143] = 99; // full pitch mod depth!
+  //dexed->data[158] = 7; // mod wheel assign all
+  //dexed->data[160] = 7; // foot ctrl assign all
+  //dexed->data[162] = 7; // breath ctrl assign all
+  //dexed->data[164] = 7; // at ctrl assign all
+
+  //queue_midi_event(0xb0, 1, 99); // test mod wheel
+  //queue_midi_event(0xb0, 2, 99); // test breath ctrl
+  //queue_midi_event(0xb0, 4, 99); // test food switch
+  //queue_midi_event(0xd0, 4, 99); // test at
+  //queue_midi_event(0xe0, 0xff, 0xff); // test pitch bend
+#endif
 }
 
 void loop()
 {
   int16_t* audio_buffer; // pointer to 128 * int16_t (=256 bytes!)
-  bool break_for_calculation;
+  bool break_for_calculation=false;
 
   while (42 == 42) // DON'T PANIC!
   {
@@ -126,11 +141,20 @@ void loop()
       Serial.println(F("audio_buffer allocation problems!"));
     }
 
-    while (MIDI.read())
+    while (usbMIDI.read())
     {
-      break_for_calculation = dexed->processMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
+      break_for_calculation = dexed->processMidiMessage(usbMIDI.getType(), usbMIDI.getData1(), usbMIDI.getData2());
       if (break_for_calculation == true)
         break;
+    }
+    if (!break_for_calculation)
+    {
+      while (MIDI.read())
+      {
+        break_for_calculation = dexed->processMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
+        if (break_for_calculation == true)
+          break;
+      }
     }
 
     if (!queue1.available())
@@ -288,7 +312,7 @@ bool load_sysex_voice(File sysex, uint8_t voice_number)
     *(p_data + 135) = (tmp & 0x07);         // FB
     file.read(p_data + 137, 4);             // LFS, LFD, LPMD, LAMD
     tmp = file.read();
-    *(p_data + 143) = (tmp & 0x30) >> 4;    // LFO PITCH MOD DEP
+    *(p_data + 143) = (tmp & 0x30) >> 4;    // LFO PITCH MOD SENS
     *(p_data + 142) = (tmp & 0x0e) >> 1;    // LFO WAV
     *(p_data + 141) = (tmp & 0x01);         // LFO SYNC
     file.read(p_data + 144, 1);             // TRNSP
@@ -320,7 +344,7 @@ bool load_sysex_voice(File sysex, uint8_t voice_number)
 #ifdef DEBUG
     char voicename[11];
     memset(voicename, 0, sizeof(voicename));
-    strncpy(voicename, (char *)&dexed->data[144], sizeof(voicename) - 1);
+    strncpy(voicename, (char *)&dexed->data[145], sizeof(voicename) - 1);
     Serial.print(F("["));
     Serial.print(voicename);
     Serial.println(F("]"));
@@ -412,7 +436,7 @@ void show_patch(void)
     Serial.print(dexed->data[(i * 21) + 9], DEC);
     Serial.print(F("             "));
     Serial.println(dexed->data[(i * 21) + 10], DEC);
-    Serial.println(F("SCL_L_CURVE|SCL_R_CURVE|RT_SCALE| AMS | KVS |OUT_LEV|OP_MOD|FRQ_C|FRQ_F"));
+    Serial.println(F("SCL_L_CURVE|SCL_R_CURVE|RT_SCALE| AMS | KVS |OUT_LEV|OP_MOD|FRQ_C|FRQ_F|DETUNE"));
     Serial.print(F("      "));
     Serial.print(dexed->data[(i * 21) + 11], DEC);
     Serial.print(F("         "));
@@ -421,11 +445,11 @@ void show_patch(void)
     Serial.print(dexed->data[(i * 21) + 13], DEC);
     Serial.print(F("        "));
     Serial.print(dexed->data[(i * 21) + 14], DEC);
-    Serial.print(F("        "));
+    Serial.print(F("     "));
     Serial.print(dexed->data[(i * 21) + 15], DEC);
-    Serial.print(F("        "));
+    Serial.print(F("      "));
     Serial.print(dexed->data[(i * 21) + 16], DEC);
-    Serial.print(F("        "));
+    Serial.print(F("      "));
     Serial.print(dexed->data[(i * 21) + 17], DEC);
     Serial.print(F("    "));
     Serial.print(dexed->data[(i * 21) + 18], DEC);
@@ -460,10 +484,10 @@ void show_patch(void)
   Serial.println(dexed->data[141], DEC);
   Serial.print(F("LFO_WAVEFRM: "));
   Serial.println(dexed->data[142], DEC);
-  Serial.print(F("LFO_PMD: "));
+  Serial.print(F("LFO_PMS: "));
   Serial.println(dexed->data[143], DEC);
   Serial.print(F("TRNSPSE: "));
-  Serial.println(dexed->data[143], DEC);
+  Serial.println(dexed->data[144], DEC);
   Serial.print(F("NAME: "));
   strncpy(voicename, (char *)&dexed->data[144], sizeof(voicename) - 1);
   Serial.print(F("["));
