@@ -1,26 +1,26 @@
 /*
- * MicroDexed
- *
- * MicroDexed is a port of the Dexed sound engine
- * (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
- * 
- * (c)2018 H. Wirtz <wirtz@parasitstudio.de>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
- *
- */
+   MicroDexed
+
+   MicroDexed is a port of the Dexed sound engine
+   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
+
+   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+*/
 
 #include <Audio.h>
 #include <Wire.h>
@@ -125,7 +125,7 @@ void setup()
 void loop()
 {
   int16_t* audio_buffer; // pointer to 128 * int16_t (=256 bytes!)
-  bool break_for_calculation=false;
+  bool break_for_calculation = false;
 
   while (42 == 42) // DON'T PANIC!
   {
@@ -249,85 +249,85 @@ void show_patch(void)
     Serial.print(6 - i, DEC);
     Serial.println(F(":"));
     Serial.println(F("R1|R2|R3|R4|L1|L2|L3|L4 LEV_SCL_BRK_PT|SCL_LEFT_DEPTH|SCL_RGHT_DEPTH"));
-    Serial.print(dexed->data[(i * 21) + 0], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_R1], DEC);
     Serial.print(F(" "));
-    Serial.print(dexed->data[(i * 21) + 1], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_R2], DEC);
     Serial.print(F(" "));
-    Serial.print(dexed->data[(i * 21) + 2], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_R3], DEC);
     Serial.print(F(" "));
-    Serial.print(dexed->data[(i * 21) + 3], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_R4], DEC);
     Serial.print(F(" "));
-    Serial.print(dexed->data[(i * 21) + 4], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_L1], DEC);
     Serial.print(F(" "));
-    Serial.print(dexed->data[(i * 21) + 5], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_L2], DEC);
     Serial.print(F(" "));
-    Serial.print(dexed->data[(i * 21) + 6], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_L3], DEC);
     Serial.print(F(" "));
-    Serial.print(dexed->data[(i * 21) + 7], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_L4], DEC);
     Serial.print(F("        "));
-    Serial.print(dexed->data[(i * 21) + 8], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_LEV_SCL_BRK_PT], DEC);
     Serial.print(F("             "));
-    Serial.print(dexed->data[(i * 21) + 9], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_SCL_LEFT_DEPTH], DEC);
     Serial.print(F("             "));
-    Serial.println(dexed->data[(i * 21) + 10], DEC);
+    Serial.println(dexed->data[(i * 21) + DEXED_OP_SCL_RGHT_DEPTH], DEC);
     Serial.println(F("SCL_L_CURVE|SCL_R_CURVE|RT_SCALE| AMS | KVS |OUT_LEV|OP_MOD|FRQ_C|FRQ_F|DETUNE"));
     Serial.print(F("      "));
-    Serial.print(dexed->data[(i * 21) + 11], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_SCL_LEFT_CURVE], DEC);
     Serial.print(F("         "));
-    Serial.print(dexed->data[(i * 21) + 12], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_SCL_RGHT_CURVE], DEC);
     Serial.print(F("         "));
-    Serial.print(dexed->data[(i * 21) + 13], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_OSC_RATE_SCALE], DEC);
     Serial.print(F("        "));
-    Serial.print(dexed->data[(i * 21) + 14], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_AMP_MOD_SENS], DEC);
     Serial.print(F("     "));
-    Serial.print(dexed->data[(i * 21) + 15], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_KEY_VEL_SENS], DEC);
     Serial.print(F("      "));
-    Serial.print(dexed->data[(i * 21) + 16], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_OUTPUT_LEV], DEC);
     Serial.print(F("      "));
-    Serial.print(dexed->data[(i * 21) + 17], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_OSC_MODE], DEC);
     Serial.print(F("    "));
-    Serial.print(dexed->data[(i * 21) + 18], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_FREQ_COARSE], DEC);
     Serial.print(F("     "));
-    Serial.print(dexed->data[(i * 21) + 19], DEC);
+    Serial.print(dexed->data[(i * 21) + DEXED_OP_FREQ_FINE], DEC);
     Serial.print(F("     "));
-    Serial.println(dexed->data[(i * 21) + 20], DEC);
+    Serial.println(dexed->data[(i * 21) + DEXED_OP_OSC_DETUNE], DEC);
   }
   Serial.println(F("PR1|PR2|PR3|PR4|PL1|PL2|PL3|PL4"));
   Serial.print(F(" "));
   for (i = 0; i < 8; i++)
   {
-    Serial.print(dexed->data[125 + i], DEC);
+    Serial.print(dexed->data[DEXED_VOICE_OFFSET + i], DEC);
     Serial.print(F("  "));
   }
   Serial.println();
   Serial.print(F("ALG: "));
-  Serial.println(dexed->data[134], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_ALGORITHM], DEC);
   Serial.print(F("FB: "));
-  Serial.println(dexed->data[135], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_FEEDBACK], DEC);
   Serial.print(F("OKS: "));
-  Serial.println(dexed->data[136], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_OSC_KEY_SYNC], DEC);
   Serial.print(F("LFO SPD: "));
-  Serial.println(dexed->data[137], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_LFO_SPEED], DEC);
   Serial.print(F("LFO_DLY: "));
-  Serial.println(dexed->data[138], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_LFO_DELAY], DEC);
   Serial.print(F("LFO PMD: "));
-  Serial.println(dexed->data[139], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_LFO_PITCH_MOD_DEP], DEC);
   Serial.print(F("LFO_AMD: "));
-  Serial.println(dexed->data[140], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_LFO_AMP_MOD_DEP], DEC);
   Serial.print(F("LFO_SYNC: "));
-  Serial.println(dexed->data[141], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_LFO_SYNC], DEC);
   Serial.print(F("LFO_WAVEFRM: "));
-  Serial.println(dexed->data[142], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_LFO_WAVE], DEC);
   Serial.print(F("LFO_PMS: "));
-  Serial.println(dexed->data[143], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_LFO_PITCH_MOD_SENS], DEC);
   Serial.print(F("TRNSPSE: "));
-  Serial.println(dexed->data[144], DEC);
+  Serial.println(dexed->data[DEXED_VOICE_OFFSET + DEXED_TRANSPOSE], DEC);
   Serial.print(F("NAME: "));
-  strncpy(voicename, (char *)&dexed->data[144], sizeof(voicename) - 1);
+  strncpy(voicename, (char *)&dexed->data[DEXED_VOICE_OFFSET + DEXED_NAME], sizeof(voicename) - 1);
   Serial.print(F("["));
   Serial.print(voicename);
   Serial.println(F("]"));
-  for (i = 155; i < 173; i++)
+  for (i = DEXED_VOICE_OFFSET + DEXED_NAME; i < DEXED_VOICE_OFFSET + DEXED_NAME + 10 ; i++)
   {
     Serial.print(i, DEC);
     Serial.print(F(": "));

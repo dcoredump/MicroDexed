@@ -1,26 +1,26 @@
 /*
- * MicroDexed
- *
- * MicroDexed is a port of the Dexed sound engine
- * (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
- * 
- * (c)2018 H. Wirtz <wirtz@parasitstudio.de>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
- *
- */
+   MicroDexed
+
+   MicroDexed is a port of the Dexed sound engine
+   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
+
+   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+*/
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -68,64 +68,92 @@ bool load_sysex_voice(File sysex, uint8_t voice_number)
   if (file = SD.open(sysex.name()))
   {
     uint8_t* p_data = dexed->data;
-    uint8_t i;
+    uint8_t op;
     uint8_t tmp;
 
     dexed->notes_off();
 
     file.seek(6 + (voice_number * 128));
-    for (i = 0; i < 6; i++)
+    for (op = 0; op < 6; op++)
     {
-      file.read(p_data + (i * 21), 11); // R1, R2, R3, R4, L1, L2, L3, L4, LEV SCL BRK PT, SCL LEFT DEPTH, SCL RGHT DEPTH
+      //  DEXED_OP_EG_R1,           // 0
+      //	DEXED_OP_EG_R2,           // 1
+      //	DEXED_OP_EG_R3,           // 2
+      //	DEXED_OP_EG_R4,           // 3
+      //	DEXED_OP_EG_L1,           // 4
+      //	DEXED_OP_EG_L2,           // 5
+      //	DEXED_OP_EG_L3,           // 6
+      //	DEXED_OP_EG_L4,           // 7
+      //	DEXED_OP_LEV_SCL_BRK_PT,  // 8
+      //	DEXED_OP_SCL_LEFT_DEPTH,  // 9
+      //	DEXED_OP_SCL_RGHT_DEPTH,  // 10
+      file.read(p_data + (op * 21) + DEXED_OP_EG_R1, 11);
       tmp = file.read();
-      *(p_data + 11 + (i * 21)) = (tmp & 0x3);        // SCL LEFT CURVE
-      *(p_data + 12 + (i * 21)) = (tmp & 0x0c) >> 2;  // SCL RGHT CURVE
+      *(p_data + DEXED_OP_SCL_LEFT_CURVE + (op * 21)) = (tmp & 0x3);
+      *(p_data + DEXED_OP_SCL_RGHT_CURVE + (op * 21)) = (tmp & 0x0c) >> 2;
       tmp = file.read();
-      *(p_data + 20 + (i * 21)) = (tmp & 0x78) >> 3;  // DETUNE
-      *(p_data + 13 + (i * 21)) = (tmp & 0x07);       // RS
+      *(p_data + DEXED_OP_OSC_DETUNE + (op * 21)) = (tmp & 0x78) >> 3;
+      *(p_data + DEXED_OP_OSC_RATE_SCALE + (op * 21)) = (tmp & 0x07);
       tmp = file.read();
-      *(p_data + 15 + (i * 21)) = (tmp & 0x1c) >> 2;  // KVS
-      *(p_data + 14 + (i * 21)) = (tmp & 0x03);       // AMS
-      *(p_data + 16 + (i * 21)) = file.read();        // OUTPUT LVL
+      *(p_data + DEXED_OP_KEY_VEL_SENS + (op * 21)) = (tmp & 0x1c) >> 2;
+      *(p_data + DEXED_OP_AMP_MOD_SENS + (op * 21)) = (tmp & 0x03);
+      *(p_data + DEXED_OP_OUTPUT_LEV + (op * 21)) = file.read();
       tmp = file.read();
-      *(p_data + 18 + (i * 21)) = (tmp & 0x3e) >> 1;  // FREQ_CORSE
-      *(p_data + 17 + (i * 21)) = (tmp & 0x01);       // OP MODE
-      file.read(p_data + 19 + (i * 21), 1);           // FREQ FINE
+      *(p_data + DEXED_OP_FREQ_COARSE + (op * 21)) = (tmp & 0x3e) >> 1;
+      *(p_data + DEXED_OP_OSC_MODE + (op * 21)) = (tmp & 0x01);
+      file.read(p_data + DEXED_OP_FREQ_FINE + (op * 21), 1);
     }
-    file.read(p_data + 125, 8); // PR1, PR2, PR3, PR4, PL1, PL2, PL3, PL4
+    //  DEXED_PITCH_EG_R1,        // 0
+    //  DEXED_PITCH_EG_R2,        // 1
+    //  DEXED_PITCH_EG_R3,        // 2
+    //  DEXED_PITCH_EG_R4,        // 3
+    //  DEXED_PITCH_EG_L1,        // 4
+    //  DEXED_PITCH_EG_L2,        // 5
+    //  DEXED_PITCH_EG_L3,        // 6
+    //  DEXED_PITCH_EG_L4,        // 7
+    file.read(p_data + DEXED_VOICE_OFFSET + DEXED_PITCH_EG_R1, 8);
     tmp = file.read();
-    *(p_data + 134) = (tmp & 0x1f);         // ALG
+    *(p_data + DEXED_VOICE_OFFSET + DEXED_ALGORITHM) = (tmp & 0x1f);
     tmp = file.read();
-    *(p_data + 136) = (tmp & 0x08) >> 3;    // OKS
-    *(p_data + 135) = (tmp & 0x07);         // FB
-    file.read(p_data + 137, 4);             // LFS, LFD, LPMD, LAMD
+    *(p_data + DEXED_VOICE_OFFSET + DEXED_OSC_KEY_SYNC) = (tmp & 0x08) >> 3;
+    *(p_data + DEXED_VOICE_OFFSET + DEXED_FEEDBACK) = (tmp & 0x07);
+    //  DEXED_LFO_SPEED,          // 11
+    //  DEXED_LFO_DELAY,          // 12
+    //  DEXED_LFO_PITCH_MOD_DEP,  // 13
+    //  DEXED_LFO_AMP_MOD_DEP,    // 14
+    file.read(p_data + DEXED_VOICE_OFFSET + DEXED_LFO_SPEED, 4);
     tmp = file.read();
-    *(p_data + 143) = (tmp & 0x30) >> 4;    // LFO PITCH MOD SENS
-    *(p_data + 142) = (tmp & 0x0e) >> 1;    // LFO WAV
-    *(p_data + 141) = (tmp & 0x01);         // LFO SYNC
-    file.read(p_data + 144, 1);             // TRNSP
-    file.read(p_data + 145, 10);            // NAME
-    *(p_data + 155) = 1;        // PBEND RANGE
-    *(p_data + 156) = 0;        // PBEND STEP
-    *(p_data + 157) = 99;       // MOD RANGE
-    *(p_data + 158) = 0;        // MOD ASSIGN
-    *(p_data + 159) = 99;       // FOOT CTRL RANGE
-    *(p_data + 160) = 0;        // FOOT CTRL ASSIGN
-    *(p_data + 161) = 99;       // BREATH CTRL RANGE
-    *(p_data + 162) = 0;        // BREATH CTRL ASSIGN
-    *(p_data + 163) = 99;       // AT RANGE
-    *(p_data + 164) = 0;        // AT ASSIGN
-    *(p_data + 165) = 0;        // MASTER TUNE
-    *(p_data + 166) = 1;        // OP1 ENABLE
-    *(p_data + 167) = 1;        // OP2 ENABLE
-    *(p_data + 168) = 1;        // OP3 ENABLE
-    *(p_data + 169) = 1;        // OP4 ENABLE
-    *(p_data + 170) = 1;        // OP5 ENABLE
-    *(p_data + 171) = 1;        // OP6 ENABLE
-    *(p_data + 172) = MAX_NOTES;
+    *(p_data + DEXED_VOICE_OFFSET + DEXED_LFO_PITCH_MOD_SENS) = (tmp & 0x30) >> 4;
+    *(p_data + DEXED_VOICE_OFFSET + DEXED_LFO_WAVE) = (tmp & 0x0e) >> 1;
+    *(p_data + DEXED_VOICE_OFFSET + DEXED_LFO_SYNC) = (tmp & 0x01);
+    file.read(p_data + DEXED_VOICE_OFFSET + DEXED_TRANSPOSE, 1);
+    file.read(p_data + DEXED_VOICE_OFFSET + DEXED_NAME, 10);
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE) = 1;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP) = 0;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE) = 99;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN) = 0;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE) = 99;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN) = 0;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE) = 99;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN) = 0;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE) = 99;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN) = 0;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE) = 0;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP1_ENABLE) = 1;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP2_ENABLE) = 1;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP3_ENABLE) = 1;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP4_ENABLE) = 1;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP5_ENABLE) = 1;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP6_ENABLE) = 1;
+    *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MAX_NOTES) = MAX_NOTES;
 
-    dexed->setOPs((*(p_data + 166) << 5) | (*(p_data + 167) << 4) | (*(p_data + 168) << 3) | (*(p_data + 166) << 2) | (*(p_data + 170) << 1) | *(p_data + 171));
-    dexed->setMaxNotes(*(p_data + 172));
+    dexed->setOPs((*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP1_ENABLE) << 5) |
+                  (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP2_ENABLE) << 4) |
+                  (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP3_ENABLE) << 3) |
+                  (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP4_ENABLE) << 2) |
+                  (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP5_ENABLE) << 1) |
+                  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP6_ENABLE ));
+    dexed->setMaxNotes(*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MAX_NOTES));
     dexed->doRefreshVoice();
     dexed->activate();
 

@@ -10,7 +10,7 @@
 #define TEST_VEL_MIN 60
 #define TEST_VEL_MAX 110
 
-//#define DEBUG 1
+#define DEBUG 1
 #define SERIAL_SPEED 38400
 #define VOLUME 0.1
 #define SAMPLE_RATE 44100
