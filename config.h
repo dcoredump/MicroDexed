@@ -1,11 +1,28 @@
-//
-// MicroDexed
-//
-// A port of the Dexed sound engine (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
-// (c)2018 H. Wirtz <wirtz@parasitstudio.de>
-//
+/*
+   MicroDexed
 
-//#define TEST_MIDI 1
+   MicroDexed is a port of the Dexed sound engine
+   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
+
+   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+*/
+
+#define TEST_MIDI 1
 #define TEST_NOTE 40
 #define TEST_VEL_MIN 60
 #define TEST_VEL_MAX 110

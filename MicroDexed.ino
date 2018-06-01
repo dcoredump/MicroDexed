@@ -46,6 +46,7 @@ bool sd_card_available = false;
 #ifdef TEST_MIDI
 IntervalTimer sched_note_on;
 IntervalTimer sched_note_off;
+uint8_t _voice_counter=0;
 #endif
 
 void setup()
@@ -83,7 +84,6 @@ void setup()
   AudioMemoryUsageMaxReset();
 #endif
 
-  load_sysex("ROM1A.SYX", 10);
 #ifdef DEBUG
   show_patch();
 #endif
@@ -113,7 +113,6 @@ void setup()
   //dexed->data[160] = 7; // foot ctrl assign all
   //dexed->data[162] = 7; // breath ctrl assign all
   //dexed->data[164] = 7; // at ctrl assign all
-
   //queue_midi_event(0xb0, 1, 99); // test mod wheel
   //queue_midi_event(0xb0, 2, 99); // test breath ctrl
   //queue_midi_event(0xb0, 4, 99); // test food switch
@@ -211,6 +210,7 @@ void note_off(void)
   queue_midi_event(0x80, TEST_NOTE + 52, 0);      // 14
   queue_midi_event(0x80, TEST_NOTE + 57, 0);      // 15
   queue_midi_event(0x80, TEST_NOTE + 60, 0);      // 16
+  load_sysex("ROM1A.SYX", ++_voice_counter%32);
 }
 #endif
 
@@ -327,7 +327,7 @@ void show_patch(void)
   Serial.print(F("["));
   Serial.print(voicename);
   Serial.println(F("]"));
-  for (i = DEXED_VOICE_OFFSET + DEXED_NAME; i < DEXED_VOICE_OFFSET + DEXED_NAME + 10 ; i++)
+  for (i = DEXED_GLOBAL_PARAMETER_OFFSET; i <= DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MAX_NOTES; i++)
   {
     Serial.print(i, DEC);
     Serial.print(F(": "));

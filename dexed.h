@@ -137,10 +137,11 @@ class Dexed
     void getSamples(uint16_t n_samples, int16_t* buffer);
     bool processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2);
     void panic(void);
-    void notes_off(void);
+    void notesOff(void);
     void setMaxNotes(uint8_t n);
     void doRefreshVoice(void);
     void setOPs(uint8_t ops);
+    bool loadSysexVoice(uint8_t* data);
 
     Controllers controllers;
 
