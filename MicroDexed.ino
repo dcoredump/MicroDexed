@@ -27,10 +27,12 @@
 #include <SPI.h>
 #include <SD.h>
 #include <MIDI.h>
-#include <USBHost_t36.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
 #include "config.h"
+#ifdef USE_ONBOARD_USB_HOST
+#include <USBHost_t36.h>
+#endif
 
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=84,294
@@ -49,6 +51,7 @@ MIDIDevice midi_usb(usb_host);
 #endif
 
 bool sd_card_available = false;
+bool master_key_enabled = false;
 #ifdef TEST_MIDI
 IntervalTimer sched_note_on;
 IntervalTimer sched_note_off;
@@ -59,7 +62,7 @@ void setup()
 {
   //while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(SERIAL_SPEED);
-  delay(50);
+  delay(200);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz"));
   Serial.println(F("setup start"));
@@ -77,6 +80,7 @@ void setup()
   }
   else
   {
+    Serial.println(F("SD card found."));
     sd_card_available = true;
   }
 
@@ -89,22 +93,18 @@ void setup()
   sgtl5000_1.enable();
   sgtl5000_1.volume(VOLUME);
 
-  // Initialize processor and memory measurements
 #ifdef SHOW_CPU_LOAD_MSEC
+  // Initialize processor and memory measurements
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
 #endif
 
-#ifdef DEBUG
-  show_patch();
-#endif
   //dexed->activate();
   //dexed->setMaxNotes(MAX_NOTES);
   //dexed->setEngineType(DEXED_ENGINE);
 
-#ifdef SHOW_CPU_LOAD_MSEC
-  sched.begin(cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
-#endif
+  sched.begin(cleanup, SHOW_CPU_LOAD_MSEC * 1000);
+
   Serial.print(F("AUDIO_BLOCK_SAMPLES="));
   Serial.println(AUDIO_BLOCK_SAMPLES);
 
@@ -118,12 +118,12 @@ void setup()
   cpu_and_mem_usage();
 
 #ifdef TEST_MIDI
-  //dexed->data[139] = 99; // full pitch mod sense!
-  //dexed->data[143] = 99; // full pitch mod depth!
-  //dexed->data[158] = 7; // mod wheel assign all
-  //dexed->data[160] = 7; // foot ctrl assign all
-  //dexed->data[162] = 7; // breath ctrl assign all
-  //dexed->data[164] = 7; // at ctrl assign all
+  //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_DEP] = 99;           // full pitch mod depth
+  //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_SENS] = 99;          // full pitch mod sense
+  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_MODWHEEL_ASSIGN] = 7;   // mod wheel assign all
+  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_FOOTCTRL_ASSIGN] = 7;   // foot ctrl assign all
+  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_BREATHCTRL_ASSIGN] = 7; // breath ctrl assign all
+  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+AT_ASSIGN] = 7;               // at ctrl assign all
   //queue_midi_event(0xb0, 1, 99); // test mod wheel
   //queue_midi_event(0xb0, 2, 99); // test breath ctrl
   //queue_midi_event(0xb0, 4, 99); // test food switch
@@ -151,7 +151,7 @@ void loop()
 #ifdef USE_ONBOARD_USB_HOST
     while (midi_usb.read())
     {
-      break_for_calculation = dexed->processMidiMessage(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
+      break_for_calculation = queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
       if (break_for_calculation == true)
         break;
     }
@@ -160,7 +160,7 @@ void loop()
 #endif
       while (MIDI.read())
       {
-        break_for_calculation = dexed->processMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
+        break_for_calculation = queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
         if (break_for_calculation == true)
           break;
       }
@@ -228,13 +228,61 @@ void note_off(void)
   queue_midi_event(0x80, TEST_NOTE + 52, 0);      // 14
   queue_midi_event(0x80, TEST_NOTE + 57, 0);      // 15
   queue_midi_event(0x80, TEST_NOTE + 60, 0);      // 16
-  load_sysex("ROM1A.SYX", ++_voice_counter % 32);
+
+  //bool success=true;
+  //bool success = load_sysex("ROM1A.SYX", (++_voice_counter)-1);
+  //bool success=load_sysex("ROM1B.SYX", (++_voice_counter)-1);
+  //bool success=load_sysex("RITCH01-32.SYX", (++_voice_counter)-1);
+  //bool success=load_sysex("RITCH33-64.SYX", (++_voice_counter)-1);
+  bool success = load_sysex("RITCH0~1.SYX", (++_voice_counter) - 1);
+  if (success == false)
+    Serial.println(F("Cannot load SYSEX data"));
+  else
+    show_patch();
 }
 #endif
 
 bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
-  return (dexed->processMidiMessage(type, data1, data2));
+  if (master_key_enabled == true)
+  {
+    if (data1 >= 24 && data1 <= 56)
+    {
+      if (!load_sysex("RITCH0~1.SYX", data1 - 24))
+      {
+        Serial.print("E: cannot load voice number ");
+        Serial.println(data1 - 24, DEC);
+      }
+    }
+    master_key_enabled = false;
+    Serial.println("Master key disabled");
+  }
+  else
+  {
+    if (type == 0x80 && data1 == MASTER_KEY_MIDI) // ignore Master key up
+      return (false);
+    else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
+    {
+      master_key_enabled = true;
+      Serial.println("Master key enabled");
+    }
+    else
+      return (dexed->processMidiMessage(type, data1, data2));
+  }
+  return (false);
+}
+
+void cleanup(void)
+{
+  if (master_key_enabled == true)
+  {
+    master_key_enabled = false;
+    Serial.println("Auto disabled master key");
+  }
+
+#ifdef SHOW_CPU_LOAD_MSEC
+  cpu_and_mem_usage();
+#endif
 }
 
 #ifdef SHOW_CPU_LOAD_MSEC

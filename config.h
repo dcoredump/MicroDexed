@@ -22,7 +22,7 @@
 
 */
 
-#define TEST_MIDI 1
+//#define TEST_MIDI 1
 #define TEST_NOTE 40
 #define TEST_VEL_MIN 60
 #define TEST_VEL_MAX 110
@@ -38,6 +38,7 @@
 #define SHOW_CPU_LOAD_MSEC 5000
 #define MAX_NOTES 16
 #define AUDIO_MEM 2
+#define MASTER_KEY_MIDI 108
 
 // Use these with the Teensy Audio Shield
 #define SDCARD_CS_PIN    10

@@ -490,7 +490,7 @@ bool Dexed::loadSysexVoice(uint8_t* new_data)
   uint8_t op;
   uint8_t tmp;
 
-  notesOff();
+  //notesOff();
 
   for (op = 0; op < 6; op++)
   {
@@ -572,16 +572,17 @@ bool Dexed::loadSysexVoice(uint8_t* new_data)
          (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP5_ENABLE) << 1) |
          *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP6_ENABLE ));
   setMaxNotes(*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MAX_NOTES));
+  //panic();
   doRefreshVoice();
-  activate();
+  //activate();
 
 #ifdef DEBUG
   char voicename[11];
   memset(voicename, 0, sizeof(voicename));
   strncpy(voicename, (char *)&data[145], sizeof(voicename) - 1);
-  Serial.print(F("["));
+  Serial.print(F("Voice ["));
   Serial.print(voicename);
-  Serial.println(F("]"));
+  Serial.println(F("] loaded."));
 #endif
 
   return (true);

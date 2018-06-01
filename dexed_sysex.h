@@ -25,6 +25,6 @@
 extern bool sd_card_available;
 extern Dexed* dexed;
 
-void load_sysex(char *name, uint8_t voice_number);
+bool load_sysex(char *name, uint8_t voice_number);
 bool get_sysex_voice(File sysex, uint8_t voice_number, uint8_t* data);
 
