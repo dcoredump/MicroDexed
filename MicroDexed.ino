@@ -145,7 +145,7 @@ void loop()
     audio_buffer = queue1.getBuffer();
     if (audio_buffer == NULL)
     {
-      Serial.println(F("audio_buffer allocation problems!"));
+      Serial.println(F("E: audio_buffer allocation problems!"));
     }
 
 #ifdef USE_ONBOARD_USB_HOST
@@ -160,9 +160,16 @@ void loop()
 #endif
       while (MIDI.read())
       {
-        break_for_calculation = queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
-        if (break_for_calculation == true)
-          break;
+        if (MIDI.getType() == 0xF0) // SysEX
+        {
+          handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
+        }
+        else
+        {
+          break_for_calculation = queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
+          if (break_for_calculation == true)
+            break;
+        }
       }
 #ifdef USE_ONBOARD_USB_HOST
     }
@@ -178,7 +185,7 @@ void loop()
 #ifdef SHOW_XRUN
     uint32_t t2 = t1;
     if (t2 > 2900) // everything greater 2.9ms is a buffer underrun!
-      Serial.println(F("xrun"));
+      Serial.println(F("XRUN"));
 #endif
 #ifdef SHOW_DEXED_TIMING
     Serial.println(t1, DEC);
@@ -236,7 +243,7 @@ void note_off(void)
   //bool success=load_sysex("RITCH33-64.SYX", (++_voice_counter)-1);
   bool success = load_sysex("RITCH0~1.SYX", (++_voice_counter) - 1);
   if (success == false)
-    Serial.println(F("Cannot load SYSEX data"));
+    Serial.println(F("E: Cannot load SYSEX data"));
   else
     show_patch();
 }
@@ -272,12 +279,42 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   return (false);
 }
 
+void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
+{
+  // parse parameter change
+  if (len == 7)
+  {
+    if (sysex[1] != 0x43) // check for Yamaha sysex
+    {
+      Serial.println("E: SysEx vendor not Yamaha.");
+      return;
+    }
+    if ((sysex[3] & 0x7c) != 0)
+    {
+      Serial.println("E: Not a parameter change.");
+      return;
+    }
+    if (sysex[6] != 0xf7)
+    {
+      Serial.println("E: SysEx end status byte not detected.");
+      return;
+    }
+    dexed->data[sysex[4]] = sysex[5]; // set parameter
+    Serial.print("SysEx parameter ");
+    Serial.print(sysex[4], DEC);
+    Serial.print("=");
+    Serial.println(sysex[5], DEC);
+  }
+  else
+    Serial.println("E: SysEx parameter length wrong.");
+}
+
 void cleanup(void)
 {
   if (master_key_enabled == true)
   {
     master_key_enabled = false;
-    Serial.println("Auto disabled master key");
+    Serial.println("Auto disabling master key");
   }
 
 #ifdef SHOW_CPU_LOAD_MSEC
