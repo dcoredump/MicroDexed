@@ -291,7 +291,7 @@ void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
     }
     if ((sysex[3] & 0x7c) != 0)
     {
-      Serial.println("E: Not a parameter change.");
+      Serial.println("E: Not a SysEx parameter change.");
       return;
     }
     if (sysex[6] != 0xf7)
