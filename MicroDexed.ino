@@ -27,6 +27,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <MIDI.h>
+#include <USBHost_t36.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
 #include "config.h"
@@ -42,11 +43,16 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 IntervalTimer sched;
+#ifdef USE_ONBOARD_USB_HOST
+USBHost usb_host;
+MIDIDevice midi_usb(usb_host);
+#endif
+
 bool sd_card_available = false;
 #ifdef TEST_MIDI
 IntervalTimer sched_note_on;
 IntervalTimer sched_note_off;
-uint8_t _voice_counter=0;
+uint8_t _voice_counter = 0;
 #endif
 
 void setup()
@@ -57,6 +63,11 @@ void setup()
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz"));
   Serial.println(F("setup start"));
+
+  // strat up USB host
+#ifdef USE_ONBOARD_USB_HOST
+  usb_host.begin();
+#endif
 
   SPI.setMOSI(SDCARD_MOSI_PIN);
   SPI.setSCK(SDCARD_SCK_PIN);
@@ -128,27 +139,34 @@ void loop()
 
   while (42 == 42) // DON'T PANIC!
   {
+#ifdef USE_ONBOARD_USB_HOST
+    usb_host.Task();
+#endif
     audio_buffer = queue1.getBuffer();
     if (audio_buffer == NULL)
     {
       Serial.println(F("audio_buffer allocation problems!"));
     }
 
-    while (usbMIDI.read())
+#ifdef USE_ONBOARD_USB_HOST
+    while (midi_usb.read())
     {
-      break_for_calculation = dexed->processMidiMessage(usbMIDI.getType(), usbMIDI.getData1(), usbMIDI.getData2());
+      break_for_calculation = dexed->processMidiMessage(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
       if (break_for_calculation == true)
         break;
     }
     if (!break_for_calculation)
     {
+#endif
       while (MIDI.read())
       {
         break_for_calculation = dexed->processMidiMessage(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
         if (break_for_calculation == true)
           break;
       }
+#ifdef USE_ONBOARD_USB_HOST
     }
+#endif
 
     if (!queue1.available())
       continue;
@@ -210,7 +228,7 @@ void note_off(void)
   queue_midi_event(0x80, TEST_NOTE + 52, 0);      // 14
   queue_midi_event(0x80, TEST_NOTE + 57, 0);      // 15
   queue_midi_event(0x80, TEST_NOTE + 60, 0);      // 16
-  load_sysex("ROM1A.SYX", ++_voice_counter%32);
+  load_sysex("ROM1A.SYX", ++_voice_counter % 32);
 }
 #endif
 
