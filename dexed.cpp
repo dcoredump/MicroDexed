@@ -1,26 +1,26 @@
 /*
- * MicroDexed
- *
- * MicroDexed is a port of the Dexed sound engine
- * (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
- * 
- * (c)2018 H. Wirtz <wirtz@parasitstudio.de>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
- *
- */
+   MicroDexed
+
+   MicroDexed is a port of the Dexed sound engine
+   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
+
+   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+*/
 
 #include "synth.h"
 #include "dexed.h"
@@ -155,6 +155,14 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 
 bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
 {
+#ifdef SHOW_MIDI_EVENT
+  Serial.print("MIDI event type: ");
+  Serial.print(type, DEC);
+  Serial.print(" data1: ");
+  Serial.print(data1, DEC);
+  Serial.print(" data2: ");
+  Serial.println(data2, DEC);
+#endif
   switch (type & 0xf0) {
     case 0x80 :
       keyup(data1);

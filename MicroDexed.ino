@@ -83,7 +83,7 @@ void setup()
   AudioMemoryUsageMaxReset();
 #endif
 
-  load_sysex("ROM1A.SYX", 10);
+  load_sysex("ROM1A.SYX", 17);
 #ifdef DEBUG
   show_patch();
 #endif
@@ -134,13 +134,13 @@ void loop()
     {
       Serial.println(F("audio_buffer allocation problems!"));
     }
-
     while (usbMIDI.read())
     {
       break_for_calculation = dexed->processMidiMessage(usbMIDI.getType(), usbMIDI.getData1(), usbMIDI.getData2());
       if (break_for_calculation == true)
         break;
     }
+
     if (!break_for_calculation)
     {
       while (MIDI.read())
@@ -157,7 +157,10 @@ void loop()
 #if defined(SHOW_DEXED_TIMING) || defined(SHOW_XRUN)
     elapsedMicros t1;
 #endif
+    Serial.println("1");
     dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
+    Serial.println("2");
+
 #ifdef SHOW_XRUN
     uint32_t t2 = t1;
     if (t2 > 2900) // everything greater 2.9ms is a buffer underrun!
@@ -216,6 +219,14 @@ void note_off(void)
 
 bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
+#ifdef SHOW_MIDI_EVENT
+  Serial.print("MIDI event type: ");
+  Serial.print(type, DEC);
+  Serial.print(" data1: ");
+  Serial.print(data1, DEC);
+  Serial.print(" data2: ");
+  Serial.println(data2, DEC);
+#endif
   return (dexed->processMidiMessage(type, data1, data2));
 }
 
