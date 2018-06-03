@@ -205,7 +205,7 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
             return (true);
             break;
           case 123:
-            notes_off();
+            notesOff();
             return (true);
             break;
         }
@@ -474,7 +474,7 @@ void Dexed::panic(void) {
   }
 }
 
-void Dexed::notes_off(void) {
+void Dexed::notesOff(void) {
   for (uint8_t i = 0; i < MAX_ACTIVE_NOTES; i++) {
     if (voices[i].live == true && voices[i].keydown == true) {
       voices[i].keydown = false;
@@ -485,9 +485,113 @@ void Dexed::notes_off(void) {
 void Dexed::setMaxNotes(uint8_t n) {
   if (n <= MAX_ACTIVE_NOTES)
   {
-    notes_off();
+    notesOff();
     max_notes = n;
     panic();
     controllers.refresh();
   }
+}
+
+bool Dexed::loadSysexVoice(uint8_t* new_data)
+{
+  uint8_t* p_data = data;
+  uint8_t op;
+  uint8_t tmp;
+
+  //notesOff();
+
+  for (op = 0; op < 6; op++)
+  {
+    //  DEXED_OP_EG_R1,           // 0
+    //  DEXED_OP_EG_R2,           // 1
+    //  DEXED_OP_EG_R3,           // 2
+    //  DEXED_OP_EG_R4,           // 3
+    //  DEXED_OP_EG_L1,           // 4
+    //  DEXED_OP_EG_L2,           // 5
+    //  DEXED_OP_EG_L3,           // 6
+    //  DEXED_OP_EG_L4,           // 7
+    //  DEXED_OP_LEV_SCL_BRK_PT,  // 8
+    //  DEXED_OP_SCL_LEFT_DEPTH,  // 9
+    //  DEXED_OP_SCL_RGHT_DEPTH,  // 10
+    memcpy(&data[op * 21], &new_data[op * 17], 11);
+    tmp = new_data[(op * 17) + 11];
+    *(p_data + DEXED_OP_SCL_LEFT_CURVE + (op * 21)) = (tmp & 0x3);
+    *(p_data + DEXED_OP_SCL_RGHT_CURVE + (op * 21)) = (tmp & 0x0c) >> 2;
+    tmp = new_data[(op * 17) + 12];
+    *(p_data + DEXED_OP_OSC_DETUNE + (op * 21)) = (tmp & 0x78) >> 3;
+    *(p_data + DEXED_OP_OSC_RATE_SCALE + (op * 21)) = (tmp & 0x07);
+    tmp = new_data[(op * 17) + 13];
+    *(p_data + DEXED_OP_KEY_VEL_SENS + (op * 21)) = (tmp & 0x1c) >> 2;
+    *(p_data + DEXED_OP_AMP_MOD_SENS + (op * 21)) = (tmp & 0x03);
+    *(p_data + DEXED_OP_OUTPUT_LEV + (op * 21)) = new_data[(op * 17) + 14];
+    tmp = new_data[(op * 17) + 15];
+    *(p_data + DEXED_OP_FREQ_COARSE + (op * 21)) = (tmp & 0x3e) >> 1;
+    *(p_data + DEXED_OP_OSC_MODE + (op * 21)) = (tmp & 0x01);
+    *(p_data + DEXED_OP_FREQ_FINE + (op * 21)) = new_data[(op * 17) + 16];
+  }
+  //  DEXED_PITCH_EG_R1,        // 0
+  //  DEXED_PITCH_EG_R2,        // 1
+  //  DEXED_PITCH_EG_R3,        // 2
+  //  DEXED_PITCH_EG_R4,        // 3
+  //  DEXED_PITCH_EG_L1,        // 4
+  //  DEXED_PITCH_EG_L2,        // 5
+  //  DEXED_PITCH_EG_L3,        // 6
+  //  DEXED_PITCH_EG_L4,        // 7
+  memcpy(&data[DEXED_VOICE_OFFSET], &new_data[102], 8);
+  tmp = new_data[110];
+  *(p_data + DEXED_VOICE_OFFSET + DEXED_ALGORITHM) = (tmp & 0x1f);
+  tmp = new_data[111];
+  *(p_data + DEXED_VOICE_OFFSET + DEXED_OSC_KEY_SYNC) = (tmp & 0x08) >> 3;
+  *(p_data + DEXED_VOICE_OFFSET + DEXED_FEEDBACK) = (tmp & 0x07);
+  //  DEXED_LFO_SPEED,          // 11
+  //  DEXED_LFO_DELAY,          // 12
+  //  DEXED_LFO_PITCH_MOD_DEP,  // 13
+  //  DEXED_LFO_AMP_MOD_DEP,    // 14
+  memcpy(&data[DEXED_VOICE_OFFSET + DEXED_LFO_SPEED], &new_data[112], 4);
+  tmp = new_data[116];
+  *(p_data + DEXED_VOICE_OFFSET + DEXED_LFO_PITCH_MOD_SENS) = (tmp & 0x30) >> 4;
+  *(p_data + DEXED_VOICE_OFFSET + DEXED_LFO_WAVE) = (tmp & 0x0e) >> 1;
+  *(p_data + DEXED_VOICE_OFFSET + DEXED_LFO_SYNC) = (tmp & 0x01);
+  *(p_data + DEXED_VOICE_OFFSET + DEXED_TRANSPOSE) = new_data[117];
+  memcpy(&data[DEXED_VOICE_OFFSET + DEXED_NAME], &new_data[118], 10);
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE) = 1;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP) = 0;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE) = 99;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN) = 0;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE) = 99;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN) = 0;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE) = 99;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN) = 0;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE) = 99;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN) = 0;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE) = 0;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP1_ENABLE) = 1;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP2_ENABLE) = 1;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP3_ENABLE) = 1;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP4_ENABLE) = 1;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP5_ENABLE) = 1;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP6_ENABLE) = 1;
+  *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MAX_NOTES) = MAX_NOTES;
+
+  setOPs((*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP1_ENABLE) << 5) |
+         (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP2_ENABLE) << 4) |
+         (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP3_ENABLE) << 3) |
+         (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP4_ENABLE) << 2) |
+         (*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP5_ENABLE) << 1) |
+         *(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_OP6_ENABLE ));
+  setMaxNotes(*(p_data + DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MAX_NOTES));
+  //panic();
+  doRefreshVoice();
+  //activate();
+
+#ifdef DEBUG
+  char voicename[11];
+  memset(voicename, 0, sizeof(voicename));
+  strncpy(voicename, (char *)&data[145], sizeof(voicename) - 1);
+  Serial.print(F("Voice ["));
+  Serial.print(voicename);
+  Serial.println(F("] loaded."));
+#endif
+
+  return (true);
 }
