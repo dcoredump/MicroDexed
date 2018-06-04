@@ -40,6 +40,7 @@
 #define MAX_NOTES 16
 #define AUDIO_MEM 2
 #define MASTER_KEY_MIDI 108
+#define MASTER_KEY_AUTO_DISABLE_MSEC 5000
 
 // Use these with the Teensy Audio Shield
 #define SDCARD_CS_PIN    10

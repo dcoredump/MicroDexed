@@ -44,7 +44,12 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
-IntervalTimer sched;
+
+IntervalTimer sched_master_key_auto_disable;
+
+#ifdef SHOW_CPU_LOAD_MSEC
+IntervalTimer sched_show_cpu_usage;
+#endif
 #ifdef USE_ONBOARD_USB_HOST
 USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
@@ -97,6 +102,7 @@ void setup()
   // Initialize processor and memory measurements
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
+  sched_show_cpu_usage.begin(show_cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
 #endif
 
   load_sysex("ROM1A.SYX", 17);
@@ -108,8 +114,6 @@ void setup()
   //dexed->setMaxNotes(MAX_NOTES);
   //dexed->setEngineType(DEXED_ENGINE);
 
-  sched.begin(cleanup, SHOW_CPU_LOAD_MSEC * 1000);
-
   Serial.print(F("AUDIO_BLOCK_SAMPLES="));
   Serial.println(AUDIO_BLOCK_SAMPLES);
 
@@ -120,7 +124,7 @@ void setup()
 #endif
 
   Serial.println(F("setup end"));
-  cpu_and_mem_usage();
+  show_cpu_and_mem_usage();
 
 #ifdef TEST_MIDI
   //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_DEP] = 99;           // full pitch mod depth
@@ -287,6 +291,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
     else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
     {
       master_key_enabled = true;
+      sched_master_key_auto_disable.begin(master_key_auto_disable, MASTER_KEY_AUTO_DISABLE_MSEC * 1000);
       Serial.println("Master key enabled");
     }
     else
@@ -325,20 +330,18 @@ void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
     Serial.println("E: SysEx parameter length wrong.");
 }
 
-void cleanup(void)
+void master_key_auto_disable(void)
 {
   if (master_key_enabled == true)
   {
     master_key_enabled = false;
     Serial.println("Auto disabling master key");
   }
-#ifdef SHOW_CPU_LOAD_MSEC
-  cpu_and_mem_usage();
-#endif
+  sched_master_key_auto_disable.end();
 }
 
 #ifdef SHOW_CPU_LOAD_MSEC
-void cpu_and_mem_usage(void)
+void show_cpu_and_mem_usage(void)
 {
   Serial.print(F("CPU:"));
   Serial.print(AudioProcessorUsage(), DEC);
