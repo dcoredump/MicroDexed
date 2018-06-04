@@ -77,6 +77,15 @@ void setup()
   usb_host.begin();
 #endif
 
+  // start MIDI
+  MIDI.begin(MIDI_CHANNEL_OMNI);
+
+  // start audio card
+  AudioMemory(AUDIO_MEM);
+  sgtl5000_1.enable();
+  sgtl5000_1.volume(VOLUME);
+
+  // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
   SPI.setSCK(SDCARD_SCK_PIN);
   if (!SD.begin(SDCARD_CS_PIN))
@@ -89,15 +98,6 @@ void setup()
     sd_card_available = true;
   }
 
-  MIDI.begin(MIDI_CHANNEL_OMNI);
-
-  // Audio connections require memory to work.  For more
-  // detailed information, see the MemoryAndCpuUsage example
-  AudioMemory(AUDIO_MEM);
-
-  sgtl5000_1.enable();
-  sgtl5000_1.volume(VOLUME);
-
 #ifdef SHOW_CPU_LOAD_MSEC
   // Initialize processor and memory measurements
   AudioProcessorUsageMaxReset();
@@ -105,7 +105,8 @@ void setup()
   sched_show_cpu_usage.begin(show_cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
 #endif
 
-  load_sysex("ROM1A.SYX", 1);
+  // load default SYSEX data
+  load_sysex(DEFAULT_SYSEXFILE, DEFAULT_SYSEXSOUND);
 
 #ifdef DEBUG
   show_patch();
@@ -189,7 +190,7 @@ void handle_midi_input(void)
 
   while (MIDI.read())
   {
-    if (MIDI.getType() == 0xF0) // SysEX
+    if (MIDI.getType() == 0xF0) // SYSEX
     {
       handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
     }
@@ -248,7 +249,7 @@ void note_off(void)
   //bool success=load_sysex("ROM1B.SYX", (++_voice_counter)-1);
   //bool success=load_sysex("RITCH01-32.SYX", (++_voice_counter)-1);
   //bool success=load_sysex("RITCH33-64.SYX", (++_voice_counter)-1);
-  bool success = load_sysex("RITCH0~1.SYX", (++_voice_counter) - 1);
+  bool success = load_sysex(DEFAULT_SYSEXFILE, (++_voice_counter) - 1);
   if (success == false)
     Serial.println(F("E: Cannot load SYSEX data"));
   else
@@ -266,7 +267,7 @@ bool handle_master_key(uint8_t data)
     num = num - 1 + (((data - MASTER_NUM1) / 12) * 7);
     if (num <= 32)
     {
-      if (!load_sysex("RITCH0~1.SYX", num))
+      if (!load_sysex(DEFAULT_SYSEXFILE, num))
       {
         Serial.print("E: cannot load voice number ");
         Serial.println(num, DEC);
@@ -378,7 +379,7 @@ void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
     }
     else
     {
-      dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set functionparameter
+      dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set function parameter
       dexed->controllers.values_[kControllerPitchRange] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE];
       dexed->controllers.values_[kControllerPitchStep] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP];
       dexed->controllers.wheel.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE]);
