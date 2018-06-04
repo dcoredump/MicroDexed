@@ -44,19 +44,19 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
-
 IntervalTimer sched_master_key_auto_disable;
+bool sd_card_available = false;
+bool master_key_enabled = false;
 
 #ifdef SHOW_CPU_LOAD_MSEC
 IntervalTimer sched_show_cpu_usage;
 #endif
+
 #ifdef USE_ONBOARD_USB_HOST
 USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
 #endif
 
-bool sd_card_available = false;
-bool master_key_enabled = false;
 #ifdef TEST_MIDI
 IntervalTimer sched_note_on;
 IntervalTimer sched_note_off;
@@ -72,7 +72,7 @@ void setup()
   Serial.println(F("(c)2018 H. Wirtz"));
   Serial.println(F("setup start"));
 
-  // strat up USB host
+  // start up USB host
 #ifdef USE_ONBOARD_USB_HOST
   usb_host.begin();
 #endif
@@ -105,14 +105,11 @@ void setup()
   sched_show_cpu_usage.begin(show_cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
 #endif
 
-  load_sysex("ROM1A.SYX", 17);
+  load_sysex("ROM1A.SYX", 1);
+
 #ifdef DEBUG
   show_patch();
 #endif
-
-  //dexed->activate();
-  //dexed->setMaxNotes(MAX_NOTES);
-  //dexed->setEngineType(DEXED_ENGINE);
 
   Serial.print(F("AUDIO_BLOCK_SAMPLES="));
   Serial.println(AUDIO_BLOCK_SAMPLES);
@@ -144,46 +141,16 @@ void setup()
 void loop()
 {
   int16_t* audio_buffer; // pointer to 128 * int16_t (=256 bytes!)
-  bool break_for_calculation = false;
 
   while (42 == 42) // DON'T PANIC!
   {
-#ifdef USE_ONBOARD_USB_HOST
-    usb_host.Task();
-#endif
+    handle_midi_input();
+
     audio_buffer = queue1.getBuffer();
     if (audio_buffer == NULL)
     {
       Serial.println(F("E: audio_buffer allocation problems!"));
     }
-
-#ifdef USE_ONBOARD_USB_HOST
-    while (midi_usb.read())
-    {
-      break_for_calculation = queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
-      if (break_for_calculation == true)
-        break;
-    }
-
-    if (!break_for_calculation)
-    {
-#endif
-      while (MIDI.read())
-      {
-        if (MIDI.getType() == 0xF0) // SysEX
-        {
-          handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
-        }
-        else
-        {
-          break_for_calculation = queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
-          if (break_for_calculation == true)
-            break;
-        }
-      }
-#ifdef USE_ONBOARD_USB_HOST
-    }
-#endif
 
     if (!queue1.available())
       continue;
@@ -202,6 +169,35 @@ void loop()
     Serial.println(t1, DEC);
 #endif
     queue1.playBuffer();
+  }
+}
+
+void handle_midi_input(void)
+{
+#ifdef USE_ONBOARD_USB_HOST
+  usb_host.Task();
+  while (midi_usb.read())
+  {
+    if (MIDI.getType() == 0xF0) // SysEX
+    {
+      handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
+    }
+    else if (queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2()))
+      return;
+  }
+#endif
+
+  while (MIDI.read())
+  {
+    if (MIDI.getType() == 0xF0) // SysEX
+    {
+      handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
+    }
+    else
+    {
+      if (queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2()))
+        return;
+    }
   }
 }
 
@@ -260,6 +256,34 @@ void note_off(void)
 }
 #endif
 
+bool handle_master_key(uint8_t data)
+{
+  int8_t num = num_key_base_c(data);
+
+  if (num > 0)
+  {
+    // a white key!
+    num = num - 1 + (((data - MASTER_NUM1) / 12) * 7);
+    if (num <= 32)
+    {
+      if (!load_sysex("RITCH0~1.SYX", num))
+      {
+        Serial.print("E: cannot load voice number ");
+        Serial.println(num, DEC);
+      }
+    }
+    return (true);
+  }
+  else
+  {
+    // a black key!
+    num = abs(num) + (((data - MASTER_NUM1) / 12) * 7);
+    if (num <= 10)
+      sgtl5000_1.volume(num * 0.1);
+  }
+  return (false);
+}
+
 bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
 #ifdef SHOW_MIDI_EVENT
@@ -273,16 +297,10 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 
   if (master_key_enabled == true)
   {
-    if (data1 >= 24 && data1 <= 56)
-    {
-      if (!load_sysex("RITCH0~1.SYX", data1 - 24))
-      {
-        Serial.print("E: cannot load voice number ");
-        Serial.println(data1 - 24, DEC);
-      }
-    }
-    master_key_enabled = false;
-    Serial.println("Master key disabled");
+    master_key_enabled = handle_master_key(data1);
+
+    if (master_key_enabled == false)
+      Serial.println("Master key disabled");
   }
   else
   {
@@ -300,6 +318,39 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   return (false);
 }
 
+int8_t num_key_base_c(uint8_t midi_note)
+{
+  switch (midi_note % 12)
+  {
+    // positive numbers are white keys, negative black ones
+    case 0:
+      return (1);
+    case 1:
+      return (-1);
+    case 2:
+      return (2);
+    case 3:
+      return (-2);
+    case 4:
+      return (3);
+    case 5:
+      return (4);
+    case 6:
+      return (-3);
+    case 7:
+      return (5);
+    case 8:
+      return (-4);
+    case 9:
+      return (6);
+    case 10:
+      return (-5);
+    case 11:
+      return (7);
+  }
+  return (0);
+}
+
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
 {
   // parse parameter change
@@ -307,27 +358,51 @@ void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
   {
     if (sysex[1] != 0x43) // check for Yamaha sysex
     {
-      Serial.println("E: SysEx vendor not Yamaha.");
+      Serial.println(F("E: SysEx vendor not Yamaha."));
       return;
     }
-    if ((sysex[3] & 0x7c) != 0)
+    if ((sysex[3] & 0x7c) != 0 || (sysex[3] & 0x7c) != 2)
     {
-      Serial.println("E: Not a SysEx parameter change.");
+      Serial.println(F("E: Not a SysEx parameter or function parameter change."));
       return;
     }
     if (sysex[6] != 0xf7)
     {
-      Serial.println("E: SysEx end status byte not detected.");
+      Serial.println(F("E: SysEx end status byte not detected."));
       return;
     }
-    dexed->data[sysex[4]] = sysex[5]; // set parameter
-    Serial.print("SysEx parameter ");
+    if ((sysex[3] & 0x7c) == 0)
+    {
+      dexed->data[sysex[4]] = sysex[5]; // set parameter
+      dexed->doRefreshVoice();
+    }
+    else
+    {
+      dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set functionparameter
+      dexed->controllers.values_[kControllerPitchRange] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE];
+      dexed->controllers.values_[kControllerPitchStep] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP];
+      dexed->controllers.wheel.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE]);
+      dexed->controllers.wheel.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN]);
+      dexed->controllers.foot.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE]);
+      dexed->controllers.foot.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN]);
+      dexed->controllers.breath.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE]);
+      dexed->controllers.breath.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN]);
+      dexed->controllers.at.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE]);
+      dexed->controllers.at.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN]);
+      dexed->controllers.masterTune = (dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE] * 0x4000 << 11) * (1.0 / 12);
+      dexed->controllers.refresh();
+    }
+
+    Serial.print(F("SysEx"));
+    if ((sysex[3] & 0x7c) == 0)
+      Serial.print(F(" function"));
+    Serial.print(F(" parameter "));
     Serial.print(sysex[4], DEC);
-    Serial.print("=");
+    Serial.print(F("="));
     Serial.println(sysex[5], DEC);
   }
   else
-    Serial.println("E: SysEx parameter length wrong.");
+    Serial.println(F("E: SysEx parameter length wrong."));
 }
 
 void master_key_auto_disable(void)
