@@ -269,7 +269,12 @@ bool handle_master_key(uint8_t data)
     {
       if (!load_sysex(DEFAULT_SYSEXFILE, num))
       {
-        Serial.print("E: cannot load voice number ");
+        Serial.print(F("E: cannot load voice number "));
+        Serial.println(num, DEC);
+      }
+      else
+      {
+        Serial.print(F("Loading voice number "));
         Serial.println(num, DEC);
       }
     }
@@ -278,9 +283,13 @@ bool handle_master_key(uint8_t data)
   else
   {
     // a black key!
-    num = abs(num) + (((data - MASTER_NUM1) / 12) * 7);
+    num = abs(num) + (((data - MASTER_NUM1) / 12) * 5);
     if (num <= 10)
+    {
       sgtl5000_1.volume(num * 0.1);
+      Serial.print(F("Volume changed to: "));
+      Serial.println(num * 0.1, DEC);
+    }
   }
   return (false);
 }
@@ -309,8 +318,8 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
       return (false);
     else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
     {
-      master_key_enabled = true;
       sched_master_key_auto_disable.begin(master_key_auto_disable, MASTER_KEY_AUTO_DISABLE_MSEC * 1000);
+      master_key_enabled = true;
       Serial.println("Master key enabled");
     }
     else
