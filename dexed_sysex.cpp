@@ -30,16 +30,23 @@
 #include "dexed_sysex.h"
 #include "config.h"
 
-bool load_sysex(char *name, uint8_t voice_number)
+bool load_sysex(uint8_t bank, uint8_t voice_number)
 {
   File root;
   bool found = false;
 
   voice_number %= 32;
+  bank %= 10;
 
   if (sd_card_available)
   {
-    root = SD.open("/");
+    char bankdir[3];
+
+    bankdir[0] = '/';
+    bankdir[2] = '\0';
+    itoa(bank, &bankdir[1], 10);
+
+    root = SD.open(bankdir);
     if (!root)
     {
       Serial.println(F("E: Cannot open main dir from SD."));
@@ -57,19 +64,23 @@ bool load_sysex(char *name, uint8_t voice_number)
       {
         if (!entry.isDirectory())
         {
-          if (strcmp(name, entry.name()) == 0)
+          uint8_t data[128];
+          found = true;
+          if (get_sysex_voice(bankdir, entry, voice_number, data))
           {
-            uint8_t data[128];
-
-            found = true;
-            if (get_sysex_voice(entry, voice_number, data))
-              return (dexed->loadSysexVoice(data));
-            else
-              Serial.println(F("E: Cannot load voice data"));
-            entry.close();
-            break;
+            char n[11];
+            strncpy(n, (char*)&data[118], 10);
+            Serial.print("<");
+            Serial.print(entry.name());
+            Serial.print("|'");
+            Serial.print(n);
+            Serial.println("'>");
+            return (dexed->loadSysexVoice(data));
           }
+          else
+            Serial.println(F("E: Cannot load voice data"));
           entry.close();
+          break;
         }
       }
     }
@@ -80,18 +91,23 @@ bool load_sysex(char *name, uint8_t voice_number)
   return (false);
 }
 
-bool get_sysex_voice(File sysex, uint8_t voice_number, uint8_t* data)
+bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data)
 {
   File file;
   uint16_t i, n;
   uint32_t calc_checksum = 0;
+  char sysex_file[20];
+
+  strcpy(sysex_file, dir);
+  strcat(sysex_file, "/");
+  strcat(sysex_file, sysex.name());
 
   if (sysex.size() != 4104) // check sysex size
   {
     Serial.println(F("E: SysEx file size wrong."));
     return (false);
   }
-  if (file = SD.open(sysex.name()))
+  if (file = SD.open(sysex_file))
   {
     if (file.read() != 0xf0)  // check sysex start-byte
     {
@@ -134,6 +150,11 @@ bool get_sysex_voice(File sysex, uint8_t voice_number, uint8_t* data)
       Serial.println(F("E: checksum mismatch."));
       return (false);
     }
+  }
+  else
+  {
+    Serial.print(F("Cannot open "));
+    Serial.println(sysex.name());
   }
   return (true);
 }

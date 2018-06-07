@@ -45,6 +45,8 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
+uint8_t bank = DEFAULT_SYSEXBANK;
+
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
 #endif
@@ -107,7 +109,7 @@ void setup()
 #endif
 
   // load default SYSEX data
-  load_sysex(DEFAULT_SYSEXFILE, DEFAULT_SYSEXSOUND);
+  load_sysex(bank, DEFAULT_SYSEXSOUND);
 
 #ifdef DEBUG
   show_patch();
@@ -277,16 +279,13 @@ bool handle_master_key(uint8_t data)
 {
   int8_t num = num_key_base_c(data);
 
-  Serial.print(F("Key->Number: "));
-  Serial.println(num);
-
   if (num > 0)
   {
     // a white key!
     num = num - 1 + (((data - MASTER_NUM1) / 12) * 7);
     if (num <= 32)
     {
-      if (!load_sysex(DEFAULT_SYSEXFILE, num))
+      if (!load_sysex(bank, num))
       {
         Serial.print(F("E: cannot load voice number "));
         Serial.println(num, DEC);
