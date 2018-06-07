@@ -35,6 +35,9 @@
 #include <unistd.h>
 #include <limits.h>
 
+extern uint8_t bank;
+extern bool load_sysex(uint8_t bank, uint8_t voice_number);
+
 Dexed::Dexed(int rate)
 {
   uint8_t i;
@@ -169,6 +172,8 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
         uint8_t value = data2;
 
         switch (ctrl) {
+          case 0: // BankSelect MSB
+            break;
           case 1:
             controllers.modwheel_cc = value;
             controllers.refresh();
@@ -180,6 +185,9 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
           case 4:
             controllers.foot_cc = value;
             controllers.refresh();
+            break;
+          case 32: // BankSelect LSB
+            bank=data2;
             break;
           case 64:
             sustain = value > 63;
@@ -204,9 +212,9 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
         break;
       }
 
-    //        case 0xc0 :
-    //            setCurrentProgram(data1);
-    //            break;
+    case 0xc0 : // ProgramChange
+      load_sysex(bank, data1);
+      break;
 
     // channel aftertouch
     case 0xd0 :
