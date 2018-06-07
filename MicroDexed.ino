@@ -308,6 +308,12 @@ bool handle_master_key(uint8_t data)
       Serial.print(F("Volume changed to: "));
       Serial.println(num * 0.1, DEC);
     }
+    else if (num > 10 && num <= 20)
+    {
+      bank=num-11;
+      Serial.print(F("Bank switch to: "));
+      Serial.println(bank, DEC);
+    }
   }
   return (false);
 }
