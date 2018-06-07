@@ -44,9 +44,10 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
-IntervalTimer sched_master_key_auto_disable;
 bool sd_card_available = false;
+#ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
+#endif
 
 #ifdef SHOW_CPU_LOAD_MSEC
 IntervalTimer sched_show_cpu_usage;
@@ -257,9 +258,27 @@ void note_off(void)
 }
 #endif
 
+#ifdef SHOW_MIDI_EVENT
+void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
+{
+  Serial.print("MIDI event type: 0x");
+  if (type < 16)
+    Serial.print(F("0"));
+  Serial.print(type, HEX);
+  Serial.print(" data1: ");
+  Serial.print(data1, DEC);
+  Serial.print(" data2: ");
+  Serial.println(data2, DEC);
+}
+#endif
+
+#ifdef MASTER_KEY_MIDI
 bool handle_master_key(uint8_t data)
 {
   int8_t num = num_key_base_c(data);
+
+  Serial.print(F("Key->Number: "));
+  Serial.println(num);
 
   if (num > 0)
   {
@@ -293,41 +312,39 @@ bool handle_master_key(uint8_t data)
   }
   return (false);
 }
+#endif
 
 bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
+  bool ret = false;
+
 #ifdef SHOW_MIDI_EVENT
-  Serial.print("MIDI event type: ");
-  Serial.print(type, DEC);
-  Serial.print(" data1: ");
-  Serial.print(data1, DEC);
-  Serial.print(" data2: ");
-  Serial.println(data2, DEC);
+  print_midi_event(type, data1, data2);
 #endif
 
-  if (master_key_enabled == true)
+#ifdef MASTER_KEY_MIDI
+  if (master_key_enabled == true && type == 0x80)
   {
     master_key_enabled = handle_master_key(data1);
-
-    if (master_key_enabled == false)
-      Serial.println("Master key disabled");
+  }
+  if (type == 0x80 && data1 == MASTER_KEY_MIDI)
+  {
+    master_key_enabled = false;
+    Serial.println("Master key disabled");
+  }
+  else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
+  {
+    master_key_enabled = true;
+    Serial.println("Master key enabled");
   }
   else
-  {
-    if (type == 0x80 && data1 == MASTER_KEY_MIDI) // ignore Master key up
-      return (false);
-    else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
-    {
-      sched_master_key_auto_disable.begin(master_key_auto_disable, MASTER_KEY_AUTO_DISABLE_MSEC * 1000);
-      master_key_enabled = true;
-      Serial.println("Master key enabled");
-    }
-    else
-      return (dexed->processMidiMessage(type, data1, data2));
-  }
-  return (false);
+#endif
+    ret = dexed->processMidiMessage(type, data1, data2);
+
+  return (ret);
 }
 
+#ifdef MASTER_KEY_MIDI
 int8_t num_key_base_c(uint8_t midi_note)
 {
   switch (midi_note % 12)
@@ -360,6 +377,7 @@ int8_t num_key_base_c(uint8_t midi_note)
   }
   return (0);
 }
+#endif
 
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
 {
@@ -413,16 +431,6 @@ void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
   }
   else
     Serial.println(F("E: SysEx parameter length wrong."));
-}
-
-void master_key_auto_disable(void)
-{
-  if (master_key_enabled == true)
-  {
-    master_key_enabled = false;
-    Serial.println("Auto disabling master key");
-  }
-  sched_master_key_auto_disable.end();
 }
 
 #ifdef SHOW_CPU_LOAD_MSEC

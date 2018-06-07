@@ -44,7 +44,6 @@
 #define DEFAULT_SYSEXSOUND 0
 
 #define MASTER_KEY_MIDI 84      // C6
-#define MASTER_KEY_AUTO_DISABLE_MSEC 5000
 #define MASTER_NUM1 24          // C1
 #define MASTER_BANK_SELECT 83   // B5
 

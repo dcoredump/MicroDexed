@@ -57,8 +57,6 @@ bool load_sysex(char *name, uint8_t voice_number)
       {
         if (!entry.isDirectory())
         {
-          Serial.println(entry.name());
-
           if (strcmp(name, entry.name()) == 0)
           {
             uint8_t data[128];

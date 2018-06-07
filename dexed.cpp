@@ -155,14 +155,6 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 
 bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
 {
-#ifdef SHOW_MIDI_EVENT
-  Serial.print("MIDI event type: ");
-  Serial.print(type, DEC);
-  Serial.print(" data1: ");
-  Serial.print(data1, DEC);
-  Serial.print(" data2: ");
-  Serial.println(data2, DEC);
-#endif
   switch (type & 0xf0) {
     case 0x80 :
       keyup(data1);
