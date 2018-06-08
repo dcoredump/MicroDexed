@@ -144,7 +144,7 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
           int32_t val = audiobuf.get()[j];
           val = val >> 4;
 #ifdef USE_TEENSY_DSP
-          int32_t clip_val=signed_saturate_rshift(32,24,9);
+          int32_t clip_val=signed_saturate_rshift(val,24,9);
 #else
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
 #endif

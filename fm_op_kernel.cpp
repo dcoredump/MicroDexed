@@ -25,8 +25,9 @@
 #include "synth.h"
 #include "sin.h"
 #include "fm_op_kernel.h"
+#include "config.h"
 
-#ifdef HAVE_NEONx
+#ifdef HAVE_NEON
 static bool hasNeon() {
   return true;
   return (android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
@@ -36,7 +37,7 @@ extern "C"
 void neon_fm_kernel(const int *in, const int *busin, int *out, int count,
   int32_t phase0, int32_t freq, int32_t gain1, int32_t dgain);
 
-const int32_t __attribute__ ((aligned(16))) zeros[N] = {0};
+const int32_t __attribute__ ((aligned(16))) zeros[_N_] = {0};
 
 #else
 static bool hasNeon() {
