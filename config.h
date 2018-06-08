@@ -40,7 +40,7 @@
 #define MAX_NOTES 16
 #define AUDIO_MEM 2
 
-#define DEFAULT_SYSEXBANK 5
+#define DEFAULT_SYSEXBANK 0
 #define DEFAULT_SYSEXSOUND 0
 
 #define MASTER_KEY_MIDI 84      // C6

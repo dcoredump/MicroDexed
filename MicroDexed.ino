@@ -279,10 +279,12 @@ bool handle_master_key(uint8_t data)
 {
   int8_t num = num_key_base_c(data);
 
+  Serial.print(F("Master-Key: "));
+  Serial.println(num, DEC);
+
   if (num > 0)
   {
     // a white key!
-    num = num - 1 + (((data - MASTER_NUM1) / 12) * 7);
     if (num <= 32)
     {
       if (!load_sysex(bank, num))
@@ -301,7 +303,7 @@ bool handle_master_key(uint8_t data)
   else
   {
     // a black key!
-    num = abs(num) + (((data - MASTER_NUM1) / 12) * 5);
+    num = abs(num);
     if (num <= 10)
     {
       sgtl5000_1.volume(num * 0.1);
@@ -310,7 +312,7 @@ bool handle_master_key(uint8_t data)
     }
     else if (num > 10 && num <= 20)
     {
-      bank=num-11;
+      bank = num - 10;
       Serial.print(F("Bank switch to: "));
       Serial.println(bank, DEC);
     }
@@ -328,11 +330,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 #endif
 
 #ifdef MASTER_KEY_MIDI
-  if (master_key_enabled == true && type == 0x80)
-  {
-    master_key_enabled = handle_master_key(data1);
-  }
-  if (type == 0x80 && data1 == MASTER_KEY_MIDI)
+  if (type == 0x80 && data1 == MASTER_KEY_MIDI) // Master key released
   {
     master_key_enabled = false;
     Serial.println("Master key disabled");
@@ -343,44 +341,71 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
     Serial.println("Master key enabled");
   }
   else
+  {
+    if (master_key_enabled)
+    {
+      if (type == 0x80) // handle when note is released
+        handle_master_key(data1);
+    }
+    else
 #endif
-    ret = dexed->processMidiMessage(type, data1, data2);
-
+      ret = dexed->processMidiMessage(type, data1, data2);
+#ifdef MASTER_KEY_MIDI
+  }
+#endif
   return (ret);
 }
 
 #ifdef MASTER_KEY_MIDI
 int8_t num_key_base_c(uint8_t midi_note)
 {
+  int8_t num = 0;
+
   switch (midi_note % 12)
   {
     // positive numbers are white keys, negative black ones
     case 0:
-      return (1);
+      num = 1;
+      break;
     case 1:
-      return (-1);
+      num = -1;
+      break;
     case 2:
-      return (2);
+      num = 2;
+      break;
     case 3:
-      return (-2);
+      num = -2;
+      break;
     case 4:
-      return (3);
+      num = 3;
+      break;
     case 5:
-      return (4);
+      num = 4;
+      break;
     case 6:
-      return (-3);
+      num = -3;
+      break;
     case 7:
-      return (5);
+      num = 5;
+      break;
     case 8:
-      return (-4);
+      num = -4;
+      break;
     case 9:
-      return (6);
+      num = 6;
+      break;
     case 10:
-      return (-5);
+      num = -5;
+      break;
     case 11:
-      return (7);
+      num = 7;
+      break;
   }
-  return (0);
+
+  if (num > 0)
+    return (num + (((midi_note - MASTER_NUM1) / 12) * 7));
+  else
+    return (num + ((((midi_note - MASTER_NUM1) / 12) * 5) * -1));
 }
 #endif
 
