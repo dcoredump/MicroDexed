@@ -221,7 +221,7 @@ void note_on(void)
   queue_midi_event(0x90, TEST_NOTE + 32, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 9
   queue_midi_event(0x90, TEST_NOTE + 37, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 10
   queue_midi_event(0x90, TEST_NOTE + 40, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 11
-  queue_midi_event(0x90, TEST_NOTE + 44, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 12
+  queue_midi_event(0x90, TEST_NOTE + 46, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 12
   queue_midi_event(0x90, TEST_NOTE + 49, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 13
   queue_midi_event(0x90, TEST_NOTE + 52, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 14
   queue_midi_event(0x90, TEST_NOTE + 57, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 15
@@ -241,18 +241,13 @@ void note_off(void)
   queue_midi_event(0x80, TEST_NOTE + 32, 0);      // 9
   queue_midi_event(0x80, TEST_NOTE + 37, 0);      // 10
   queue_midi_event(0x80, TEST_NOTE + 40, 0);      // 11
-  queue_midi_event(0x80, TEST_NOTE + 44, 0);      // 12
+  queue_midi_event(0x80, TEST_NOTE + 46, 0);      // 12
   queue_midi_event(0x80, TEST_NOTE + 49, 0);      // 13
   queue_midi_event(0x80, TEST_NOTE + 52, 0);      // 14
   queue_midi_event(0x80, TEST_NOTE + 57, 0);      // 15
   queue_midi_event(0x80, TEST_NOTE + 60, 0);      // 16
 
-  //bool success=true;
-  //bool success = load_sysex("ROM1A.SYX", (++_voice_counter)-1);
-  //bool success=load_sysex("ROM1B.SYX", (++_voice_counter)-1);
-  //bool success=load_sysex("RITCH01-32.SYX", (++_voice_counter)-1);
-  //bool success=load_sysex("RITCH33-64.SYX", (++_voice_counter)-1);
-  bool success = load_sysex(DEFAULT_SYSEXFILE, (++_voice_counter) - 1);
+  bool success = load_sysex(DEFAULT_SYSEXBANK, (++_voice_counter) - 1);
   if (success == false)
     Serial.println(F("E: Cannot load SYSEX data"));
   else

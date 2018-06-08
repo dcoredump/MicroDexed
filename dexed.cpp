@@ -34,6 +34,9 @@
 #include "controllers.h"
 #include <unistd.h>
 #include <limits.h>
+#ifdef USE_TEENSY_DSP
+#include <Audio.h>
+#endif
 
 extern uint8_t bank;
 extern bool load_sysex(uint8_t bank, uint8_t voice_number);
@@ -140,7 +143,11 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
         for (uint8_t j = 0; j < _N_; ++j) {
           int32_t val = audiobuf.get()[j];
           val = val >> 4;
+#ifdef USE_TEENSY_DSP
+          int32_t clip_val=signed_saturate_rshift(32,24,9);
+#else
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
+#endif
           float f = static_cast<float>(clip_val >> 1) / 0x8000;
           if (f > 1) f = 1;
           if (f < -1) f = -1;

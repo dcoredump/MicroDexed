@@ -31,8 +31,8 @@
 #define SERIAL_SPEED 38400
 #define VOLUME 0.1
 #define SAMPLE_RATE 44100
-#define DEXED_ENGINE DEXED_ENGINE_MODERN
-//#define USE_ONBOARD_USB_HOST 1
+//#define DEXED_ENGINE DEXED_ENGINE_MODERN
+#define USE_ONBOARD_USB_HOST 1
 //#define SHOW_DEXED_TIMING 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
@@ -46,6 +46,8 @@
 #define MASTER_KEY_MIDI 84      // C6
 #define MASTER_NUM1 24          // C1
 #define MASTER_BANK_SELECT 83   // B5
+
+#define USE_TEENSY_DSP 1
 
 // Use these with the Teensy Audio Shield
 #define SDCARD_CS_PIN    10
