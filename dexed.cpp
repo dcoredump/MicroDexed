@@ -127,11 +127,15 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 
   for (i = 0; i < n_samples; i += _N_) {
     AlignedBuf<int32_t, _N_> audiobuf;
+#ifndef SUM_UP_AS_INT
     float sumbuf[_N_];
+#endif
 
     for (uint8_t j = 0; j < _N_; ++j) {
       audiobuf.get()[j] = 0;
+#ifndef SUM_UP_AS_INT
       sumbuf[j] = 0.0;
+#endif
     }
 
     int32_t lfovalue = lfo.getsample();
@@ -144,22 +148,38 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
           int32_t val = audiobuf.get()[j];
           val = val >> 4;
 #ifdef USE_TEENSY_DSP
-          int32_t clip_val=signed_saturate_rshift(val,24,9);
+          int32_t clip_val = signed_saturate_rshift(val, 24, 9);
 #else
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
 #endif
-          float f = static_cast<float>(clip_val >> 1) / 0x8000;
+#ifdef SUM_UP_AS_INT
+          int32_t tmp = buffer[i + j] + clip_val;
+          if (buffer[i + j] > 0 && clip_val > 0)
+          {
+            if ((tmp < buffer[i + j]) && (tmp < clip_val))
+              tmp = 0x8000;
+          }
+          else if (buffer[i + j] < 0 && clip_val < 0)
+          {
+            if ((tmp > buffer[i + j]) && (tmp > clip_val))
+              tmp = 0x7FFF;
+          }
+          buffer[i + j] = tmp;
+#else
+          float f = static_cast<float>(clip_val) / 0x8000;
           if (f > 1) f = 1;
           if (f < -1) f = -1;
           sumbuf[j] += f;
           audiobuf.get()[j] = 0;
+#endif
         }
       }
     }
-
+#ifndef SUM_UP_AS_INT
     for (uint8_t j = 0; j < _N_; ++j) {
       buffer[i + j] = static_cast<int16_t>(sumbuf[j] * 0x8000);
     }
+#endif
   }
 }
 
@@ -194,7 +214,7 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
             controllers.refresh();
             break;
           case 32: // BankSelect LSB
-            bank=data2;
+            bank = data2;
             break;
           case 64:
             sustain = value > 63;
