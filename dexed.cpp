@@ -135,6 +135,8 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
       audiobuf.get()[j] = 0;
 #ifndef SUM_UP_AS_INT
       sumbuf[j] = 0.0;
+#else
+      buffer[i + j] = 0;
 #endif
     }
 
@@ -153,7 +155,7 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
 #endif
 #ifdef SUM_UP_AS_INT
-          int32_t tmp = buffer[i + j] + clip_val;
+          int32_t tmp = buffer[i + j] + (clip_val >> 1);
           if (buffer[i + j] > 0 && clip_val > 0)
           {
             if ((tmp < buffer[i + j]) && (tmp < clip_val))
@@ -165,8 +167,9 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
               tmp = 0x7FFF;
           }
           buffer[i + j] = tmp;
+          audiobuf.get()[j] = 0;
 #else
-          float f = static_cast<float>(clip_val) / 0x8000;
+          float f = static_cast<float>(clip_val >> 1) / 0x8000;
           if (f > 1) f = 1;
           if (f < -1) f = -1;
           sumbuf[j] += f;

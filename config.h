@@ -22,12 +22,12 @@
 
 */
 
-#define TEST_MIDI 1
+//#define TEST_MIDI 1
 #define TEST_NOTE 40
 #define TEST_VEL_MIN 60
 #define TEST_VEL_MAX 110
 
-#define SHOW_DEXED_TIMING 1
+//#define SHOW_DEXED_TIMING 1
 #define DEBUG 1
 #define SERIAL_SPEED 38400
 #define VOLUME 0.1
@@ -48,7 +48,7 @@
 #define MASTER_BANK_SELECT 83   // B5
 
 #define USE_TEENSY_DSP 1
-//#define SUM_UP_AS_INT 1
+#define SUM_UP_AS_INT 1
 
 // Use these with the Teensy Audio Shield
 #define SDCARD_CS_PIN    10
