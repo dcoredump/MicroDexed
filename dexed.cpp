@@ -39,6 +39,7 @@
 #endif
 
 extern uint8_t bank;
+extern uint32_t overload;
 extern bool load_sysex(uint8_t bank, uint8_t voice_number);
 
 Dexed::Dexed(int rate)
@@ -142,6 +143,9 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 
     int32_t lfovalue = lfo.getsample();
     int32_t lfodelay = lfo.getdelay();
+#ifdef SUM_UP_AS_INT
+    int32_t sum;
+#endif
 
     for (uint8_t note = 0; note < max_notes; ++note) {
       if (voices[note].live) {
@@ -154,24 +158,34 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 #else
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
 #endif
+          if (clip_val != (val>>9))
+            overload++;
 #ifdef SUM_UP_AS_INT
-          int32_t tmp = buffer[i + j] + (clip_val >> 1);
-          if (buffer[i + j] > 0 && clip_val > 0)
+          sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS);
+/*
+          if (buffer[i + j] > 0 && clip_val > 0 && sum < 0)
           {
-            if ((tmp < buffer[i + j]) && (tmp < clip_val))
-              tmp = 0x8000;
+            sum = 0x8000;
           }
-          else if (buffer[i + j] < 0 && clip_val < 0)
+          else if (buffer[i + j] < 0 && clip_val < 0 && sum > 0)
           {
-            if ((tmp > buffer[i + j]) && (tmp > clip_val))
-              tmp = 0x7FFF;
+            sum = 0x7FFF;
           }
-          buffer[i + j] = tmp;
+          */
+          buffer[i + j] = sum;
           audiobuf.get()[j] = 0;
 #else
-          float f = static_cast<float>(clip_val >> 1) / 0x8000;
-          if (f > 1) f = 1;
-          if (f < -1) f = -1;
+          float f = static_cast<float>(clip_val >> REDUCE_LOUDNESS) / 0x8000;
+          if (f > 1)
+          {
+            f = 1;
+            overload++;
+          }
+          else if (f < -1)
+          {
+            f = -1;
+            overload++;
+          }
           sumbuf[j] += f;
           audiobuf.get()[j] = 0;
 #endif

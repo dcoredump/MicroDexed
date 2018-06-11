@@ -21,9 +21,10 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 */
+#include "midinotes.h"
 
 //#define TEST_MIDI 1
-#define TEST_NOTE 40
+#define TEST_NOTE MIDI_E2
 #define TEST_VEL_MIN 60
 #define TEST_VEL_MAX 110
 
@@ -43,12 +44,12 @@
 #define DEFAULT_SYSEXBANK 0
 #define DEFAULT_SYSEXSOUND 0
 
-#define MASTER_KEY_MIDI 84      // C6
-#define MASTER_NUM1 24          // C1
-#define MASTER_BANK_SELECT 83   // B5
+#define MASTER_KEY_MIDI MIDI_C6
+#define MASTER_NUM1 MIDI_C1
 
 #define USE_TEENSY_DSP 1
 #define SUM_UP_AS_INT 1
+#define REDUCE_LOUDNESS 2
 
 // Use these with the Teensy Audio Shield
 #define SDCARD_CS_PIN    10

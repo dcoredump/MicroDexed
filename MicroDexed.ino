@@ -46,6 +46,8 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
 uint8_t bank = DEFAULT_SYSEXBANK;
+uint32_t xrun = 0;
+uint32_t overload = 0;
 
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
@@ -159,16 +161,11 @@ void loop()
     if (!queue1.available())
       continue;
 
-#if defined(SHOW_DEXED_TIMING) || defined(SHOW_XRUN)
     elapsedMicros t1;
-#endif
     dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
-
-#ifdef SHOW_XRUN
     uint32_t t2 = t1;
     if (t2 > 2900) // everything greater 2.9ms is a buffer underrun!
-      Serial.println(F("XRUN"));
-#endif
+      xrun++;
 #ifdef SHOW_DEXED_TIMING
     Serial.println(t1, DEC);
 #endif
@@ -209,8 +206,7 @@ void handle_midi_input(void)
 void note_on(void)
 {
   randomSeed(analogRead(A0));
-  queue_midi_event(0x90, TEST_NOTE, random(TEST_VEL_MIN, TEST_VEL_MAX));
-  // 1
+  queue_midi_event(0x90, TEST_NOTE, random(TEST_VEL_MIN, TEST_VEL_MAX));           // 1
   queue_midi_event(0x90, TEST_NOTE + 5, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 2
   queue_midi_event(0x90, TEST_NOTE + 8, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 3
   queue_midi_event(0x90, TEST_NOTE + 12, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 4
@@ -328,12 +324,12 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   if (type == 0x80 && data1 == MASTER_KEY_MIDI) // Master key released
   {
     master_key_enabled = false;
-    Serial.println("Master key disabled");
+    Serial.println(F("Master key disabled"));
   }
   else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
   {
     master_key_enabled = true;
-    Serial.println("Master key enabled");
+    Serial.println(F("Master key enabled"));
   }
   else
   {
@@ -469,6 +465,10 @@ void show_cpu_and_mem_usage(void)
   Serial.print(AudioMemoryUsage(), DEC);
   Serial.print(F("   MEM MAX:"));
   Serial.print(AudioMemoryUsageMax(), DEC);
+  Serial.print(F("   XRUN:"));
+  Serial.print(xrun, DEC);
+  Serial.print(F("   OVERLOAD:"));
+  Serial.print(overload, DEC);
   Serial.println();
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
