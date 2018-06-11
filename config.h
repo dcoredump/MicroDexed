@@ -64,3 +64,7 @@
 //#define SDCARD_CS_PIN    BUILTIN_SDCARD
 //#define SDCARD_MOSI_PIN  11  // not actually used
 //#define SDCARD_SCK_PIN   13  // not actually used
+
+// EEPROM address
+#define EEPROM_VOICE_ADDR 0
+#define EEPROM_BANK_ADDR 0

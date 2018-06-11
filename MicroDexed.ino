@@ -27,6 +27,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <MIDI.h>
+#include <EEPROM.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
 #include "config.h"
@@ -45,7 +46,7 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
-uint8_t bank = DEFAULT_SYSEXBANK;
+uint8_t bank = EEPROM.read(EEPROM_BANK_ADDR);
 uint32_t xrun = 0;
 uint32_t overload = 0;
 
@@ -74,7 +75,7 @@ void setup()
   Serial.begin(SERIAL_SPEED);
   delay(200);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
-  Serial.println(F("(c)2018 H. Wirtz"));
+  Serial.println(F("(c)2018 H. Wirtz <wirtz@parasitstudio.de>"));
   Serial.println(F("setup start"));
 
   // start up USB host
@@ -111,7 +112,7 @@ void setup()
 #endif
 
   // load default SYSEX data
-  load_sysex(bank, DEFAULT_SYSEXSOUND);
+  load_sysex(bank, EEPROM.read(EEPROM_VOICE_ADDR));
 
 #ifdef DEBUG
   show_patch();
@@ -287,6 +288,8 @@ bool handle_master_key(uint8_t data)
       {
         Serial.print(F("Loading voice number "));
         Serial.println(num, DEC);
+        EEPROM.write(EEPROM_VOICE_ADDR,num);
+        EEPROM.write(EEPROM_BANK_ADDR,bank);
       }
     }
     return (true);
