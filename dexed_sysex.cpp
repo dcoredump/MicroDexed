@@ -70,11 +70,11 @@ bool load_sysex(uint8_t bank, uint8_t voice_number)
           {
             char n[11];
             strncpy(n, (char*)&data[118], 10);
-            Serial.print("<");
+            Serial.print(F("<"));
             Serial.print(entry.name());
-            Serial.print("|'");
+            Serial.print(F("|'"));
             Serial.print(n);
-            Serial.println("'>");
+            Serial.println(F("'>"));
             return (dexed->loadSysexVoice(data));
           }
           else

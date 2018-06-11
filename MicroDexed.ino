@@ -62,7 +62,7 @@ USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
 #endif
 
-#ifdef TEST_MIDI
+#ifdef TEST_NOTE
 IntervalTimer sched_note_on;
 IntervalTimer sched_note_off;
 uint8_t _voice_counter = 0;
@@ -120,7 +120,7 @@ void setup()
   Serial.print(F("AUDIO_BLOCK_SAMPLES="));
   Serial.println(AUDIO_BLOCK_SAMPLES);
 
-#ifdef TEST_MIDI
+#ifdef TEST_NOTE
   Serial.println(F("MIDI test enabled"));
   sched_note_on.begin(note_on, 2000000);
   sched_note_off.begin(note_off, 6333333);
@@ -129,7 +129,7 @@ void setup()
   Serial.println(F("setup end"));
   show_cpu_and_mem_usage();
 
-#ifdef TEST_MIDI
+#ifdef TEST_NOTE
   //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_DEP] = 99;           // full pitch mod depth
   //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_SENS] = 99;          // full pitch mod sense
   //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_MODWHEEL_ASSIGN] = 7;   // mod wheel assign all
@@ -202,7 +202,7 @@ void handle_midi_input(void)
   }
 }
 
-#ifdef TEST_MIDI
+#ifdef TEST_NOTE
 void note_on(void)
 {
   randomSeed(analogRead(A0));
@@ -254,13 +254,13 @@ void note_off(void)
 #ifdef SHOW_MIDI_EVENT
 void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
-  Serial.print("MIDI event type: 0x");
+  Serial.print(F("MIDI event type: 0x"));
   if (type < 16)
     Serial.print(F("0"));
   Serial.print(type, HEX);
-  Serial.print(" data1: ");
+  Serial.print(F(" data1: "));
   Serial.print(data1, DEC);
-  Serial.print(" data2: ");
+  Serial.print(F(" data2: "));
   Serial.println(data2, DEC);
 }
 #endif

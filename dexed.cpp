@@ -158,20 +158,18 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 #else
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
 #endif
-          if (clip_val != (val>>9))
-            overload++;
 #ifdef SUM_UP_AS_INT
           sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS);
-/*
           if (buffer[i + j] > 0 && clip_val > 0 && sum < 0)
           {
-            sum = 0x8000;
+            sum = INT_MAX;
+            overload++;
           }
           else if (buffer[i + j] < 0 && clip_val < 0 && sum > 0)
           {
-            sum = 0x7FFF;
+            sum = INT_MIN;
+            overload++;
           }
-          */
           buffer[i + j] = sum;
           audiobuf.get()[j] = 0;
 #else
