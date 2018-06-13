@@ -25,22 +25,27 @@
 #include "midinotes.h"
 
 // Initial values
+#define MIDI_DEVICE Serial1
 #define VOLUME 0.1
 #define SAMPLE_RATE 44100
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
-#define USE_ONBOARD_USB_HOST 1
-#define MAX_NOTES 16
+//#define USE_ONBOARD_USB_HOST 1
+#if !defined(__MK66FX1M0__) // check for Teensy-3.6
+#define MAX_NOTES 11        // No? 
+#else
+#define MAX_NOTES 16        // Yes
+#endif
 #define AUDIO_MEM 2
 #define DEFAULT_SYSEXBANK 0
 #define DEFAULT_SYSEXSOUND 0
 
-// Master key handling (comment out for disabling)
+// Master key handling (comment for disabling)
 #define MASTER_KEY_MIDI MIDI_C6
 #define MASTER_NUM1 MIDI_C1
 
 // Debug output
 #define SERIAL_SPEED 38400
-//#define SHOW_DEXED_TIMING 1
+#define SHOW_DEXED_TIMING 1
 #define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
@@ -52,7 +57,7 @@
 #define REDUCE_LOUDNESS 2
 
 // Enable TEST_NOTE for adding code to drop some midi notes for testing without keyboard
-//#define TEST_NOTE MIDI_E2
+#define TEST_NOTE MIDI_E2
 #define TEST_VEL_MIN 60
 #define TEST_VEL_MAX 110
 

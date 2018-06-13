@@ -43,7 +43,7 @@ AudioConnection          patchCord3(queue1, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=507,403
 // GUItool: end automatically generated code
 
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
+MIDI_CREATE_INSTANCE(HardwareSerial, MIDI_DEVICE, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
 uint8_t bank = EEPROM.read(EEPROM_BANK_ADDR);
@@ -76,7 +76,7 @@ void setup()
   delay(200);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz <wirtz@parasitstudio.de>"));
-  Serial.println(F("setup start"));
+  Serial.println(F("<setup start>"));
 
   // start up USB host
 #ifdef USE_ONBOARD_USB_HOST
@@ -127,7 +127,7 @@ void setup()
   sched_note_off.begin(note_off, 6333333);
 #endif
 
-  Serial.println(F("setup end"));
+  Serial.println(F("<setup end>"));
   show_cpu_and_mem_usage();
 
 #ifdef TEST_NOTE
@@ -180,6 +180,9 @@ void handle_midi_input(void)
   usb_host.Task();
   while (midi_usb.read())
   {
+#ifdef DEBUG
+    Serial.println(F("MIDI-USB"));
+#endif
     if (MIDI.getType() == 0xF0) // SysEX
     {
       handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
@@ -191,6 +194,9 @@ void handle_midi_input(void)
 
   while (MIDI.read())
   {
+#ifdef DEBUG
+    Serial.println(F("MIDI-Serial"));
+#endif
     if (MIDI.getType() == 0xF0) // SYSEX
     {
       handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
@@ -288,8 +294,8 @@ bool handle_master_key(uint8_t data)
       {
         Serial.print(F("Loading voice number "));
         Serial.println(num, DEC);
-        EEPROM.write(EEPROM_VOICE_ADDR,num);
-        EEPROM.write(EEPROM_BANK_ADDR,bank);
+        EEPROM.write(EEPROM_VOICE_ADDR, num);
+        EEPROM.write(EEPROM_BANK_ADDR, bank);
       }
     }
     return (true);
