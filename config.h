@@ -36,6 +36,7 @@
 #define MAX_NOTES 16        // Yes
 #endif
 #define AUDIO_MEM 2
+#define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
 #define DEFAULT_SYSEXSOUND 0
 
@@ -45,7 +46,7 @@
 
 // Debug output
 #define SERIAL_SPEED 38400
-#define SHOW_DEXED_TIMING 1
+//#define SHOW_DEXED_TIMING 1
 #define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
@@ -57,7 +58,7 @@
 #define REDUCE_LOUDNESS 2
 
 // Enable TEST_NOTE for adding code to drop some midi notes for testing without keyboard
-#define TEST_NOTE MIDI_E2
+//#define TEST_NOTE MIDI_E2
 #define TEST_VEL_MIN 60
 #define TEST_VEL_MAX 110
 

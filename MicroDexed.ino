@@ -47,6 +47,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, MIDI_DEVICE, MIDI);
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
 uint8_t bank = EEPROM.read(EEPROM_BANK_ADDR);
+uint8_t midi_channel = DEFAULT_MIDI_CHANNEL;
 uint32_t xrun = 0;
 uint32_t overload = 0;
 
@@ -183,7 +184,7 @@ void handle_midi_input(void)
 #ifdef DEBUG
     Serial.println(F("MIDI-USB"));
 #endif
-    if (MIDI.getType() == 0xF0) // SysEX
+    if (MIDI.getType() >= 0xf0) // SysEX
     {
       handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
     }
@@ -195,9 +196,9 @@ void handle_midi_input(void)
   while (MIDI.read())
   {
 #ifdef DEBUG
-    Serial.println(F("MIDI-Serial"));
+    Serial.print(F("[MIDI-Serial] "));
 #endif
-    if (MIDI.getType() == 0xF0) // SYSEX
+    if (MIDI.getType() >= 0xf0) // SYSEX
     {
       handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
     }
@@ -261,13 +262,18 @@ void note_off(void)
 #ifdef SHOW_MIDI_EVENT
 void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
-  Serial.print(F("MIDI event type: 0x"));
+  Serial.print(F("MIDI-Channel: "));
+  if (midi_channel == MIDI_CHANNEL_OMNI)
+    Serial.print(F("OMNI"));
+  else
+    Serial.print(midi_channel, DEC);
+  Serial.print(F(", MIDI event type: 0x"));
   if (type < 16)
     Serial.print(F("0"));
   Serial.print(type, HEX);
-  Serial.print(F(" data1: "));
+  Serial.print(F(", data1: "));
   Serial.print(data1, DEC);
-  Serial.print(F(" data2: "));
+  Serial.print(F(", data2: "));
   Serial.println(data2, DEC);
 }
 #endif
@@ -294,8 +300,7 @@ bool handle_master_key(uint8_t data)
       {
         Serial.print(F("Loading voice number "));
         Serial.println(num, DEC);
-        EEPROM.write(EEPROM_VOICE_ADDR, num);
-        EEPROM.write(EEPROM_BANK_ADDR, bank);
+        store_voice_number(bank, num);
       }
     }
     return (true);
@@ -326,8 +331,13 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   bool ret = false;
 
 #ifdef SHOW_MIDI_EVENT
+    print_midi_event(type, data1, data2);
+#endif
+
+#ifdef SHOW_MIDI_EVENT
   print_midi_event(type, data1, data2);
 #endif
+  type = type & 0xf0;
 
 #ifdef MASTER_KEY_MIDI
   if (type == 0x80 && data1 == MASTER_KEY_MIDI) // Master key released
@@ -409,6 +419,14 @@ int8_t num_key_base_c(uint8_t midi_note)
 }
 #endif
 
+void store_voice_number(uint8_t bank, uint8_t voice)
+{
+  if (EEPROM.read(EEPROM_BANK_ADDR) != bank)
+    EEPROM.write(EEPROM_BANK_ADDR, bank);
+  if (EEPROM.read(EEPROM_VOICE_ADDR) != voice)
+    EEPROM.write(EEPROM_VOICE_ADDR, voice);
+}
+
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
 {
   // parse parameter change
@@ -456,7 +474,7 @@ void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
       Serial.print(F(" function"));
     Serial.print(F(" parameter "));
     Serial.print(sysex[4], DEC);
-    Serial.print(F("="));
+    Serial.print(F(" = "));
     Serial.println(sysex[5], DEC);
   }
   else
@@ -466,17 +484,17 @@ void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
 #ifdef SHOW_CPU_LOAD_MSEC
 void show_cpu_and_mem_usage(void)
 {
-  Serial.print(F("CPU:"));
+  Serial.print(F("CPU: "));
   Serial.print(AudioProcessorUsage(), DEC);
-  Serial.print(F("   CPU MAX:"));
+  Serial.print(F("   CPU MAX: "));
   Serial.print(AudioProcessorUsageMax(), DEC);
-  Serial.print(F("  MEM:"));
+  Serial.print(F("  MEM: "));
   Serial.print(AudioMemoryUsage(), DEC);
-  Serial.print(F("   MEM MAX:"));
+  Serial.print(F("   MEM MAX: "));
   Serial.print(AudioMemoryUsageMax(), DEC);
-  Serial.print(F("   XRUN:"));
+  Serial.print(F("   XRUN: "));
   Serial.print(xrun, DEC);
-  Serial.print(F("   OVERLOAD:"));
+  Serial.print(F("   OVERLOAD: "));
   Serial.print(overload, DEC);
   Serial.println();
   AudioProcessorUsageMaxReset();
@@ -495,8 +513,8 @@ void show_patch(void)
   {
     Serial.print(F("OP"));
     Serial.print(6 - i, DEC);
-    Serial.println(F(":"));
-    Serial.println(F("R1|R2|R3|R4|L1|L2|L3|L4 LEV_SCL_BRK_PT|SCL_LEFT_DEPTH|SCL_RGHT_DEPTH"));
+    Serial.println(F(": "));
+    Serial.println(F("R1 | R2 | R3 | R4 | L1 | L2 | L3 | L4 LEV_SCL_BRK_PT | SCL_LEFT_DEPTH | SCL_RGHT_DEPTH"));
     Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_R1], DEC);
     Serial.print(F(" "));
     Serial.print(dexed->data[(i * 21) + DEXED_OP_EG_R2], DEC);
@@ -518,7 +536,7 @@ void show_patch(void)
     Serial.print(dexed->data[(i * 21) + DEXED_OP_SCL_LEFT_DEPTH], DEC);
     Serial.print(F("             "));
     Serial.println(dexed->data[(i * 21) + DEXED_OP_SCL_RGHT_DEPTH], DEC);
-    Serial.println(F("SCL_L_CURVE|SCL_R_CURVE|RT_SCALE| AMS | KVS |OUT_LEV|OP_MOD|FRQ_C|FRQ_F|DETUNE"));
+    Serial.println(F("SCL_L_CURVE | SCL_R_CURVE | RT_SCALE | AMS | KVS | OUT_LEV | OP_MOD | FRQ_C | FRQ_F | DETUNE"));
     Serial.print(F("      "));
     Serial.print(dexed->data[(i * 21) + DEXED_OP_SCL_LEFT_CURVE], DEC);
     Serial.print(F("         "));
@@ -540,7 +558,7 @@ void show_patch(void)
     Serial.print(F("     "));
     Serial.println(dexed->data[(i * 21) + DEXED_OP_OSC_DETUNE], DEC);
   }
-  Serial.println(F("PR1|PR2|PR3|PR4|PL1|PL2|PL3|PL4"));
+  Serial.println(F("PR1 | PR2 | PR3 | PR4 | PL1 | PL2 | PL3 | PL4"));
   Serial.print(F(" "));
   for (i = 0; i < 8; i++)
   {
