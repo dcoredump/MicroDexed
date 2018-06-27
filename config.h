@@ -26,7 +26,7 @@
 
 // Initial values
 #define MIDI_DEVICE Serial1
-#define VOLUME 0.1
+#define VOLUME 0.5
 #define SAMPLE_RATE 44100
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
 //#define USE_ONBOARD_USB_HOST 1

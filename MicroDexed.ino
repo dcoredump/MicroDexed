@@ -85,7 +85,7 @@ void setup()
 #endif
 
   // start MIDI
-  MIDI.begin(MIDI_CHANNEL_OMNI);
+  MIDI.begin(DEFAULT_MIDI_CHANNEL);
 
   // start audio card
   AudioMemory(AUDIO_MEM);
@@ -184,12 +184,12 @@ void handle_midi_input(void)
 #ifdef DEBUG
     Serial.println(F("MIDI-USB"));
 #endif
-    if (MIDI.getType() >= 0xf0) // SysEX
+    if (midi_usb.getType() >= 0xf0) // SysEX
     {
-      handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
+      handle_sysex_parameter(midi_usb.getSysExArray(), midi_usb.getSysExArrayLength());
     }
-    else if (queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2()))
-      return;
+    else
+      queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
   }
 #endif
 
@@ -203,10 +203,7 @@ void handle_midi_input(void)
       handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
     }
     else
-    {
-      if (queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2()))
-        return;
-    }
+      queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
   }
 }
 
@@ -331,7 +328,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   bool ret = false;
 
 #ifdef SHOW_MIDI_EVENT
-    print_midi_event(type, data1, data2);
+  print_midi_event(type, data1, data2);
 #endif
 
 #ifdef SHOW_MIDI_EVENT
