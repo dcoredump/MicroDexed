@@ -29,7 +29,7 @@
 #define VOLUME 0.5
 #define SAMPLE_RATE 44100
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
-//#define USE_ONBOARD_USB_HOST 1
+#define USE_ONBOARD_USB_HOST 1
 #if !defined(__MK66FX1M0__) // check for Teensy-3.6
 #define MAX_NOTES 11        // No? 
 #else

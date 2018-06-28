@@ -182,14 +182,14 @@ void handle_midi_input(void)
   while (midi_usb.read())
   {
 #ifdef DEBUG
-    Serial.println(F("MIDI-USB"));
+    Serial.println(F("[MIDI-USB]"));
 #endif
     if (midi_usb.getType() >= 0xf0) // SysEX
     {
       handle_sysex_parameter(midi_usb.getSysExArray(), midi_usb.getSysExArrayLength());
     }
-    else
-      queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
+    else if (queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2()))
+      return;
   }
 #endif
 
@@ -202,8 +202,8 @@ void handle_midi_input(void)
     {
       handle_sysex_parameter(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
     }
-    else
-      queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2());
+    else if (queue_midi_event(MIDI.getType(), MIDI.getData1(), MIDI.getData2()))
+      return;
   }
 }
 
@@ -331,9 +331,6 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   print_midi_event(type, data1, data2);
 #endif
 
-#ifdef SHOW_MIDI_EVENT
-  print_midi_event(type, data1, data2);
-#endif
   type = type & 0xf0;
 
 #ifdef MASTER_KEY_MIDI
@@ -357,6 +354,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
     else
 #endif
       ret = dexed->processMidiMessage(type, data1, data2);
+
 #ifdef MASTER_KEY_MIDI
   }
 #endif
@@ -426,14 +424,16 @@ void store_voice_number(uint8_t bank, uint8_t voice)
 
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
 {
+  if (sysex[1] != 0x43) // check for Yamaha sysex
+  {
+    Serial.println(F("E: SysEx vendor not Yamaha."));
+    return;
+  }
+
   // parse parameter change
   if (len == 7)
   {
-    if (sysex[1] != 0x43) // check for Yamaha sysex
-    {
-      Serial.println(F("E: SysEx vendor not Yamaha."));
-      return;
-    }
+
     if ((sysex[3] & 0x7c) != 0 || (sysex[3] & 0x7c) != 2)
     {
       Serial.println(F("E: Not a SysEx parameter or function parameter change."));
