@@ -26,22 +26,23 @@
 
 // Initial values
 #define MIDI_DEVICE Serial1
+//#define USE_ONBOARD_USB_HOST 1
 #define VOLUME 0.5
 #define SAMPLE_RATE 44100
+#define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
+#define DEFAULT_SYSEXBANK 0
+#define DEFAULT_SYSEXSOUND 0
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
-#define USE_ONBOARD_USB_HOST 1
+#define AUDIO_MEM 2
+
 #if !defined(__MK66FX1M0__) // check for Teensy-3.6
 #define MAX_NOTES 11        // No? 
 #else
 #define MAX_NOTES 16        // Yes
 #endif
-#define AUDIO_MEM 2
-#define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
-#define DEFAULT_SYSEXBANK 0
-#define DEFAULT_SYSEXSOUND 0
 
 // Master key handling (comment for disabling)
-#define MASTER_KEY_MIDI MIDI_C6
+//#define MASTER_KEY_MIDI MIDI_C6
 #define MASTER_NUM1 MIDI_C1
 
 // Debug output
@@ -70,6 +71,12 @@
 //#define SDCARD_CS_PIN    BUILTIN_SDCARD
 //#define SDCARD_MOSI_PIN  11  // not actually used
 //#define SDCARD_SCK_PIN   13  // not actually used
+
+// Encoder with button
+#define ENC1_PIN_A  14
+#define ENC1_PIN_B  15
+#define BUT1_PIN    16
+#define INITIAL_ENC1_VALUE 0
 
 // EEPROM address
 #define EEPROM_VOICE_ADDR 0
