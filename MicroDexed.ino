@@ -37,7 +37,7 @@
 #ifndef MASTER_KEY_MIDI // selecting sounds by encoder and display
 #include <Bounce.h>
 #include <Encoder.h>
-#include <LiquidCrystalPlus_I2C.h>
+//#include <LiquidCrystalPlus_I2C.h>
 #endif
 
 #ifndef MASTER_KEY_MIDI
@@ -45,7 +45,7 @@
 #define LCD_I2C_ADDRESS 0x3f
 #define LCD_CHARS 20
 #define LCD_LINES 4
-LiquidCrystalPlus_I2C lcd(LCD_I2C_ADDRESS, LCD_CHARS, LCD_LINES);
+//LiquidCrystalPlus_I2C lcd(LCD_I2C_ADDRESS, LCD_CHARS, LCD_LINES);
 Encoder enc1(ENC1_PIN_A, ENC1_PIN_B);
 Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 #endif
@@ -70,7 +70,7 @@ bool master_key_enabled = false;
 #endif
 
 #ifdef SHOW_CPU_LOAD_MSEC
-IntervalTimer sched_show_cpu_usage;
+elapsedMillis cpu_mem_millis;
 #endif
 
 #ifdef MIDI_DEVICE
@@ -93,14 +93,14 @@ void setup()
   Serial.begin(SERIAL_SPEED);
 
 #ifndef MASTER_KEY_MIDI
-  lcd.init();
-  lcd.blink_off();
-  lcd.cursor_off();
-  lcd.backlight();
-  lcd.noAutoscroll();
-  lcd.clear();
-  lcd.display();
-  lcd.show(0, 0, 20, "MicroDexed");
+  //  lcd.init();
+  //  lcd.blink_off();
+  //  lcd.cursor_off();
+  //  lcd.backlight();
+  //  lcd.noAutoscroll();
+  //  lcd.clear();
+  //  lcd.display();
+  //  lcd.show(0, 0, 20, "MicroDexed");
 
   enc1.write(INITIAL_ENC1_VALUE);
 #endif
@@ -141,11 +141,10 @@ void setup()
   // Initialize processor and memory measurements
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
-  sched_show_cpu_usage.begin(show_cpu_and_mem_usage, SHOW_CPU_LOAD_MSEC * 1000);
 #endif
 
   // load default SYSEX data
-  load_sysex(bank, EEPROM.read(EEPROM_VOICE_ADDR));
+  //load_sysex(bank, EEPROM.read(EEPROM_VOICE_ADDR));
 
 #ifdef DEBUG
   show_patch();
@@ -163,6 +162,7 @@ void setup()
   Serial.println(F("<setup end>"));
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
+  cpu_mem_millis=0;
 #endif
 
 #ifdef TEST_NOTE
@@ -186,6 +186,14 @@ void loop()
 
   while (42 == 42) // DON'T PANIC!
   {
+#if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
+    if (cpu_mem_millis > SHOW_CPU_LOAD_MSEC)
+    {
+      show_cpu_and_mem_usage();
+      cpu_mem_millis = 0;
+    }
+#endif
+
     handle_input();
 
     audio_buffer = queue1.getBuffer();

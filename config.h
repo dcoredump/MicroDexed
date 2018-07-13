@@ -26,7 +26,7 @@
 
 // Initial values
 #define MIDI_DEVICE Serial1
-//#define USE_ONBOARD_USB_HOST 1
+#define USE_ONBOARD_USB_HOST 1
 #define VOLUME 0.5
 #define SAMPLE_RATE 44100
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI

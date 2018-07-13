@@ -102,7 +102,7 @@ bool load_sysex(uint8_t bank, uint8_t voice_number)
 bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data)
 {
   File file;
-  uint16_t i, n;
+  uint16_t n;
   uint32_t calc_checksum = 0;
   char sysex_file[20];
 
@@ -149,39 +149,35 @@ bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data)
 #endif
       return (false);
     }
-    file.seek(6);             // start of 32*128 (=4096) bytes data
-    for (i = 0; i < 32; i++)
+    
+    file.seek(6 + voice_number * 128);         // start of 32*128 (=4096) bytes data
+    for (n = 0; n < 128; n++)
     {
-      for (n = 0; n < 128; n++)
-      {
-        uint8_t d = file.read();
-        if (i == voice_number)
-        {
-          calc_checksum += (d & 0x7F); // calculate checksum
-          data[n] = d;
-        }
-      }
+      uint8_t d = file.read();
+      calc_checksum += (d & 0x7F); // calculate checksum
+      data[n] = d;
     }
     calc_checksum = uint8_t(~calc_checksum + 1);
-    #ifdef DEBUG
+#ifdef DEBUG
     Serial.print(F("Checksum: 0x"));
-    Serial.println(calc_checksum,HEX);
-    #endif
-    
-    if (calc_checksum != uint8_t(file.read()))
+    Serial.println(calc_checksum, HEX);
+#endif
+
+    uint8_t c = uint8_t(file.read());
+    if (calc_checksum != c)
     {
 #ifdef DEBUG
-      Serial.println(F("E: checksum mismatch."));
+      Serial.print(F("E: checksum mismatch: 0x"));
+      Serial.print(calc_checksum,HEX);
+      Serial.print(F(" != 0x"));
+      Serial.println(c,HEX);
 #endif
-      return (false);
+      //return (false);
     }
   }
 #ifdef DEBUG
-  else
-  {
-    Serial.print(F("Cannot open "));
-    Serial.println(sysex.name());
-  }
+  Serial.print(F("Cannot open "));
+  Serial.println(sysex.name());
 #endif
   return (true);
 }
