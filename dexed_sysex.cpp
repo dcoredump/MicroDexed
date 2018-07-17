@@ -73,11 +73,13 @@ bool load_sysex(uint8_t bank, uint8_t voice_number)
 #ifdef DEBUG
             char n[11];
             strncpy(n, (char*)&data[118], 10);
-            Serial.print(F("<"));
+            Serial.print("Loading sysex ");
+            Serial.print(bankdir);
+            Serial.print("/");
             Serial.print(entry.name());
-            Serial.print(F("|"));
+            Serial.print(F(" ["));
             Serial.print(n);
-            Serial.println(F(">"));
+            Serial.println(F("]"));
 #endif
             return (dexed->loadSysexVoice(data));
           }
@@ -166,8 +168,11 @@ bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data)
     bulk_checksum_calc &= 0x7f;
 
 #ifdef DEBUG
-    Serial.print(F("   Bulk checksum: 0x"));
-    Serial.println(bulk_checksum, HEX);
+    Serial.print(F("Bulk checksum: 0x"));
+    Serial.print(bulk_checksum_calc, HEX);
+    Serial.print(F(" [0x"));
+    Serial.print(bulk_checksum, HEX);
+    Serial.println(F("]"));
 #endif
 
     if (bulk_checksum_calc != bulk_checksum)

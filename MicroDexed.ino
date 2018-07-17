@@ -91,7 +91,8 @@ void setup()
 {
   //while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(SERIAL_SPEED);
-
+  delay(200);
+  
 #ifndef MASTER_KEY_MIDI
   //  lcd.init();
   //  lcd.blink_off();
@@ -107,6 +108,7 @@ void setup()
 
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz <wirtz@parasitstudio.de>"));
+  Serial.println(F("https://github.com/dcoredump/MicroDexed"));
   Serial.println(F("<setup start>"));
 
   // start up USB host
