@@ -27,7 +27,7 @@
 // Initial values
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
-#define VOLUME 0.5
+#define VOLUME 0.2
 #define SAMPLE_RATE 44100
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
@@ -42,7 +42,7 @@
 #endif
 
 // Master key handling (comment for disabling)
-//#define MASTER_KEY_MIDI MIDI_C6
+#define MASTER_KEY_MIDI MIDI_C6
 #define MASTER_NUM1 MIDI_C1
 
 // Debug output

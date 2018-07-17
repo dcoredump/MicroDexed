@@ -144,7 +144,7 @@ void setup()
 #endif
 
   // load default SYSEX data
-  //load_sysex(bank, EEPROM.read(EEPROM_VOICE_ADDR));
+  load_sysex(bank, EEPROM.read(EEPROM_VOICE_ADDR));
 
 #ifdef DEBUG
   show_patch();
