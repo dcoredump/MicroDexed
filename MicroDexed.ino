@@ -2,7 +2,7 @@
    MicroDexed
 
    MicroDexed is a port of the Dexed sound engine
-   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
+   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield. Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
    (c)2018 H. Wirtz <wirtz@parasitstudio.de>
 
@@ -34,10 +34,10 @@
 #ifdef USE_ONBOARD_USB_HOST
 #include <USBHost_t36.h>
 #endif
-#ifndef MASTER_KEY_MIDI // selecting sounds by encoder and display
+#ifndef MASTER_KEY_MIDI // selecting sounds by encoder, button and display
 #include <Bounce.h>
 #include <Encoder.h>
-//#include <LiquidCrystalPlus_I2C.h>
+#include <LiquidCrystalPlus_I2C.h>
 #endif
 
 #ifndef MASTER_KEY_MIDI
@@ -45,7 +45,7 @@
 #define LCD_I2C_ADDRESS 0x3f
 #define LCD_CHARS 20
 #define LCD_LINES 4
-//LiquidCrystalPlus_I2C lcd(LCD_I2C_ADDRESS, LCD_CHARS, LCD_LINES);
+LiquidCrystalPlus_I2C lcd(LCD_I2C_ADDRESS, LCD_CHARS, LCD_LINES);
 Encoder enc1(ENC1_PIN_A, ENC1_PIN_B);
 Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 #endif
@@ -92,16 +92,16 @@ void setup()
   //while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(SERIAL_SPEED);
   delay(200);
-  
+
 #ifndef MASTER_KEY_MIDI
-  //  lcd.init();
-  //  lcd.blink_off();
-  //  lcd.cursor_off();
-  //  lcd.backlight();
-  //  lcd.noAutoscroll();
-  //  lcd.clear();
-  //  lcd.display();
-  //  lcd.show(0, 0, 20, "MicroDexed");
+  lcd.init();
+  lcd.blink_off();
+  lcd.cursor_off();
+  lcd.backlight();
+  lcd.noAutoscroll();
+  lcd.clear();
+  lcd.display();
+  lcd.show(0, 0, 20, "MicroDexed");
 
   enc1.write(INITIAL_ENC1_VALUE);
 #endif
@@ -164,7 +164,7 @@ void setup()
   Serial.println(F("<setup end>"));
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
-  cpu_mem_millis=0;
+  cpu_mem_millis = 0;
 #endif
 
 #ifdef TEST_NOTE

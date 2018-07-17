@@ -2,7 +2,7 @@
    MicroDexed
 
    MicroDexed is a port of the Dexed sound engine
-   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield
+   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield. Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
    (c)2018 H. Wirtz <wirtz@parasitstudio.de>
 
@@ -27,7 +27,7 @@
 // Initial values
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
-#define VOLUME 0.2
+#define VOLUME 0.8
 #define SAMPLE_RATE 44100
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
