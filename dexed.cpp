@@ -41,6 +41,9 @@
 extern uint8_t bank;
 extern uint32_t overload;
 extern bool load_sysex(uint8_t bank, uint8_t voice_number);
+extern AudioControlSGTL5000 sgtl5000_1; 
+extern AudioAmplifier amp1;
+extern AudioAmplifier amp2;
 
 Dexed::Dexed(int rate)
 {
@@ -227,6 +230,13 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
           case 4:
             controllers.foot_cc = value;
             controllers.refresh();
+            break;
+          case 7: // Volume
+            sgtl5000_1.volume(float(value) / 0x7f);
+            break;
+          case 10: // Pan
+            amp1.gain(float(0x7f-value)/0x7f);
+            amp2.gain(float(value) / 0x7f);
             break;
           case 32: // BankSelect LSB
             bank = data2;

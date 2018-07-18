@@ -44,6 +44,7 @@
 // Master key handling (comment for disabling)
 #define MASTER_KEY_MIDI MIDI_C7
 #define MASTER_NUM1 MIDI_C2
+//#define MASTER_BUTTON_PIN 25 // overrides the MASTER_KEY_MIDI if enabled 
 
 // Debug output
 #define SERIAL_SPEED 38400
