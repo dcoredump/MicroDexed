@@ -137,8 +137,8 @@ void setup()
   AudioMemory(AUDIO_MEM);
   sgtl5000_1.enable();
   sgtl5000_1.volume(VOLUME);
-  amp1.gain(1.0);
-  amp2.gain(1.0);
+  amp1.gain(0.5);
+  amp2.gain(0.5);
 
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
