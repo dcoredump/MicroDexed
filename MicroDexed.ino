@@ -399,7 +399,16 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   print_midi_event(type, data1, data2);
 #endif
 
-  type = type & 0xf0;
+  // check for MIDI channel
+  if (midi_channel != MIDI_CHANNEL_OMNI)
+  {
+    uint8_t c = type & 0x0f;
+    if (c != midi_channel)
+      return (true);
+  }
+
+  // now throw away the MIDI channel information
+  type &= 0xf0;
 
 #ifdef MASTER_KEY_MIDI
   if (type == 0x80 && data1 == MASTER_KEY_MIDI) // Master key released
@@ -411,6 +420,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   }
   else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
   {
+    dexed->notesOff();
     master_key_enabled = true;
 #ifdef DEBUG
     Serial.println(F("Master key enabled"));
