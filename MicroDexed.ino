@@ -34,16 +34,13 @@
 #ifdef USE_ONBOARD_USB_HOST
 #include <USBHost_t36.h>
 #endif
-#ifdef MASTER_BUTTON_PIN
-#include <Bounce.h>
-#endif
-#if !defined(MASTER_KEY_MIDI) || !defined(MASTER_BUTTON_PIN) // selecting sounds by encoder, button and display
+#ifndef MASTER_KEY_MIDI // selecting sounds by encoder, button and display
 #include <Bounce.h>
 #include <Encoder.h>
 #include <LiquidCrystalPlus_I2C.h>
 #endif
 
-#if !defined(MASTER_KEY_MIDI) || !defined(MASTER_BUTTON_PIN)
+#ifndef MASTER_KEY_MIDI
 // [I2C] SCL: Pin 19, SDA: Pin 18 (https://www.pjrc.com/teensy/td_libs_Wire.html)
 #define LCD_I2C_ADDRESS 0x3f
 #define LCD_CHARS 20
@@ -53,22 +50,17 @@ Encoder enc1(ENC1_PIN_A, ENC1_PIN_B);
 Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 #endif
 
-#ifdef MASTER_BUTTON_PIN
-Bounce master_key = Bounce(MASTER_BUTTON_PIN, 10);  // 10 ms debounce
-#endif
-
 // GUItool: begin automatically generated code
-AudioPlayQueue           queue1;         //xy=335,318
-AudioAmplifier           amp1;           //xy=873,270
-AudioAmplifier           amp2;           //xy=876,319
-AudioOutputI2S           i2s1;           //xy=1212,300
+AudioPlayQueue           queue1;         //xy=950,406
+AudioAmplifier           amp2;           //xy=1172,438
+AudioAmplifier           amp1;           //xy=1173,378
+AudioOutputI2S           i2s1;           //xy=1321,403
 AudioConnection          patchCord1(queue1, amp1);
 AudioConnection          patchCord2(queue1, amp2);
-AudioConnection          patchCord3(amp1, 0, i2s1, 0);
-AudioConnection          patchCord4(amp2, 0, i2s1, 1);
-AudioControlSGTL5000     sgtl5000_1;     //xy=758,427
+AudioConnection          patchCord3(amp2, 0, i2s1, 1);
+AudioConnection          patchCord4(amp1, 0, i2s1, 0);
+AudioControlSGTL5000     sgtl5000_1;     //xy=1323,459
 // GUItool: end automatically generated code
-
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
@@ -77,7 +69,7 @@ uint8_t midi_channel = DEFAULT_MIDI_CHANNEL;
 uint32_t xrun = 0;
 uint32_t overload = 0;
 
-#if defined(MASTER_KEY_MIDI) || defined(MASTER_BUTTON_PIN)
+#ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
 #endif
 
@@ -105,7 +97,7 @@ void setup()
   Serial.begin(SERIAL_SPEED);
   delay(200);
 
-#if !defined(MASTER_KEY_MIDI) && !defined(MASTER_BUTTON_PIN)
+#ifndef MASTER_KEY_MIDI
   lcd.init();
   lcd.blink_off();
   lcd.cursor_off();
@@ -139,7 +131,7 @@ void setup()
   sgtl5000_1.volume(VOLUME);
   amp1.gain(0.5);
   amp2.gain(0.5);
-
+  
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
   SPI.setSCK(SDCARD_SCK_PIN);
@@ -181,10 +173,6 @@ void setup()
   cpu_mem_millis = 0;
 #endif
 
-#ifdef MASTER_BUTTON_PIN
-  pinMode(MASTER_BUTTON_PIN, INPUT_PULLUP);
-#endif
-
 #ifdef TEST_NOTE
   //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_DEP] = 99;           // full pitch mod depth
   //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_SENS] = 99;          // full pitch mod sense
@@ -203,7 +191,7 @@ void setup()
 void loop()
 {
   int16_t* audio_buffer; // pointer to 128 * int16_t (=256 bytes!)
-
+  
   while (42 == 42) // DON'T PANIC!
   {
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
@@ -214,23 +202,6 @@ void loop()
     }
 #endif
 
-#if MASTER_BUTTON_PIN
-    if (master_key.update())
-    {
-      if (master_key.fallingEdge())
-      {
-        master_key_enabled = true;
-        dexed->notesOff();
-        Serial.println(F("Master key enabled"));
-      }
-      else if (master_key.risingEdge())
-      {
-        master_key_enabled = false;
-        Serial.println(F("Master key disabled"));
-      }
-    }
-#endif
-
     handle_input();
 
     audio_buffer = queue1.getBuffer();
@@ -238,10 +209,10 @@ void loop()
     {
       Serial.println(F("E: audio_buffer allocation problems!"));
     }
-
+    
     if (!queue1.available())
       continue;
-
+      
     elapsedMicros t1;
     dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
     uint32_t t2 = t1;
@@ -286,7 +257,7 @@ void handle_input(void)
   }
 #endif
 
-#if !defined(MASTER_KEY_MIDI) && !defined(MASTER_BUTTON_PIN)
+#ifndef MASTER_KEY_MIDI
   int enc1_val = enc1.read();
 
   if (but1.update())
@@ -368,7 +339,7 @@ void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 #endif
 #endif
 
-#if defined(MASTER_KEY_MIDI) || defined(MASTER_BUTTON_PIN)
+#ifdef MASTER_KEY_MIDI
 bool handle_master_key(uint8_t data)
 {
   int8_t num = num_key_base_c(data);
@@ -439,7 +410,16 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   {
     uint8_t c = type & 0x0f;
     if (c != midi_channel)
-      return (true);
+    {
+#ifdef DEBUG
+      Serial.print(F("Ignoring MIDI data on channel "));
+      Serial.print(c);
+      Serial.print(F("(listening on "));
+      Serial.print(midi_channel);
+      Serial.println(F(")"));
+#endif
+      return (false);
+    }
   }
 
   // now throw away the MIDI channel information
@@ -463,8 +443,6 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   }
   else
   {
-#endif
-#if defined(MASTER_KEY_MIDI) || defined(MASTER_BUTTON_PIN)
     if (master_key_enabled)
     {
       if (type == 0x80) // handle when note is released
@@ -473,14 +451,14 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
     else
 #endif
       ret = dexed->processMidiMessage(type, data1, data2);
-#if defined(MASTER_KEY_MIDI)
+
+#ifdef MASTER_KEY_MIDI
   }
 #endif
-
   return (ret);
 }
 
-#if defined(MASTER_KEY_MIDI) || defined(MASTER_BUTTON_PIN)
+#ifdef MASTER_KEY_MIDI
 int8_t num_key_base_c(uint8_t midi_note)
 {
   int8_t num = 0;

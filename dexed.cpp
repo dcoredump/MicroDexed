@@ -41,7 +41,7 @@
 extern uint8_t bank;
 extern uint32_t overload;
 extern bool load_sysex(uint8_t bank, uint8_t voice_number);
-extern AudioControlSGTL5000 sgtl5000_1; 
+extern AudioControlSGTL5000 sgtl5000_1;
 extern AudioAmplifier amp1;
 extern AudioAmplifier amp2;
 

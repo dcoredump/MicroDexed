@@ -33,7 +33,7 @@
 #define DEFAULT_SYSEXBANK 0
 #define DEFAULT_SYSEXSOUND 0
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
-#define AUDIO_MEM 2
+#define AUDIO_MEM 4
 
 #if !defined(__MK66FX1M0__) // check for Teensy-3.6
 #define MAX_NOTES 11        // No? 
@@ -44,7 +44,6 @@
 // Master key handling (comment for disabling)
 #define MASTER_KEY_MIDI MIDI_C7
 #define MASTER_NUM1 MIDI_C2
-//#define MASTER_BUTTON_PIN 25 // overrides the MASTER_KEY_MIDI if enabled 
 
 // Debug output
 #define SERIAL_SPEED 38400
