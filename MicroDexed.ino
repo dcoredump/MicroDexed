@@ -51,15 +51,19 @@ Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 #endif
 
 // GUItool: begin automatically generated code
-AudioPlayQueue           queue1;         //xy=950,406
-AudioAmplifier           amp2;           //xy=1172,438
-AudioAmplifier           amp1;           //xy=1173,378
-AudioOutputI2S           i2s1;           //xy=1321,403
-AudioConnection          patchCord1(queue1, amp1);
-AudioConnection          patchCord2(queue1, amp2);
-AudioConnection          patchCord3(amp2, 0, i2s1, 1);
-AudioConnection          patchCord4(amp1, 0, i2s1, 0);
-AudioControlSGTL5000     sgtl5000_1;     //xy=1323,459
+AudioPlayQueue           queue1;         //xy=637,396
+AudioEffectFreeverbStereo freeverbs1;     //xy=815,506
+AudioMixer4              mixer2;         //xy=1014,461
+AudioMixer4              mixer1;         //xy=1016,376
+AudioOutputI2S           i2s1;           //xy=1214,414
+AudioConnection          patchCord1(queue1, freeverbs1);
+AudioConnection          patchCord2(queue1, 0, mixer1, 0);
+AudioConnection          patchCord3(queue1, 0, mixer2, 0);
+AudioConnection          patchCord4(freeverbs1, 0, mixer1, 1);
+AudioConnection          patchCord5(freeverbs1, 1, mixer2, 1);
+AudioConnection          patchCord6(mixer2, 0, i2s1, 1);
+AudioConnection          patchCord7(mixer1, 0, i2s1, 0);
+AudioControlSGTL5000     sgtl5000_1;     //xy=1214,469
 // GUItool: end automatically generated code
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
@@ -129,8 +133,16 @@ void setup()
   AudioMemory(AUDIO_MEM);
   sgtl5000_1.enable();
   sgtl5000_1.volume(VOLUME);
-  amp1.gain(0.5);
-  amp2.gain(0.5);
+
+  // configure mixer
+  mixer1.gain(0,1.0); // normal audio
+  mixer2.gain(0,0.2); // reverb audio
+  mixer1.gain(0,1.0); // normal audio
+  mixer2.gain(0,0.2); // reverb audio
+
+  // configure reverb
+  freeverbs1.roomsize(DEFAULT_REVERB_ROOMSIZE);
+  freeverbs1.damping(DEFAULT_REVERB_DAMPING);
   
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);

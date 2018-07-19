@@ -44,6 +44,9 @@ extern bool load_sysex(uint8_t bank, uint8_t voice_number);
 extern AudioControlSGTL5000 sgtl5000_1;
 extern AudioAmplifier amp1;
 extern AudioAmplifier amp2;
+extern AudioEffectFreeverbStereo freeverbs1;
+extern AudioMixer4 mixer2;
+extern AudioMixer4 mixer1;
 
 Dexed::Dexed(int rate)
 {
@@ -235,8 +238,21 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
             sgtl5000_1.volume(float(value) / 0x7f);
             break;
           case 10: // Pan
-            amp1.gain(float(0x7f-value)/0x7f);
-            amp2.gain(float(value) / 0x7f);
+            if (value < 64)
+            {
+              mixer1.gain(0, 1.0);
+              mixer2.gain(0, float(value) / 0x40);
+            }
+            else if (value > 64)
+            {
+              mixer1.gain(0, float(0x7f - value) / 0x40);
+              mixer2.gain(0, 1.0);
+            }
+            else
+            {
+              mixer1.gain(0, 1.0);
+              mixer2.gain(0, 1.0);
+            }
             break;
           case 32: // BankSelect LSB
             bank = data2;
