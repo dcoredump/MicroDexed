@@ -30,6 +30,8 @@
 #include "dexed_sysex.h"
 #include "config.h"
 
+extern uint16_t render_time_max;
+
 bool load_sysex(uint8_t bank, uint8_t voice_number)
 {
   File root;
@@ -194,5 +196,7 @@ bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data)
   }
 #endif
 
+  render_time_max=0;
+  
   return (true);
 }

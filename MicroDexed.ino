@@ -51,20 +51,17 @@ Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 #endif
 
 // GUItool: begin automatically generated code
-AudioPlayQueue           queue1;         //xy=637,396
-AudioEffectFreeverbStereo freeverbs1;     //xy=815,506
-AudioMixer4              mixer2;         //xy=1014,461
-AudioMixer4              mixer1;         //xy=1016,376
-AudioOutputI2S           i2s1;           //xy=1214,414
-AudioConnection          patchCord1(queue1, freeverbs1);
-AudioConnection          patchCord2(queue1, 0, mixer1, 0);
-AudioConnection          patchCord3(queue1, 0, mixer2, 0);
-AudioConnection          patchCord4(freeverbs1, 0, mixer1, 1);
-AudioConnection          patchCord5(freeverbs1, 1, mixer2, 1);
-AudioConnection          patchCord6(mixer2, 0, i2s1, 1);
-AudioConnection          patchCord7(mixer1, 0, i2s1, 0);
-AudioControlSGTL5000     sgtl5000_1;     //xy=1214,469
+AudioPlayQueue           queue1;         //xy=708,349
+AudioAmplifier           amp1;           //xy=904,314
+AudioAmplifier           amp2;           //xy=909,373
+AudioOutputI2S           i2s1;           //xy=1055,343
+AudioConnection          patchCord1(queue1, amp1);
+AudioConnection          patchCord2(queue1, amp2);
+AudioConnection          patchCord3(amp1, 0, i2s1, 0);
+AudioConnection          patchCord4(amp2, 0, i2s1, 1);
+AudioControlSGTL5000     sgtl5000_1;     //xy=1055,398
 // GUItool: end automatically generated code
+
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
@@ -72,6 +69,7 @@ uint8_t bank = EEPROM.read(EEPROM_BANK_ADDR);
 uint8_t midi_channel = DEFAULT_MIDI_CHANNEL;
 uint32_t xrun = 0;
 uint32_t overload = 0;
+uint16_t render_time_max = 0;
 
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
@@ -133,17 +131,9 @@ void setup()
   AudioMemory(AUDIO_MEM);
   sgtl5000_1.enable();
   sgtl5000_1.volume(VOLUME);
+  amp1.gain(1.0); // normal audio
+  amp2.gain(1.0); // normal audio
 
-  // configure mixer
-  mixer1.gain(0,1.0); // normal audio
-  mixer2.gain(0,0.2); // reverb audio
-  mixer1.gain(0,1.0); // normal audio
-  mixer2.gain(0,0.2); // reverb audio
-
-  // configure reverb
-  freeverbs1.roomsize(DEFAULT_REVERB_ROOMSIZE);
-  freeverbs1.damping(DEFAULT_REVERB_DAMPING);
-  
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
   SPI.setSCK(SDCARD_SCK_PIN);
@@ -203,7 +193,7 @@ void setup()
 void loop()
 {
   int16_t* audio_buffer; // pointer to 128 * int16_t (=256 bytes!)
-  
+
   while (42 == 42) // DON'T PANIC!
   {
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
@@ -221,18 +211,17 @@ void loop()
     {
       Serial.println(F("E: audio_buffer allocation problems!"));
     }
-    
+
     if (!queue1.available())
       continue;
-      
+
     elapsedMicros t1;
     dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
     uint32_t t2 = t1;
     if (t2 > 2900) // everything greater 2.9ms is a buffer underrun!
       xrun++;
-#ifdef SHOW_DEXED_TIMING
-    Serial.println(t1, DEC);
-#endif
+    if (t2 > render_time_max)
+      render_time_max = t2;
     queue1.playBuffer();
   }
 }
@@ -607,6 +596,8 @@ void show_cpu_and_mem_usage(void)
   Serial.print(AudioMemoryUsage(), DEC);
   Serial.print(F("   MEM MAX: "));
   Serial.print(AudioMemoryUsageMax(), DEC);
+  Serial.print(F("   RENDER_TIME_MAX: "));
+  Serial.print(render_time_max, DEC);
   Serial.print(F("   XRUN: "));
   Serial.print(xrun, DEC);
   Serial.print(F("   OVERLOAD: "));
@@ -614,6 +605,7 @@ void show_cpu_and_mem_usage(void)
   Serial.println();
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
+  render_time_max=0;
 }
 #endif
 

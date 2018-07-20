@@ -28,14 +28,12 @@
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
 #define VOLUME 0.8
-#define SAMPLE_RATE 44100
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
 #define DEFAULT_SYSEXSOUND 0
-#define DEFAULT_REVERB_ROOMSIZE 0.5
-#define DEFAULT_REVERB_DAMPING 0.5
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
-#define AUDIO_MEM 32
+#define AUDIO_MEM 2
+#define SAMPLE_RATE 44100
 
 #if !defined(__MK66FX1M0__) // check for Teensy-3.6
 #define MAX_NOTES 11        // No? 
@@ -49,13 +47,12 @@
 
 // Debug output
 #define SERIAL_SPEED 38400
-//#define SHOW_DEXED_TIMING 1
 #define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
 
-// Some optimizations in the code
+// Some optimizations
 #define USE_TEENSY_DSP 1
 #define SUM_UP_AS_INT 1
 #define REDUCE_LOUDNESS 2

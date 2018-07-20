@@ -45,8 +45,8 @@ extern AudioControlSGTL5000 sgtl5000_1;
 extern AudioAmplifier amp1;
 extern AudioAmplifier amp2;
 extern AudioEffectFreeverbStereo freeverbs1;
-extern AudioMixer4 mixer2;
-extern AudioMixer4 mixer1;
+extern AudioAmplifier amp1;
+extern AudioAmplifier amp2;
 
 Dexed::Dexed(int rate)
 {
@@ -240,18 +240,18 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
           case 10: // Pan
             if (value < 64)
             {
-              mixer1.gain(0, 1.0);
-              mixer2.gain(0, float(value) / 0x40);
+              amp1.gain(1.0);
+              amp2.gain(float(value) / 0x40);
             }
             else if (value > 64)
             {
-              mixer1.gain(0, float(0x7f - value) / 0x40);
-              mixer2.gain(0, 1.0);
+              amp1.gain(float(0x7f - value) / 0x40);
+              amp2.gain(1.0);
             }
             else
             {
-              mixer1.gain(0, 1.0);
-              mixer2.gain(0, 1.0);
+              amp1.gain(1.0);
+              amp2.gain(1.0);
             }
             break;
           case 32: // BankSelect LSB
