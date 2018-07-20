@@ -2,7 +2,8 @@
    MicroDexed
 
    MicroDexed is a port of the Dexed sound engine
-   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield. Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
+   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
+   Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
    (c)2018 H. Wirtz <wirtz@parasitstudio.de>
 
@@ -54,11 +55,13 @@ Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 AudioPlayQueue           queue1;         //xy=708,349
 AudioAmplifier           amp1;           //xy=904,314
 AudioAmplifier           amp2;           //xy=909,373
+AudioAnalyzePeak         peak1;          //xy=909,436
 AudioOutputI2S           i2s1;           //xy=1055,343
 AudioConnection          patchCord1(queue1, amp1);
 AudioConnection          patchCord2(queue1, amp2);
-AudioConnection          patchCord3(amp1, 0, i2s1, 0);
-AudioConnection          patchCord4(amp2, 0, i2s1, 1);
+AudioConnection          patchCord3(queue1, peak1);
+AudioConnection          patchCord4(amp1, 0, i2s1, 0);
+AudioConnection          patchCord5(amp2, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=1055,398
 // GUItool: end automatically generated code
 
@@ -69,6 +72,7 @@ uint8_t bank = EEPROM.read(EEPROM_BANK_ADDR);
 uint8_t midi_channel = DEFAULT_MIDI_CHANNEL;
 uint32_t xrun = 0;
 uint32_t overload = 0;
+uint32_t peak = 0;
 uint16_t render_time_max = 0;
 
 #ifdef MASTER_KEY_MIDI
@@ -222,6 +226,11 @@ void loop()
       xrun++;
     if (t2 > render_time_max)
       render_time_max = t2;
+    if (peak1.available())
+    {
+      if (peak1.read() > 0.99)
+        peak++;
+    }
     queue1.playBuffer();
   }
 }
@@ -602,10 +611,12 @@ void show_cpu_and_mem_usage(void)
   Serial.print(xrun, DEC);
   Serial.print(F("   OVERLOAD: "));
   Serial.print(overload, DEC);
+  Serial.print(F("   PEAK: "));
+  Serial.print(peak, DEC);
   Serial.println();
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
-  render_time_max=0;
+  render_time_max = 0;
 }
 #endif
 

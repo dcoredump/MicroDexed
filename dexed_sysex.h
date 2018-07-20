@@ -2,7 +2,8 @@
    MicroDexed
 
    MicroDexed is a port of the Dexed sound engine
-   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield. Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
+   (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
+   Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
    (c)2018 H. Wirtz <wirtz@parasitstudio.de>
 
@@ -24,6 +25,7 @@
 
 extern bool sd_card_available;
 extern Dexed* dexed;
+extern uint16_t render_time_max;
 
 bool load_sysex(uint8_t bank, uint8_t voice_number);
 bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data);
