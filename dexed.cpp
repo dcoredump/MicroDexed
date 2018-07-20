@@ -65,13 +65,7 @@ Dexed::Dexed(int rate)
 
   max_notes = 16;
   currentNote = 0;
-  controllers.values_[kControllerPitch] = 0x2000;
-  controllers.values_[kControllerPitchRange] = 0;
-  controllers.values_[kControllerPitchStep] = 0;
-  controllers.modwheel_cc = 0;
-  controllers.foot_cc = 0;
-  controllers.breath_cc = 0;
-  controllers.aftertouch_cc = 0;
+  resetControllers();
   controllers.masterTune = 0;
   controllers.opSwitch = 0x3f; // enable all operators
   //controllers.opSwitch=0x00;
@@ -263,8 +257,20 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
             panic();
             return (true);
             break;
+          case 121:
+            resetControllers();
+            return (true);
+            break;
           case 123:
             notesOff();
+            return (true);
+            break;
+          case 126:
+            setMonoMode(true);
+            return (true);
+            break;
+          case 127:
+            setMonoMode(false);
             return (true);
             break;
         }
@@ -531,6 +537,18 @@ void Dexed::panic(void) {
       }
     }
   }
+}
+
+void Dexed::resetControllers(void)
+{
+  controllers.values_[kControllerPitch] = 0x2000;
+  controllers.values_[kControllerPitchRange] = 0;
+  controllers.values_[kControllerPitchStep] = 0;
+  controllers.modwheel_cc = 0;
+  controllers.foot_cc = 0;
+  controllers.breath_cc = 0;
+  controllers.aftertouch_cc = 0;
+  controllers.refresh();
 }
 
 void Dexed::notesOff(void) {

@@ -147,6 +147,7 @@ class Dexed
     bool processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2);
     void panic(void);
     void notesOff(void);
+    void resetControllers(void);
     void setMaxNotes(uint8_t n);
     void doRefreshVoice(void);
     void setOPs(uint8_t ops);

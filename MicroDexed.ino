@@ -159,8 +159,11 @@ void setup()
 
   // load default SYSEX data
   load_sysex(bank, EEPROM.read(EEPROM_VOICE_ADDR));
-
 #ifdef DEBUG
+  Serial.print(F("Bank/Voice from EEPROM: "));
+  Serial.print(EEPROM.read(EEPROM_BANK_ADDR), DEC);
+  Serial.print(F("/"));
+  Serial.println(EEPROM.read(EEPROM_VOICE_ADDR), DEC);
   show_patch();
 #endif
 
