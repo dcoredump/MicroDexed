@@ -168,7 +168,10 @@ void setup()
 #endif
 
   Serial.print(F("AUDIO_BLOCK_SAMPLES="));
-  Serial.println(AUDIO_BLOCK_SAMPLES);
+  Serial.print(AUDIO_BLOCK_SAMPLES);
+  Serial.print(F(" (Time per block="));
+  Serial.print(1000000/(SAMPLE_RATE/AUDIO_BLOCK_SAMPLES));
+  Serial.println(F("ms)"));
 
 #ifdef TEST_NOTE
   Serial.println(F("MIDI test enabled"));
@@ -200,7 +203,8 @@ void setup()
 void loop()
 {
   int16_t* audio_buffer; // pointer to 128 * int16_t (=256 bytes!)
-
+  const uint16_t audio_block_time_ms=1000000/(SAMPLE_RATE/AUDIO_BLOCK_SAMPLES);
+  
   while (42 == 42) // DON'T PANIC!
   {
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
@@ -225,7 +229,7 @@ void loop()
     elapsedMicros t1;
     dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
     uint32_t t2 = t1;
-    if (t2 > 2900) // everything greater 2.9ms is a buffer underrun!
+    if (t2 > audio_block_time_ms) // everything greater 2.9ms is a buffer underrun!
       xrun++;
     if (t2 > render_time_max)
       render_time_max = t2;

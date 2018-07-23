@@ -25,6 +25,9 @@
 
 #include "midinotes.h"
 
+// ATTENTION! For better latency you have to redefine AUDIO_BLOCK_SAMPLES from
+// 128 to 64 in <ARDUINO-IDE-DIR>/cores/teensy3/AudioStream.h
+
 // Initial values
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
