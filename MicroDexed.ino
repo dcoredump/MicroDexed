@@ -65,7 +65,6 @@ AudioConnection          patchCord5(amp2, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=1055,398
 // GUItool: end automatically generated code
 
-
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
 uint8_t bank = EEPROM.read(EEPROM_BANK_ADDR);
@@ -133,10 +132,13 @@ void setup()
 
   // start audio card
   AudioMemory(AUDIO_MEM);
-  sgtl5000_1.enable();
-  sgtl5000_1.volume(VOLUME);
   amp1.gain(1.0); // normal audio
   amp2.gain(1.0); // normal audio
+  sgtl5000_1.enable();
+  sgtl5000_1.unmuteHeadphone();
+  sgtl5000_1.autoVolumeDisable(); // turn off AGC
+  sgtl5000_1.volume(1.0,1.0);
+  sgtl5000_1.dacVolume(VOLUME,VOLUME);
 
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
@@ -170,7 +172,7 @@ void setup()
   Serial.print(F("AUDIO_BLOCK_SAMPLES="));
   Serial.print(AUDIO_BLOCK_SAMPLES);
   Serial.print(F(" (Time per block="));
-  Serial.print(1000000/(SAMPLE_RATE/AUDIO_BLOCK_SAMPLES));
+  Serial.print(1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES));
   Serial.println(F("ms)"));
 
 #ifdef TEST_NOTE
@@ -202,9 +204,9 @@ void setup()
 
 void loop()
 {
-  int16_t* audio_buffer; // pointer to 128 * int16_t (=256 bytes!)
-  const uint16_t audio_block_time_ms=1000000/(SAMPLE_RATE/AUDIO_BLOCK_SAMPLES);
-  
+  int16_t* audio_buffer; // pointer to AUDIO_BLOCK_SAMPLES * int16_t
+  const uint16_t audio_block_time_ms = 1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES);
+
   while (42 == 42) // DON'T PANIC!
   {
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
@@ -395,7 +397,8 @@ bool handle_master_key(uint8_t data)
     num = abs(num);
     if (num <= 10)
     {
-      sgtl5000_1.volume(num * 0.1);
+      //sgtl5000_1.volume(num * 0.1, num * 0.1);
+      sgtl5000_1.dacVolume(num * 0.1, num * 0.1);
 #ifdef DEBUG
       Serial.print(F("Volume changed to: "));
       Serial.println(num * 0.1, DEC);

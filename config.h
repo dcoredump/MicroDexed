@@ -31,7 +31,7 @@
 // Initial values
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
-#define VOLUME 0.8
+#define VOLUME 0.5
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
 #define DEFAULT_SYSEXSOUND 0
