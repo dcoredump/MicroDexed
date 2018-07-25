@@ -127,7 +127,8 @@ enum DexedGlobalParameters {
   DEXED_OP4_ENABLE,         // 14
   DEXED_OP5_ENABLE,         // 15
   DEXED_OP6_ENABLE,         // 16
-  DEXED_MAX_NOTES           // 17
+  DEXED_MAX_NOTES,          // 17
+  DEXED_VOICE_VOLUME        // 18
 };
 
 // GLOBALS

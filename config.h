@@ -59,7 +59,7 @@
 // Some optimizations
 #define USE_TEENSY_DSP 1
 #define SUM_UP_AS_INT 1
-#define REDUCE_LOUDNESS 1
+#define REDUCE_LOUDNESS 0
 
 // Enable TEST_NOTE for adding code to drop some midi notes for testing without keyboard
 //#define TEST_NOTE MIDI_E2
@@ -82,10 +82,13 @@
 #define INITIAL_ENC1_VALUE 0
 
 // EEPROM address
-//#define INITIALIZE_EEPROM 1
 #define EEPROM_OFFSET 0
-#define EEPROM_BANK_ADDR 0
-#define EEPROM_VOICE_ADDR 1
-#define EEPROM_MASTER_VOLUME_ADDR 2
-#define EEPROM_VOLUME_RIGHT_ADDR 3
-#define EEPROM_VOLUME_LEFT_ADDR 4
+#define EEPROM_DATA_LENGTH 5
+
+#define EEPROM_CRC32_ADDR 0 // uint32_t (= 4bytes)
+#define EEPROM_BANK_ADDR 4
+#define EEPROM_VOICE_ADDR 5
+#define EEPROM_MASTER_VOLUME_ADDR 6
+#define EEPROM_VOLUME_RIGHT_ADDR 7
+#define EEPROM_VOLUME_LEFT_ADDR 8
+
