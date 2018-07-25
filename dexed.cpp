@@ -220,24 +220,27 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
             controllers.refresh();
             break;
           case 7: // Volume
-            //sgtl5000_1.volume(value / 0x7f, value / 0x7f);
-            sgtl5000_1.dacVolume(value / 0x7f, value / 0x7f);
+            vol = value / 0x7f;
+            sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
             break;
           case 10: // Pan
             if (value < 64)
             {
-              amp1.gain(1.0);
-              amp2.gain(float(value) / 0x40);
+              vol_left = 1.0;
+              vol_right = float(value) / 0x40;
+              set_volume(vol, vol_left, vol_right);
             }
             else if (value > 64)
             {
-              amp1.gain(float(0x7f - value) / 0x40);
-              amp2.gain(1.0);
+              vol_left = float(0x7f - value) / 0x40;
+              vol_right = 1.0;
+              set_volume(vol, vol_left, vol_right);
             }
             else
             {
-              amp1.gain(1.0);
-              amp2.gain(1.0);
+              vol_left = 1.0;
+              vol_right = 1.0;
+              set_volume(vol, vol_left, vol_right);
             }
             break;
           case 32: // BankSelect LSB

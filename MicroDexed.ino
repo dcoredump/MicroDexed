@@ -53,15 +53,11 @@ Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=708,349
-AudioAmplifier           amp1;           //xy=904,314
-AudioAmplifier           amp2;           //xy=909,373
 AudioAnalyzePeak         peak1;          //xy=909,436
 AudioOutputI2S           i2s1;           //xy=1055,343
-AudioConnection          patchCord1(queue1, amp1);
-AudioConnection          patchCord2(queue1, amp2);
-AudioConnection          patchCord3(queue1, peak1);
-AudioConnection          patchCord4(amp1, 0, i2s1, 0);
-AudioConnection          patchCord5(amp2, 0, i2s1, 1);
+AudioConnection          patchCord1(queue1, peak1);
+AudioConnection          patchCord2(queue1, 0, i2s1, 0);
+AudioConnection          patchCord3(queue1, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=1055,398
 // GUItool: end automatically generated code
 
@@ -73,6 +69,9 @@ uint32_t xrun = 0;
 uint32_t overload = 0;
 uint32_t peak = 0;
 uint16_t render_time_max = 0;
+float vol = float(EEPROM.read(EEPROM_MASTER_VOLUME_ADDR)) / 256;
+float vol_right = float(EEPROM.read(EEPROM_VOLUME_RIGHT_ADDR)) / 256;
+float vol_left = float(EEPROM.read(EEPROM_VOLUME_LEFT_ADDR)) / 256;
 
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
@@ -132,15 +131,13 @@ void setup()
 
   // start audio card
   AudioMemory(AUDIO_MEM);
-  amp1.gain(1.0); // normal audio
-  amp2.gain(1.0); // normal audio
   sgtl5000_1.enable();
   //sgtl5000_1.dacVolumeRamp();
   sgtl5000_1.dacVolumeRampLinear();
   sgtl5000_1.unmuteHeadphone();
   sgtl5000_1.autoVolumeDisable(); // turn off AGC
-  sgtl5000_1.volume(1.0,1.0);
-  sgtl5000_1.dacVolume(VOLUME,VOLUME);
+  sgtl5000_1.volume(1.0, 1.0);
+  set_volume(vol, vol_left, vol_right);
 
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
@@ -381,7 +378,7 @@ bool handle_master_key(uint8_t data)
         Serial.print(F("Loading voice number "));
         Serial.println(num, DEC);
 #endif
-        store_voice_number(bank, num);
+        EEPROM.update(EEPROM_VOICE_ADDR, num);
       }
 #ifdef DEBUG
       else
@@ -399,8 +396,7 @@ bool handle_master_key(uint8_t data)
     num = abs(num);
     if (num <= 10)
     {
-      //sgtl5000_1.volume(num * 0.1, num * 0.1);
-      sgtl5000_1.dacVolume(num * 0.1, num * 0.1);
+      set_volume(num * 0.1, vol_left, vol_right);
 #ifdef DEBUG
       Serial.print(F("Volume changed to: "));
       Serial.println(num * 0.1, DEC);
@@ -409,6 +405,7 @@ bool handle_master_key(uint8_t data)
     else if (num > 10 && num <= 20)
     {
       bank = num - 10;
+      EEPROM.update(EEPROM_BANK_ADDR, bank);
 #ifdef DEBUG
       Serial.print(F("Bank switch to: "));
       Serial.println(bank, DEC);
@@ -533,12 +530,12 @@ int8_t num_key_base_c(uint8_t midi_note)
 }
 #endif
 
-void store_voice_number(uint8_t bank, uint8_t voice)
+void set_volume(float master_volume, float volume_right, float volume_left)
 {
-  if (EEPROM.read(EEPROM_BANK_ADDR) != bank)
-    EEPROM.write(EEPROM_BANK_ADDR, bank);
-  if (EEPROM.read(EEPROM_VOICE_ADDR) != voice)
-    EEPROM.write(EEPROM_VOICE_ADDR, voice);
+  EEPROM.update(EEPROM_MASTER_VOLUME_ADDR, uint8_t(master_volume * 256));
+  EEPROM.update(EEPROM_VOLUME_RIGHT_ADDR, uint8_t(volume_right * 256));
+  EEPROM.update(EEPROM_VOLUME_LEFT_ADDR, uint8_t(volume_left * 256));
+  sgtl5000_1.dacVolume(master_volume * volume_left, master_volume * volume_right);
 }
 
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
