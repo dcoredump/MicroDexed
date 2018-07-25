@@ -135,6 +135,8 @@ void setup()
   amp1.gain(1.0); // normal audio
   amp2.gain(1.0); // normal audio
   sgtl5000_1.enable();
+  //sgtl5000_1.dacVolumeRamp();
+  sgtl5000_1.dacVolumeRampLinear();
   sgtl5000_1.unmuteHeadphone();
   sgtl5000_1.autoVolumeDisable(); // turn off AGC
   sgtl5000_1.volume(1.0,1.0);
