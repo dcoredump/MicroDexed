@@ -31,21 +31,24 @@
 #include "dexed_sysex.h"
 #include "config.h"
 
-bool load_sysex(uint8_t bank, uint8_t voice_number)
+bool load_sysex(uint8_t b, uint8_t v)
 {
   File root;
   bool found = false;
 
-  voice_number %= 32;
-  bank %= 10;
+  v %= 32;
+  b %= 10;
 
+  if(b==bank && v==voice)
+    return(true);
+    
   if (sd_card_available)
   {
     char bankdir[3];
 
     bankdir[0] = '/';
     bankdir[2] = '\0';
-    itoa(bank, &bankdir[1], 10);
+    itoa(b, &bankdir[1], 10);
 
     root = SD.open(bankdir);
     if (!root)
@@ -69,7 +72,7 @@ bool load_sysex(uint8_t bank, uint8_t voice_number)
         {
           uint8_t data[128];
           found = true;
-          if (get_sysex_voice(bankdir, entry, voice_number, data))
+          if (get_sysex_voice(bankdir, entry, v, data))
           {
 #ifdef DEBUG
             char n[11];

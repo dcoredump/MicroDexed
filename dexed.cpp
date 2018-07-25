@@ -220,7 +220,7 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
             controllers.refresh();
             break;
           case 7: // Volume
-            vol = value / 0x7f;
+            vol = float(value) / 0x7f;
             sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
             break;
           case 10: // Pan

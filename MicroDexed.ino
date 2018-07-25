@@ -63,15 +63,16 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=1055,398
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
-uint8_t bank = EEPROM.read(EEPROM_BANK_ADDR);
 uint8_t midi_channel = DEFAULT_MIDI_CHANNEL;
 uint32_t xrun = 0;
 uint32_t overload = 0;
 uint32_t peak = 0;
 uint16_t render_time_max = 0;
-float vol = float(EEPROM.read(EEPROM_MASTER_VOLUME_ADDR)) / 256;
-float vol_right = float(EEPROM.read(EEPROM_VOLUME_RIGHT_ADDR)) / 256;
-float vol_left = float(EEPROM.read(EEPROM_VOLUME_LEFT_ADDR)) / 256;
+uint8_t bank = EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR);
+uint8_t voice = EEPROM.read(EEPROM_OFFSET + EEPROM_VOICE_ADDR);
+float vol = float(EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR)) / 256;
+float vol_right = float(EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR)) / 256;
+float vol_left = float(EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR)) / 256;
 
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
@@ -100,6 +101,19 @@ void setup()
   //while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(SERIAL_SPEED);
   delay(200);
+
+#ifdef INITIALIZE_EEPROM
+  uint8_t bank = 0;
+  EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
+  uint8_t voice = 0;
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
+  float vol = VOLUME;
+  EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol / 256));
+  float vol_right = 1.0;
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right / 256));
+  float vol_left = 1.0;
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left / 256));
+#endif
 
 #ifndef MASTER_KEY_MIDI
   lcd.init();
@@ -159,12 +173,13 @@ void setup()
 #endif
 
   // load default SYSEX data
-  load_sysex(bank, EEPROM.read(EEPROM_VOICE_ADDR));
+  load_sysex(bank, voice);
 #ifdef DEBUG
-  Serial.print(F("Bank/Voice from EEPROM: "));
-  Serial.print(EEPROM.read(EEPROM_BANK_ADDR), DEC);
+  Serial.print(F("Bank/Voice from EEPROM ["));
+  Serial.print(EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR), DEC);
   Serial.print(F("/"));
-  Serial.println(EEPROM.read(EEPROM_VOICE_ADDR), DEC);
+  Serial.print(EEPROM.read(EEPROM_OFFSET + EEPROM_VOICE_ADDR), DEC);
+  Serial.println(F("]"));
   show_patch();
 #endif
 
@@ -181,6 +196,7 @@ void setup()
 #endif
 
   Serial.println(F("<setup end>"));
+
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
   cpu_mem_millis = 0;
@@ -285,57 +301,6 @@ void handle_input(void)
 #endif
 }
 
-#ifdef TEST_NOTE
-void note_on(void)
-{
-  randomSeed(analogRead(A0));
-  queue_midi_event(0x90, TEST_NOTE, random(TEST_VEL_MIN, TEST_VEL_MAX));           // 1
-  queue_midi_event(0x90, TEST_NOTE + 5, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 2
-  queue_midi_event(0x90, TEST_NOTE + 8, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 3
-  queue_midi_event(0x90, TEST_NOTE + 12, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 4
-  queue_midi_event(0x90, TEST_NOTE + 17, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 5
-  queue_midi_event(0x90, TEST_NOTE + 20, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 6
-  queue_midi_event(0x90, TEST_NOTE + 24, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 7
-  queue_midi_event(0x90, TEST_NOTE + 29, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 8
-  queue_midi_event(0x90, TEST_NOTE + 32, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 9
-  queue_midi_event(0x90, TEST_NOTE + 37, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 10
-  queue_midi_event(0x90, TEST_NOTE + 40, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 11
-  queue_midi_event(0x90, TEST_NOTE + 46, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 12
-  queue_midi_event(0x90, TEST_NOTE + 49, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 13
-  queue_midi_event(0x90, TEST_NOTE + 52, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 14
-  queue_midi_event(0x90, TEST_NOTE + 57, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 15
-  queue_midi_event(0x90, TEST_NOTE + 60, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 16
-}
-
-void note_off(void)
-{
-  queue_midi_event(0x80, TEST_NOTE, 0);           // 1
-  queue_midi_event(0x80, TEST_NOTE + 5, 0);       // 2
-  queue_midi_event(0x80, TEST_NOTE + 8, 0);       // 3
-  queue_midi_event(0x80, TEST_NOTE + 12, 0);      // 4
-  queue_midi_event(0x80, TEST_NOTE + 17, 0);      // 5
-  queue_midi_event(0x80, TEST_NOTE + 20, 0);      // 6
-  queue_midi_event(0x80, TEST_NOTE + 24, 0);      // 7
-  queue_midi_event(0x80, TEST_NOTE + 29, 0);      // 8
-  queue_midi_event(0x80, TEST_NOTE + 32, 0);      // 9
-  queue_midi_event(0x80, TEST_NOTE + 37, 0);      // 10
-  queue_midi_event(0x80, TEST_NOTE + 40, 0);      // 11
-  queue_midi_event(0x80, TEST_NOTE + 46, 0);      // 12
-  queue_midi_event(0x80, TEST_NOTE + 49, 0);      // 13
-  queue_midi_event(0x80, TEST_NOTE + 52, 0);      // 14
-  queue_midi_event(0x80, TEST_NOTE + 57, 0);      // 15
-  queue_midi_event(0x80, TEST_NOTE + 60, 0);      // 16
-
-  bool success = load_sysex(DEFAULT_SYSEXBANK, (++_voice_counter) - 1);
-  if (success == false)
-#ifdef DEBUG
-    Serial.println(F("E: Cannot load SYSEX data"));
-#endif
-  else
-    show_patch();
-}
-#endif
-
 #ifdef DEBUG
 #ifdef SHOW_MIDI_EVENT
 void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
@@ -378,7 +343,7 @@ bool handle_master_key(uint8_t data)
         Serial.print(F("Loading voice number "));
         Serial.println(num, DEC);
 #endif
-        EEPROM.update(EEPROM_VOICE_ADDR, num);
+        EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, num);
       }
 #ifdef DEBUG
       else
@@ -396,20 +361,17 @@ bool handle_master_key(uint8_t data)
     num = abs(num);
     if (num <= 10)
     {
-      set_volume(num * 0.1, vol_left, vol_right);
-#ifdef DEBUG
-      Serial.print(F("Volume changed to: "));
-      Serial.println(num * 0.1, DEC);
-#endif
+      set_volume(float(num * 0.1), vol_left, vol_right);
     }
     else if (num > 10 && num <= 20)
     {
       bank = num - 10;
-      EEPROM.update(EEPROM_BANK_ADDR, bank);
+      EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
 #ifdef DEBUG
       Serial.print(F("Bank switch to: "));
       Serial.println(bank, DEC);
 #endif
+      return (true);
     }
   }
   return (false);
@@ -454,7 +416,6 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   }
   else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
   {
-    dexed->notesOff();
     master_key_enabled = true;
 #ifdef DEBUG
     Serial.println(F("Master key enabled"));
@@ -465,7 +426,10 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
     if (master_key_enabled)
     {
       if (type == 0x80) // handle when note is released
+      {
+        dexed->notesOff();
         handle_master_key(data1);
+      }
     }
     else
 #endif
@@ -532,9 +496,35 @@ int8_t num_key_base_c(uint8_t midi_note)
 
 void set_volume(float master_volume, float volume_right, float volume_left)
 {
-  EEPROM.update(EEPROM_MASTER_VOLUME_ADDR, uint8_t(master_volume * 256));
-  EEPROM.update(EEPROM_VOLUME_RIGHT_ADDR, uint8_t(volume_right * 256));
-  EEPROM.update(EEPROM_VOLUME_LEFT_ADDR, uint8_t(volume_left * 256));
+  EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(master_volume * 256));
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(volume_right * 256));
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(volume_left * 256));
+
+#ifdef DEBUG
+  uint8_t tmp;
+  Serial.print(F("Setting volume: VOL="));
+  Serial.print(master_volume, DEC);
+  Serial.print(F("["));
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR);
+  Serial.print(tmp, DEC);
+  Serial.print(F("/"));
+  Serial.print(float(tmp) / 256, DEC);
+  Serial.print(F("] VOL_L="));
+  Serial.print(volume_left, DEC);
+  Serial.print(F("["));
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR);
+  Serial.print(tmp, DEC);
+  Serial.print(F("/"));
+  Serial.print(float(tmp) / 256, DEC);
+  Serial.print(F("] VOL_R="));
+  Serial.print(volume_right, DEC);
+  Serial.print(F("["));
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR);
+  Serial.print(tmp, DEC);
+  Serial.print(F("/"));
+  Serial.print(float(tmp) / 256, DEC);
+  Serial.println(F("]"));
+#endif
   sgtl5000_1.dacVolume(master_volume * volume_left, master_volume * volume_right);
 }
 
@@ -730,3 +720,55 @@ void show_patch(void)
   Serial.println();
 }
 #endif
+
+#ifdef TEST_NOTE
+void note_on(void)
+{
+  randomSeed(analogRead(A0));
+  queue_midi_event(0x90, TEST_NOTE, random(TEST_VEL_MIN, TEST_VEL_MAX));           // 1
+  queue_midi_event(0x90, TEST_NOTE + 5, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 2
+  queue_midi_event(0x90, TEST_NOTE + 8, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 3
+  queue_midi_event(0x90, TEST_NOTE + 12, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 4
+  queue_midi_event(0x90, TEST_NOTE + 17, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 5
+  queue_midi_event(0x90, TEST_NOTE + 20, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 6
+  queue_midi_event(0x90, TEST_NOTE + 24, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 7
+  queue_midi_event(0x90, TEST_NOTE + 29, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 8
+  queue_midi_event(0x90, TEST_NOTE + 32, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 9
+  queue_midi_event(0x90, TEST_NOTE + 37, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 10
+  queue_midi_event(0x90, TEST_NOTE + 40, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 11
+  queue_midi_event(0x90, TEST_NOTE + 46, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 12
+  queue_midi_event(0x90, TEST_NOTE + 49, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 13
+  queue_midi_event(0x90, TEST_NOTE + 52, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 14
+  queue_midi_event(0x90, TEST_NOTE + 57, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 15
+  queue_midi_event(0x90, TEST_NOTE + 60, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 16
+}
+
+void note_off(void)
+{
+  queue_midi_event(0x80, TEST_NOTE, 0);           // 1
+  queue_midi_event(0x80, TEST_NOTE + 5, 0);       // 2
+  queue_midi_event(0x80, TEST_NOTE + 8, 0);       // 3
+  queue_midi_event(0x80, TEST_NOTE + 12, 0);      // 4
+  queue_midi_event(0x80, TEST_NOTE + 17, 0);      // 5
+  queue_midi_event(0x80, TEST_NOTE + 20, 0);      // 6
+  queue_midi_event(0x80, TEST_NOTE + 24, 0);      // 7
+  queue_midi_event(0x80, TEST_NOTE + 29, 0);      // 8
+  queue_midi_event(0x80, TEST_NOTE + 32, 0);      // 9
+  queue_midi_event(0x80, TEST_NOTE + 37, 0);      // 10
+  queue_midi_event(0x80, TEST_NOTE + 40, 0);      // 11
+  queue_midi_event(0x80, TEST_NOTE + 46, 0);      // 12
+  queue_midi_event(0x80, TEST_NOTE + 49, 0);      // 13
+  queue_midi_event(0x80, TEST_NOTE + 52, 0);      // 14
+  queue_midi_event(0x80, TEST_NOTE + 57, 0);      // 15
+  queue_midi_event(0x80, TEST_NOTE + 60, 0);      // 16
+
+  bool success = load_sysex(DEFAULT_SYSEXBANK, (++_voice_counter) - 1);
+  if (success == false)
+#ifdef DEBUG
+    Serial.println(F("E: Cannot load SYSEX data"));
+#endif
+  else
+    show_patch();
+}
+#endif
+
