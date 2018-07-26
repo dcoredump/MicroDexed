@@ -59,7 +59,7 @@
 // Some optimizations
 #define USE_TEENSY_DSP 1
 #define SUM_UP_AS_INT 1
-#define REDUCE_LOUDNESS 0
+#define REDUCE_LOUDNESS 1
 
 // Enable TEST_NOTE for adding code to drop some midi notes for testing without keyboard
 //#define TEST_NOTE MIDI_E2

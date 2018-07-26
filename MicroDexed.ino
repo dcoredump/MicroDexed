@@ -487,31 +487,35 @@ int8_t num_key_base_c(uint8_t midi_note)
 }
 #endif
 
-void set_volume(float master_vol, float vol_right, float vol_left)
+void set_volume(float v, float vr, float vl)
 {
-  EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, master_vol * UCHAR_MAX);
-  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, vol_right * UCHAR_MAX);
-  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, vol_left * UCHAR_MAX);
+  vol=v;
+  vol_right=vr;
+  vol_left=vl;
+  
+  EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));  
   update_eeprom_checksum();
 
 #ifdef DEBUG
   uint8_t tmp;
   Serial.print(F("Setting volume: VOL="));
-  Serial.print(master_vol, DEC);
+  Serial.print(v, DEC);
   Serial.print(F("["));
   tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR);
   Serial.print(tmp, DEC);
   Serial.print(F("/"));
   Serial.print(float(tmp) / UCHAR_MAX, DEC);
   Serial.print(F("] VOL_L="));
-  Serial.print(vol_left, DEC);
+  Serial.print(vl, DEC);
   Serial.print(F("["));
   tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR);
   Serial.print(tmp, DEC);
   Serial.print(F("/"));
   Serial.print(float(tmp) / UCHAR_MAX, DEC);
   Serial.print(F("] VOL_R="));
-  Serial.print(vol_right, DEC);
+  Serial.print(vr, DEC);
   Serial.print(F("["));
   tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR);
   Serial.print(tmp, DEC);
@@ -519,7 +523,8 @@ void set_volume(float master_vol, float vol_right, float vol_left)
   Serial.print(float(tmp) / UCHAR_MAX, DEC);
   Serial.println(F("]"));
 #endif
-  sgtl5000_1.dacVolume(master_vol * vol_left, master_vol * vol_right);
+
+  sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
 }
 
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
