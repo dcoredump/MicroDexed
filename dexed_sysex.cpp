@@ -39,9 +39,6 @@ bool load_sysex(uint8_t b, uint8_t v)
   v %= 32;
   b %= 10;
 
-  if(b==bank && v==voice)
-    return(true);
-    
   if (sd_card_available)
   {
     char bankdir[3];

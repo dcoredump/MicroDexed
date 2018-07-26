@@ -150,7 +150,7 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
 #endif
 #ifdef SUM_UP_AS_INT
-          //sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS)*(float(data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_VOICE_VOLUME])/256);
+          //sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS)*(float(data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_VOICE_VOLUME])/255);
           sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS);
           if (buffer[i + j] > 0 && clip_val > 0 && sum < 0)
           {

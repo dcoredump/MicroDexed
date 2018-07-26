@@ -29,6 +29,7 @@
 #include <SD.h>
 #include <MIDI.h>
 #include <EEPROM.h>
+#include <limits.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
 #include "config.h"
@@ -68,11 +69,11 @@ uint32_t xrun = 0;
 uint32_t overload = 0;
 uint32_t peak = 0;
 uint16_t render_time_max = 0;
-uint8_t bank;
-uint8_t voice;
-float vol;
-float vol_right;
-float vol_left;
+uint8_t bank = 0;
+uint8_t voice = 0;
+float vol = VOLUME;
+float vol_right = 1.0;
+float vol_left = 1.0;
 
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
@@ -100,9 +101,7 @@ void setup()
 {
   //while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(SERIAL_SPEED);
-  delay(180);
-
-  initial_values_from_eeprom();
+  delay(220);
 
 #ifndef MASTER_KEY_MIDI
   lcd.init();
@@ -121,6 +120,8 @@ void setup()
   Serial.println(F("(c)2018 H. Wirtz <wirtz@parasitstudio.de>"));
   Serial.println(F("https://github.com/dcoredump/MicroDexed"));
   Serial.println(F("<setup start>"));
+
+  initial_values_from_eeprom();
 
   // start up USB host
 #ifdef USE_ONBOARD_USB_HOST
@@ -163,11 +164,12 @@ void setup()
 
   // load default SYSEX data
   load_sysex(bank, voice);
+
 #ifdef DEBUG
   Serial.print(F("Bank/Voice from EEPROM ["));
-  Serial.print(EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_BANK_ADDR), DEC);
+  Serial.print(EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR), DEC);
   Serial.print(F("/"));
-  Serial.print(EEPROM.read(EEPROM_OFFSET + 4 +  EEPROM_VOICE_ADDR), DEC);
+  Serial.print(EEPROM.read(EEPROM_OFFSET +  EEPROM_VOICE_ADDR), DEC);
   Serial.println(F("]"));
   show_patch();
 #endif
@@ -333,6 +335,7 @@ bool handle_master_key(uint8_t data)
         Serial.println(num, DEC);
 #endif
         EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, num);
+        update_eeprom_checksum();
       }
 #ifdef DEBUG
       else
@@ -356,6 +359,7 @@ bool handle_master_key(uint8_t data)
     {
       bank = num - 10;
       EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
+      update_eeprom_checksum();
 #ifdef DEBUG
       Serial.print(F("Bank switch to: "));
       Serial.println(bank, DEC);
@@ -483,38 +487,39 @@ int8_t num_key_base_c(uint8_t midi_note)
 }
 #endif
 
-void set_volume(float master_volume, float volume_right, float volume_left)
+void set_volume(float master_vol, float vol_right, float vol_left)
 {
-  EEPROM.update(EEPROM_OFFSET + 4 + EEPROM_MASTER_VOLUME_ADDR, uint8_t(master_volume * 256));
-  EEPROM.update(EEPROM_OFFSET + 4 + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(volume_right * 256));
-  EEPROM.update(EEPROM_OFFSET + 4 + EEPROM_VOLUME_LEFT_ADDR, uint8_t(volume_left * 256));
+  EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, master_vol * UCHAR_MAX);
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, vol_right * UCHAR_MAX);
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, vol_left * UCHAR_MAX);
+  update_eeprom_checksum();
 
 #ifdef DEBUG
   uint8_t tmp;
   Serial.print(F("Setting volume: VOL="));
-  Serial.print(master_volume, DEC);
+  Serial.print(master_vol, DEC);
   Serial.print(F("["));
-  tmp = EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_MASTER_VOLUME_ADDR);
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR);
   Serial.print(tmp, DEC);
   Serial.print(F("/"));
-  Serial.print(float(tmp) / 256, DEC);
+  Serial.print(float(tmp) / UCHAR_MAX, DEC);
   Serial.print(F("] VOL_L="));
-  Serial.print(volume_left, DEC);
+  Serial.print(vol_left, DEC);
   Serial.print(F("["));
-  tmp = EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_VOLUME_LEFT_ADDR);
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR);
   Serial.print(tmp, DEC);
   Serial.print(F("/"));
-  Serial.print(float(tmp) / 256, DEC);
+  Serial.print(float(tmp) / UCHAR_MAX, DEC);
   Serial.print(F("] VOL_R="));
-  Serial.print(volume_right, DEC);
+  Serial.print(vol_right, DEC);
   Serial.print(F("["));
-  tmp = EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_VOLUME_RIGHT_ADDR);
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR);
   Serial.print(tmp, DEC);
   Serial.print(F("/"));
-  Serial.print(float(tmp) / 256, DEC);
+  Serial.print(float(tmp) / UCHAR_MAX, DEC);
   Serial.println(F("]"));
 #endif
-  sgtl5000_1.dacVolume(master_volume * volume_left, master_volume * volume_right);
+  sgtl5000_1.dacVolume(master_vol * vol_left, master_vol * vol_right);
 }
 
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
@@ -584,50 +589,56 @@ void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
 
 void initial_values_from_eeprom(void)
 {
-  uint32_t crc_eeprom=read_eeprom_checksum();
-  uint32_t crc = eeprom_crc32(EEPROM_OFFSET + 4, EEPROM_DATA_LENGTH);
-  
+  uint32_t crc_eeprom = read_eeprom_checksum();
+  uint32_t crc = eeprom_crc32(EEPROM_OFFSET, EEPROM_DATA_LENGTH);
+
+#ifdef DEBUG
+  Serial.print(F("EEPROM checksum: 0x"));
+  Serial.print(crc_eeprom, HEX);
+  Serial.print(F("!= 0x"));
+  Serial.print(crc, HEX);
+#endif
   if (crc_eeprom != crc)
   {
-    #ifdef DEBUG
-    Serial.print(F("EEPROM checksum mismatch: 0x"));
-    Serial.print(crc_eeprom,HEX);
-    Serial.print(F("!= 0x"));
-    Serial.print(crc,HEX);
-    Serial.println(F(" - initializing EEPROM!"));
-    #endif
-    
-    uint8_t bank = 0;
-    EEPROM.update(EEPROM_OFFSET + 4  + EEPROM_BANK_ADDR, bank);
-    uint8_t voice = 0;
-    EEPROM.update(EEPROM_OFFSET + 4 + EEPROM_VOICE_ADDR, voice);
-    float vol = VOLUME;
-    EEPROM.update(EEPROM_OFFSET + 4 + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol / 256));
-    float vol_right = 1.0;
-    EEPROM.update(EEPROM_OFFSET + 4 + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right / 256));
-    float vol_left = 1.0;
-    EEPROM.update(EEPROM_OFFSET + 4 + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left / 256));
-
-    // write crc32
-    uint32_t crc = eeprom_crc32(EEPROM_OFFSET + 4, EEPROM_DATA_LENGTH);  // recalculate
-    EEPROM.write(EEPROM_OFFSET + EEPROM_CRC32_ADDR, (crc & 0xff000000) >> 24);
-    EEPROM.write(EEPROM_OFFSET + EEPROM_CRC32_ADDR + 1, (crc & 0x00ff0000) >> 16);
-    EEPROM.write(EEPROM_OFFSET + EEPROM_CRC32_ADDR + 2, (crc & 0x0000ff00) >> 8);
-    EEPROM.write(EEPROM_OFFSET + EEPROM_CRC32_ADDR + 3, crc & 0x000000ff);
+#ifdef DEBUG
+    Serial.print(F(" - mismatch -> initializing EEPROM!"));
+#endif
+    EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
+    EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
+    update_eeprom_checksum();
   }
   else
   {
-    bank = EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_BANK_ADDR);
-    voice = EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_VOICE_ADDR);
-    vol = float(EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_MASTER_VOLUME_ADDR)) / 256;
-    vol_right = float(EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_VOLUME_RIGHT_ADDR)) / 256;
-    vol_left = float(EEPROM.read(EEPROM_OFFSET + 4 + EEPROM_VOLUME_LEFT_ADDR)) / 256;
+    bank = EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR);
+    voice = EEPROM.read(EEPROM_OFFSET + EEPROM_VOICE_ADDR);
+    vol = float(EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR)) / UCHAR_MAX;
+    vol_right = float(EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR)) / UCHAR_MAX;
+    vol_left = float(EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR)) / UCHAR_MAX;
   }
+#ifdef DEBUG
+  Serial.println();
+#endif
 }
 
 uint32_t read_eeprom_checksum(void)
 {
-  return (EEPROM[EEPROM_OFFSET + EEPROM_CRC32_ADDR] << 24 | EEPROM[EEPROM_OFFSET + EEPROM_CRC32_ADDR + 1] << 16 | EEPROM[EEPROM_OFFSET + EEPROM_CRC32_ADDR + 2] << 8 | EEPROM[EEPROM_OFFSET + EEPROM_CRC32_ADDR + 3]);
+  return (EEPROM.read(EEPROM_CRC32_ADDR) << 24 | EEPROM.read(EEPROM_CRC32_ADDR + 1) << 16 | EEPROM.read(EEPROM_CRC32_ADDR + 2) << 8 | EEPROM.read(EEPROM_CRC32_ADDR + 3));
+}
+
+void update_eeprom_checksum(void)
+{
+  write_eeprom_checksum(eeprom_crc32(EEPROM_OFFSET, EEPROM_DATA_LENGTH)); // recalculate crc and write to eeprom
+}
+
+void write_eeprom_checksum(uint32_t crc)
+{
+  EEPROM.update(EEPROM_CRC32_ADDR, (crc & 0xff000000) >> 24);
+  EEPROM.update(EEPROM_CRC32_ADDR + 1, (crc & 0x00ff0000) >> 16);
+  EEPROM.update(EEPROM_CRC32_ADDR + 2, (crc & 0x0000ff00) >> 8);
+  EEPROM.update(EEPROM_CRC32_ADDR + 3, crc & 0x000000ff);
 }
 
 uint32_t eeprom_crc32(uint16_t calc_start, uint16_t calc_bytes) // base code from https://www.arduino.cc/en/Tutorial/EEPROMCrc
@@ -644,7 +655,7 @@ uint32_t eeprom_crc32(uint16_t calc_start, uint16_t calc_bytes) // base code fro
   if (calc_start + calc_bytes > EEPROM.length())
     calc_bytes = EEPROM.length() - calc_start;
 
-  for (uint16_t index = calc_start ; index < calc_start + calc_bytes ; ++index)
+  for (uint16_t index = calc_start ; index < (calc_start + calc_bytes) ; ++index)
   {
     crc = crc_table[(crc ^ EEPROM[index]) & 0x0f] ^ (crc >> 4);
     crc = crc_table[(crc ^ (EEPROM[index] >> 4)) & 0x0f] ^ (crc >> 4);
