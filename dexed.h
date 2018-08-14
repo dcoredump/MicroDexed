@@ -169,7 +169,7 @@ class Dexed
       04, 06, 00,                                                                         // algorithm, feedback, osc sync
       34, 33, 00, 00, 00, 04,                                                             // lfo speed, lfo delay, lfo pitch_mod_depth, lfo_amp_mod_depth, lfo_sync, lfo_waveform
       03, 24,                                                                             // pitch_mod_sensitivity, transpose
-      00, 00, 00, 00, 00, 00, 00, 00, 00, 00,                                             // 10 * char for name
+      69, 68, 80, 56, 85 , 76, 84, 00, 00, 00,                                            // 10 * char for name ("DEFAULT   ")
       01, 00, 99, 00, 99, 00, 99, 00, 99, 00,                                             // pitch_bend_range, pitch_bend_step, mod_wheel_range, mod_wheel_assign, foot_ctrl_range, foot_ctrl_assign, breath_ctrl_range, breath_ctrl_assign, aftertouch_range, aftertouch_assign
       00,                                                                                 // master tune
       01, 01, 01, 01, 01, 01,                                                             // OP1-6 enable

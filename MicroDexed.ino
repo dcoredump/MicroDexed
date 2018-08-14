@@ -53,13 +53,25 @@ Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 #endif
 
 // GUItool: begin automatically generated code
-AudioPlayQueue           queue1;         //xy=708,349
-AudioAnalyzePeak         peak1;          //xy=909,436
-AudioOutputI2S           i2s1;           //xy=1055,343
+AudioPlayQueue           queue1;         //xy=494,404
+AudioAmplifier           volume_master;           //xy=678,393
+AudioAnalyzePeak         peak1;          //xy=695,491
+AudioAmplifier           volume_r;           //xy=818,370
+AudioAmplifier           volume_l;           //xy=818,411
+#ifdef TEENSY_AUDIO_BOARD
+AudioOutputI2S           i2s1;           //xy=1072,364
+AudioConnection          patchCord5(volume_r, 0, i2s1, 0);
+AudioConnection          patchCord7(volume_l, 0, i2s1, 1);
+AudioControlSGTL5000     sgtl5000_1;     //xy=700,536
+#else
+AudioOutputPT8211        pt8211_1;       //xy=1079,320
+AudioConnection          patchCord5(volume_r, 0, pt8211_1, 0);
+AudioConnection          patchCord7(volume_l, 0, pt8211_1, 1);
+#endif
 AudioConnection          patchCord1(queue1, peak1);
-AudioConnection          patchCord2(queue1, 0, i2s1, 0);
-AudioConnection          patchCord3(queue1, 0, i2s1, 1);
-AudioControlSGTL5000     sgtl5000_1;     //xy=1055,398
+AudioConnection          patchCord2(queue1, volume_master);
+AudioConnection          patchCord3(volume_master, volume_r);
+AudioConnection          patchCord4(volume_master, volume_l);
 // GUItool: end automatically generated code
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
@@ -135,12 +147,14 @@ void setup()
 
   // start audio card
   AudioMemory(AUDIO_MEM);
+#ifdef TEENSY_AUDIO_BOARD
   sgtl5000_1.enable();
   //sgtl5000_1.dacVolumeRamp();
   sgtl5000_1.dacVolumeRampLinear();
   sgtl5000_1.unmuteHeadphone();
   sgtl5000_1.autoVolumeDisable(); // turn off AGC
   sgtl5000_1.volume(1.0, 1.0);
+#endif
   set_volume(vol, vol_left, vol_right);
 
   // start SD card
@@ -246,6 +260,10 @@ void loop()
       if (peak1.read() > 0.99)
         peak++;
     }
+#ifndef TEENSY_AUDIO_BOARD
+    for (uint8_t i = 0; i <= AUDIO_BLOCK_SAMPLES; i++)
+      audio_buffer[i] *= vol;
+#endif
     queue1.playBuffer();
   }
 }
@@ -489,13 +507,13 @@ int8_t num_key_base_c(uint8_t midi_note)
 
 void set_volume(float v, float vr, float vl)
 {
-  vol=v;
-  vol_right=vr;
-  vol_left=vl;
-  
+  vol = v;
+  vol_right = vr;
+  vol_left = vl;
+
   EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
   EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
-  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));  
+  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
   update_eeprom_checksum();
 
 #ifdef DEBUG
@@ -524,7 +542,16 @@ void set_volume(float v, float vr, float vl)
   Serial.println(F("]"));
 #endif
 
+#ifdef TEENSY_AUDIO_BOARD
+  volume_master.gain(1.0);
+  volume_r.gain(1.0);
+  volume_l.gain(1.0);
   sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
+#else
+  volume_master.gain(vol);
+  volume_r.gain(vr);
+  volume_l.gain(vl);
+#endif
 }
 
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)

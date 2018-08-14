@@ -31,6 +31,7 @@
 // Initial values
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
+#define TEENSY_AUDIO_BOARD 1
 #define VOLUME 0.6
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
@@ -41,6 +42,7 @@
 
 #if !defined(__MK66FX1M0__) // check for Teensy-3.6
 #define MAX_NOTES 11        // No? 
+#undef USE_ONBOARD_USB_HOST
 #else
 #define MAX_NOTES 16        // Yes
 #endif
@@ -67,13 +69,13 @@
 #define TEST_VEL_MAX 110
 
 // Use these with the Teensy Audio Shield
-#define SDCARD_CS_PIN    10
-#define SDCARD_MOSI_PIN  7
-#define SDCARD_SCK_PIN   14
+//#define SDCARD_CS_PIN    10
+//#define SDCARD_MOSI_PIN  7
+//#define SDCARD_SCK_PIN   14
 // Use these with the Teensy 3.5 & 3.6 SD card
-//#define SDCARD_CS_PIN    BUILTIN_SDCARD
-//#define SDCARD_MOSI_PIN  11  // not actually used
-//#define SDCARD_SCK_PIN   13  // not actually used
+#define SDCARD_CS_PIN    BUILTIN_SDCARD
+#define SDCARD_MOSI_PIN  11  // not actually used
+#define SDCARD_SCK_PIN   13  // not actually used
 
 // Encoder with button
 #define ENC1_PIN_A  14
