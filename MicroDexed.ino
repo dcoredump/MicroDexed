@@ -44,9 +44,9 @@
 
 #ifndef MASTER_KEY_MIDI
 // [I2C] SCL: Pin 19, SDA: Pin 18 (https://www.pjrc.com/teensy/td_libs_Wire.html)
-#define LCD_I2C_ADDRESS 0x3f
-#define LCD_CHARS 20
-#define LCD_LINES 4
+#define LCD_I2C_ADDRESS 0x27
+#define LCD_CHARS 16
+#define LCD_LINES 2
 LiquidCrystalPlus_I2C lcd(LCD_I2C_ADDRESS, LCD_CHARS, LCD_LINES);
 Encoder enc1(ENC1_PIN_A, ENC1_PIN_B);
 Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
@@ -54,24 +54,25 @@ Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 
 // GUItool: begin automatically generated code
 AudioPlayQueue           queue1;         //xy=494,404
-AudioAmplifier           volume_master;           //xy=678,393
 AudioAnalyzePeak         peak1;          //xy=695,491
-AudioAmplifier           volume_r;           //xy=818,370
-AudioAmplifier           volume_l;           //xy=818,411
 #ifdef TEENSY_AUDIO_BOARD
 AudioOutputI2S           i2s1;           //xy=1072,364
-AudioConnection          patchCord5(volume_r, 0, i2s1, 0);
-AudioConnection          patchCord7(volume_l, 0, i2s1, 1);
+AudioConnection          patchCord1(queue1, peak1);
+AudioConnection          patchCord2(queue1, 0, i2s1, 0);
+AudioConnection          patchCord3(queue1, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;     //xy=700,536
 #else
 AudioOutputPT8211        pt8211_1;       //xy=1079,320
-AudioConnection          patchCord5(volume_r, 0, pt8211_1, 0);
-AudioConnection          patchCord7(volume_l, 0, pt8211_1, 1);
-#endif
+AudioAmplifier           volume_master;           //xy=678,393
+AudioAmplifier           volume_r;           //xy=818,370
+AudioAmplifier           volume_l;           //xy=818,411
 AudioConnection          patchCord1(queue1, peak1);
 AudioConnection          patchCord2(queue1, volume_master);
 AudioConnection          patchCord3(volume_master, volume_r);
 AudioConnection          patchCord4(volume_master, volume_l);
+AudioConnection          patchCord5(volume_r, 0, pt8211_1, 0);
+AudioConnection          patchCord6(volume_l, 0, pt8211_1, 1);
+#endif
 // GUItool: end automatically generated code
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
@@ -327,6 +328,10 @@ void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   Serial.print(data1, DEC);
   Serial.print(F(", data2: "));
   Serial.println(data2, DEC);
+#ifndef MASTER_KEY_MIDI
+  lcd.show(1, 0, 3, data1);
+  lcd.show(1, 4, 3, data2);
+#endif
 }
 #endif
 #endif
@@ -543,9 +548,6 @@ void set_volume(float v, float vr, float vl)
 #endif
 
 #ifdef TEENSY_AUDIO_BOARD
-  volume_master.gain(1.0);
-  volume_r.gain(1.0);
-  volume_l.gain(1.0);
   sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
 #else
   volume_master.gain(vol);
@@ -627,7 +629,7 @@ void initial_values_from_eeprom(void)
 #ifdef DEBUG
   Serial.print(F("EEPROM checksum: 0x"));
   Serial.print(crc_eeprom, HEX);
-  Serial.print(F("!= 0x"));
+  Serial.print(F(" / 0x"));
   Serial.print(crc, HEX);
 #endif
   if (crc_eeprom != crc)
