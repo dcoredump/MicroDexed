@@ -153,6 +153,7 @@ void setup()
   //sgtl5000_1.dacVolumeRamp();
   sgtl5000_1.dacVolumeRampLinear();
   sgtl5000_1.unmuteHeadphone();
+  sgtl5000_1.unmuteLineout();
   sgtl5000_1.autoVolumeDisable(); // turn off AGC
   sgtl5000_1.volume(1.0, 1.0);
 #endif
