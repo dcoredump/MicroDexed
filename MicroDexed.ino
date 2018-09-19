@@ -160,12 +160,13 @@ void setup()
   AudioMemory(AUDIO_MEM);
 #ifdef TEENSY_AUDIO_BOARD
   sgtl5000_1.enable();
-  //sgtl5000_1.dacVolumeRamp();
-  sgtl5000_1.dacVolumeRampLinear();
+  sgtl5000_1.dacVolumeRamp();
+  //sgtl5000_1.dacVolumeRampLinear();
   sgtl5000_1.unmuteHeadphone();
   sgtl5000_1.unmuteLineout();
   sgtl5000_1.autoVolumeDisable(); // turn off AGC
   sgtl5000_1.volume(1.0, 1.0);
+  sgtl5000_1.lineOutLevel(31);
 #endif
   set_volume(vol, vol_left, vol_right);
 
