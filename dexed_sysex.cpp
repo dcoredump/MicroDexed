@@ -81,6 +81,8 @@ bool load_sysex(uint8_t b, uint8_t v)
             Serial.print(F(" ["));
             Serial.print(n);
             Serial.println(F("]"));
+            strcpy(bank_name, bankdir);
+            strcpy(voice_name, entry.name());
 #endif
             return (dexed->loadSysexVoice(data));
           }
@@ -94,6 +96,16 @@ bool load_sysex(uint8_t b, uint8_t v)
       }
     }
   }
+#ifdef I2C_DISPLAY
+  char tmp[3];
+  itoa(bank, tmp, 10);
+  lcd.show(0, 0, 2, tmp);
+  lcd.show(0, 3, 10, bank_name);
+  itoa(voice, tmp, 10);
+  lcd.show(1, 0, 2, tmp);
+  lcd.show(1, 3, 10, voice_name);
+#endif
+
 #ifdef DEBUG
   if (found == false)
     Serial.println(F("E: File not found."));
@@ -195,7 +207,7 @@ bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data)
   }
 #endif
 
-  render_time_max=0;
-  
+  render_time_max = 0;
+
   return (true);
 }

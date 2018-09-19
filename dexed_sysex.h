@@ -23,11 +23,19 @@
 
 */
 
+#include "config.h"
+#ifdef I2C_DISPLAY
+#include <LiquidCrystalPlus_I2C.h>
+#endif
+
 extern bool sd_card_available;
 extern Dexed* dexed;
 extern uint16_t render_time_max;
 extern uint8_t bank;
 extern uint8_t voice;
+extern char bank_name[10];
+extern char voice_name[10];
+extern LiquidCrystalPlus_I2C lcd;
 
 bool load_sysex(uint8_t b, uint8_t v);
 bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data);

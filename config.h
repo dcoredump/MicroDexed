@@ -32,6 +32,7 @@
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
 #define TEENSY_AUDIO_BOARD 1
+#define I2C_DISPLAY 1
 #define VOLUME 0.6
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
@@ -78,10 +79,14 @@
 #define SDCARD_SCK_PIN   13  // not actually used
 
 // Encoder with button
-#define ENC1_PIN_A  14
-#define ENC1_PIN_B  15
-#define BUT1_PIN    16
-#define INITIAL_ENC1_VALUE 0
+#define ENC_L_PIN_A  2
+#define ENC_L_PIN_B  3
+#define BUT_L_PIN    4
+#define INITIAL_ENC_L_VALUE 0
+#define ENC_R_PIN_A  5
+#define ENC_R_PIN_B  24
+#define BUT_R_PIN    25
+#define INITIAL_ENC_R_VALUE 0
 
 // EEPROM address
 #define EEPROM_OFFSET 0

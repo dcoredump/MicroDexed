@@ -36,20 +36,28 @@
 #ifdef USE_ONBOARD_USB_HOST
 #include <USBHost_t36.h>
 #endif
-#ifndef MASTER_KEY_MIDI // selecting sounds by encoder, button and display
+
+#ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 #include <Bounce.h>
 #include <Encoder.h>
+#endif
+#ifdef I2C_DISPLAY
 #include <LiquidCrystalPlus_I2C.h>
 #endif
 
-#ifndef MASTER_KEY_MIDI
+#ifdef I2C_DISPLAY
+Encoder enc_l(ENC_L_PIN_A, ENC_L_PIN_B);
+Bounce but_l = Bounce(BUT_L_PIN, 10);  // 10 ms debounce
+Encoder enc_r(ENC_R_PIN_A, ENC_R_PIN_B);
+Bounce but_r = Bounce(BUT_R_PIN, 10);  // 10 ms debounce
+#endif
+
+#ifdef I2C_DISPLAY
 // [I2C] SCL: Pin 19, SDA: Pin 18 (https://www.pjrc.com/teensy/td_libs_Wire.html)
 #define LCD_I2C_ADDRESS 0x27
 #define LCD_CHARS 16
 #define LCD_LINES 2
 LiquidCrystalPlus_I2C lcd(LCD_I2C_ADDRESS, LCD_CHARS, LCD_LINES);
-Encoder enc1(ENC1_PIN_A, ENC1_PIN_B);
-Bounce but1 = Bounce(BUT1_PIN, 10);  // 10 ms debounce
 #endif
 
 // GUItool: begin automatically generated code
@@ -87,7 +95,8 @@ uint8_t voice = 0;
 float vol = VOLUME;
 float vol_right = 1.0;
 float vol_left = 1.0;
-
+char bank_name[10];
+char voice_name[10];
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
 #endif
@@ -116,7 +125,7 @@ void setup()
   Serial.begin(SERIAL_SPEED);
   delay(220);
 
-#ifndef MASTER_KEY_MIDI
+#ifndef I2C_DISPLAY
   lcd.init();
   lcd.blink_off();
   lcd.cursor_off();
@@ -126,7 +135,8 @@ void setup()
   lcd.display();
   lcd.show(0, 0, 20, "MicroDexed");
 
-  enc1.write(INITIAL_ENC1_VALUE);
+  enc_l.write(INITIAL_ENC_L_VALUE);
+  enc_r.write(INITIAL_ENC_R_VALUE);
 #endif
 
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
@@ -165,11 +175,20 @@ void setup()
   if (!SD.begin(SDCARD_CS_PIN))
   {
     Serial.println(F("SD card not accessable"));
+    strcpy(bank_name, "Default");
+    strcpy(voice_name, "FM-Piano");
   }
   else
   {
     Serial.println(F("SD card found."));
     sd_card_available = true;
+
+    // load default SYSEX data
+    load_sysex(bank, voice);
+#ifdef I2C_DISPLAY
+    enc_l.write(bank);
+    enc_r.write(voice);
+#endif
   }
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
@@ -178,8 +197,7 @@ void setup()
   AudioMemoryUsageMaxReset();
 #endif
 
-  // load default SYSEX data
-  load_sysex(bank, voice);
+
 
 #ifdef DEBUG
   Serial.print(F("Bank/Voice from EEPROM ["));
@@ -207,6 +225,11 @@ void setup()
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
   cpu_mem_millis = 0;
+#endif
+
+#ifndef I2C_DISPLAY
+  lcd.show(1, 0, 3, data1);
+  lcd.show(1, 4, 3, data2);
 #endif
 
 #ifdef TEST_NOTE
@@ -252,11 +275,10 @@ void loop()
 
     elapsedMicros t1;
     dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
-    uint32_t t2 = t1;
-    if (t2 > audio_block_time_ms) // everything greater 2.9ms is a buffer underrun!
+    if (t1 > audio_block_time_ms) // everything greater 2.9ms is a buffer underrun!
       xrun++;
-    if (t2 > render_time_max)
-      render_time_max = t2;
+    if (t1 > render_time_max)
+      render_time_max = t1;
     if (peak1.available())
     {
       if (peak1.read() > 0.99)
@@ -329,10 +351,6 @@ void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   Serial.print(data1, DEC);
   Serial.print(F(", data2: "));
   Serial.println(data2, DEC);
-#ifndef MASTER_KEY_MIDI
-  lcd.show(1, 0, 3, data1);
-  lcd.show(1, 4, 3, data2);
-#endif
 }
 #endif
 #endif
