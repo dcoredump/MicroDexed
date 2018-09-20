@@ -123,9 +123,8 @@ void setup()
 {
   //while (!Serial) ; // wait for Arduino Serial Monitor
   Serial.begin(SERIAL_SPEED);
-  delay(220);
 
-#ifndef I2C_DISPLAY
+#ifdef I2C_DISPLAY
   lcd.init();
   lcd.blink_off();
   lcd.cursor_off();
@@ -133,17 +132,18 @@ void setup()
   lcd.noAutoscroll();
   lcd.clear();
   lcd.display();
-  lcd.show(0, 0, 20, "MicroDexed");
+  lcd.show(0, 0, 16, "   MicroDexed");
+  lcd.show(1, 0, 16, "(c)parasiTstudio");
 
   enc_l.write(INITIAL_ENC_L_VALUE);
   enc_r.write(INITIAL_ENC_R_VALUE);
 #endif
 
+  delay(220);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018 H. Wirtz <wirtz@parasitstudio.de>"));
   Serial.println(F("https://github.com/dcoredump/MicroDexed"));
   Serial.println(F("<setup start>"));
-
   initial_values_from_eeprom();
 
   // start up USB host
@@ -198,8 +198,6 @@ void setup()
   AudioMemoryUsageMaxReset();
 #endif
 
-
-
 #ifdef DEBUG
   Serial.print(F("Bank/Voice from EEPROM ["));
   Serial.print(EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR), DEC);
@@ -228,9 +226,13 @@ void setup()
   cpu_mem_millis = 0;
 #endif
 
-#ifndef I2C_DISPLAY
-  lcd.show(1, 0, 3, data1);
-  lcd.show(1, 4, 3, data2);
+#ifdef I2C_DISPLAY
+  lcd.show(0, 0, 2, bank);
+  lcd.show(0, 2, 1, " ");
+  lcd.show(0, 3, 10, bank_name);
+  lcd.show(1, 0, 2, voice);
+  lcd.show(1, 2, 1, " ");
+  lcd.show(1, 3, 10, voice_name);
 #endif
 
 #ifdef TEST_NOTE
@@ -379,6 +381,11 @@ bool handle_master_key(uint8_t data)
 #endif
         EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, num);
         update_eeprom_checksum();
+#ifdef I2C_DISPLAY
+        lcd.show(1, 0, 2, voice);
+        lcd.show(1, 2, 1, " ");
+        lcd.show(1, 3, 10, voice_name);
+#endif
       }
 #ifdef DEBUG
       else
@@ -406,6 +413,19 @@ bool handle_master_key(uint8_t data)
 #ifdef DEBUG
       Serial.print(F("Bank switch to: "));
       Serial.println(bank, DEC);
+#endif
+#ifdef I2C_DISPLAY
+if(get_bank_name(bank))
+{
+      lcd.show(0, 0, 2, bank);
+      lcd.show(0, 2, 1, " ");
+      lcd.show(0, 3, 10, bank_name);
+}
+else
+{
+      lcd.show(0, 0, 2, bank);
+      lcd.show(0, 2, 10, " *ERROR*");
+}
 #endif
       return (true);
     }

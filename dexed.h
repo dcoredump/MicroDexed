@@ -44,6 +44,7 @@ extern float vol;
 extern float vol_right;
 extern float vol_left;
 extern void set_volume(float master_volume, float volume_right, float volume_left);
+extern char voice_name[10];
 
 struct ProcessorVoice {
   uint8_t midi_note;

@@ -37,5 +37,6 @@ extern char bank_name[10];
 extern char voice_name[10];
 extern LiquidCrystalPlus_I2C lcd;
 
+bool get_bank_name(uint8_t b);
 bool load_sysex(uint8_t b, uint8_t v);
 bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data);

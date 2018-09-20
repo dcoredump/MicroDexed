@@ -31,13 +31,52 @@
 #include "dexed_sysex.h"
 #include "config.h"
 
+bool get_bank_name(uint8_t b)
+{
+  File root;
+  b %= MAX_BANKS;
+
+  if (sd_card_available)
+  {
+    char bankdir[3];
+
+    bankdir[0] = '/';
+    bankdir[2] = '\0';
+    itoa(b, &bankdir[1], 10);
+
+    root = SD.open(bankdir);
+    if (!root)
+    {
+#ifdef DEBUG
+      Serial.println(F("E: Cannot open main dir from SD."));
+#endif
+      return (false);
+    }
+    while (42 == 42)
+    {
+      File entry = root.openNextFile();
+      if (!entry)
+      {
+        // No more files
+        break;
+      }
+      else
+      {
+        if (!entry.isDirectory())
+          strncpy(bank_name, entry.name(), strlen(bank_name) - 1);
+      }
+    }
+  }
+  return (false);
+}
+
 bool load_sysex(uint8_t b, uint8_t v)
 {
   File root;
   bool found = false;
 
   v %= 32;
-  b %= 10;
+  b %= MAX_BANKS;
 
   if (sd_card_available)
   {
@@ -81,9 +120,10 @@ bool load_sysex(uint8_t b, uint8_t v)
             Serial.print(F(" ["));
             Serial.print(n);
             Serial.println(F("]"));
-            strcpy(bank_name, bankdir);
-            strcpy(voice_name, entry.name());
+
 #endif
+            strncpy(bank_name, entry.name(), strlen(bank_name) - 1);
+
             return (dexed->loadSysexVoice(data));
           }
           else
@@ -96,15 +136,6 @@ bool load_sysex(uint8_t b, uint8_t v)
       }
     }
   }
-#ifdef I2C_DISPLAY
-  char tmp[3];
-  itoa(bank, tmp, 10);
-  lcd.show(0, 0, 2, tmp);
-  lcd.show(0, 3, 10, bank_name);
-  itoa(voice, tmp, 10);
-  lcd.show(1, 0, 2, tmp);
-  lcd.show(1, 3, 10, voice_name);
-#endif
 
 #ifdef DEBUG
   if (found == false)

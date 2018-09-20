@@ -683,6 +683,7 @@ bool Dexed::loadSysexVoice(uint8_t* new_data)
   char voicename[11];
   memset(voicename, 0, sizeof(voicename));
   strncpy(voicename, (char *)&data[145], sizeof(voicename) - 1);
+  strncpy(voice_name, (char *)&data[145], sizeof(voicename) - 1);
   Serial.print(F("Voice ["));
   Serial.print(voicename);
   Serial.println(F("] loaded."));
