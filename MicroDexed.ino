@@ -95,8 +95,8 @@ uint8_t voice = 0;
 float vol = VOLUME;
 float vol_right = 1.0;
 float vol_left = 1.0;
-char bank_name[10];
-char voice_name[10];
+char bank_name[11];
+char voice_name[11];
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
 #endif
@@ -227,6 +227,7 @@ void setup()
 #endif
 
 #ifdef I2C_DISPLAY
+  lcd.clear();
   lcd.show(0, 0, 2, bank);
   lcd.show(0, 2, 1, " ");
   lcd.show(0, 3, 10, bank_name);
@@ -917,4 +918,3 @@ void note_off(void)
     show_patch();
 }
 #endif
-

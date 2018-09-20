@@ -33,8 +33,8 @@ extern Dexed* dexed;
 extern uint16_t render_time_max;
 extern uint8_t bank;
 extern uint8_t voice;
-extern char bank_name[10];
-extern char voice_name[10];
+extern char bank_name[11];
+extern char voice_name[11];
 extern LiquidCrystalPlus_I2C lcd;
 
 bool get_bank_name(uint8_t b);
