@@ -38,10 +38,10 @@ bool get_bank_name(uint8_t b)
 
   if (sd_card_available)
   {
-    char bankdir[3];
+    char bankdir[4];
 
+    memset(bankdir, 0, sizeof(bankdir));
     bankdir[0] = '/';
-    bankdir[2] = '\0';
     itoa(b, &bankdir[1], 10);
 
     root = SD.open(bankdir);
@@ -63,7 +63,16 @@ bool get_bank_name(uint8_t b)
       else
       {
         if (!entry.isDirectory())
-          strcpy(bank_name, entry.name());
+        {
+          char *token;
+
+          token = strtok(entry.name(), ".");
+          if (token != NULL)
+            strcpy(bank_name, token);
+          else
+            strcpy(bank_name, "*ERROR*");
+          return (true);
+        }
       }
     }
   }
@@ -122,8 +131,13 @@ bool load_sysex(uint8_t b, uint8_t v)
             Serial.println(F("]"));
 
 #endif
-            strcpy(bank_name, entry.name());
+            char *token;
 
+            token = strtok(entry.name(), ".");
+            if (token != NULL)
+              strcpy(bank_name, token);
+            else
+              strcpy(bank_name, "*ERROR*");
             return (dexed->loadSysexVoice(data));
           }
           else
