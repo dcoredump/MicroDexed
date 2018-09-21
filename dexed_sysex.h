@@ -24,9 +24,6 @@
 */
 
 #include "config.h"
-#ifdef I2C_DISPLAY
-#include <LiquidCrystalPlus_I2C.h>
-#endif
 
 extern bool sd_card_available;
 extern Dexed* dexed;
@@ -35,7 +32,6 @@ extern uint8_t bank;
 extern uint8_t voice;
 extern char bank_name[11];
 extern char voice_name[11];
-extern LiquidCrystalPlus_I2C lcd;
 
 bool get_bank_name(uint8_t b);
 bool load_sysex(uint8_t b, uint8_t v);

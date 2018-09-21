@@ -228,10 +228,10 @@ void setup()
 
 #ifdef I2C_DISPLAY
   lcd.clear();
-  lcd.show(0, 0, 2, bank);
+  lcd.show(0, 0, 2, bank+1);
   lcd.show(0, 2, 1, " ");
   lcd.show(0, 3, 10, bank_name);
-  lcd.show(1, 0, 2, voice);
+  lcd.show(1, 0, 2, voice+1);
   lcd.show(1, 2, 1, " ");
   lcd.show(1, 3, 10, voice_name);
 #endif
@@ -383,7 +383,7 @@ bool handle_master_key(uint8_t data)
         EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, num);
         update_eeprom_checksum();
 #ifdef I2C_DISPLAY
-        lcd.show(1, 0, 2, voice);
+        lcd.show(1, 0, 2, voice+1);
         lcd.show(1, 2, 1, " ");
         lcd.show(1, 3, 10, voice_name);
 #endif
@@ -418,13 +418,13 @@ bool handle_master_key(uint8_t data)
 #ifdef I2C_DISPLAY
 if(get_bank_name(bank))
 {
-      lcd.show(0, 0, 2, bank);
+      lcd.show(0, 0, 2, bank+1);
       lcd.show(0, 2, 1, " ");
       lcd.show(0, 3, 10, bank_name);
 }
 else
 {
-      lcd.show(0, 0, 2, bank);
+      lcd.show(0, 0, 2, bank+1);
       lcd.show(0, 2, 10, " *ERROR*");
 }
 #endif
