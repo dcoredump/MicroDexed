@@ -228,10 +228,10 @@ void setup()
 
 #ifdef I2C_DISPLAY
   lcd.clear();
-  lcd.show(0, 0, 2, bank+1);
+  lcd.show(0, 0, 2, bank + 1);
   lcd.show(0, 2, 1, " ");
   lcd.show(0, 3, 10, bank_name);
-  lcd.show(1, 0, 2, voice+1);
+  lcd.show(1, 0, 2, voice + 1);
   lcd.show(1, 2, 1, " ");
   lcd.show(1, 3, 10, voice_name);
 #endif
@@ -256,8 +256,6 @@ void loop()
   int16_t* audio_buffer; // pointer to AUDIO_BLOCK_SAMPLES * int16_t
   const uint16_t audio_block_time_ms = 1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES);
 
-  while (42 == 42) // DON'T PANIC!
-  {
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
     if (cpu_mem_millis > SHOW_CPU_LOAD_MSEC)
     {
@@ -268,32 +266,27 @@ void loop()
 
     handle_input();
 
-    audio_buffer = queue1.getBuffer();
-    if (audio_buffer == NULL)
+    if (queue1.available())
     {
-      Serial.println(F("E: audio_buffer allocation problems!"));
-    }
+      audio_buffer = queue1.getBuffer();
 
-    if (!queue1.available())
-      continue;
-
-    elapsedMicros t1;
-    dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
-    if (t1 > audio_block_time_ms) // everything greater 2.9ms is a buffer underrun!
-      xrun++;
-    if (t1 > render_time_max)
-      render_time_max = t1;
-    if (peak1.available())
-    {
-      if (peak1.read() > 0.99)
-        peak++;
-    }
+      elapsedMicros t1;
+      dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
+      if (t1 > audio_block_time_ms) // everything greater 2.9ms is a buffer underrun!
+        xrun++;
+      if (t1 > render_time_max)
+        render_time_max = t1;
+      if (peak1.available())
+      {
+        if (peak1.read() > 0.99)
+          peak++;
+      }
 #ifndef TEENSY_AUDIO_BOARD
-    for (uint8_t i = 0; i <= AUDIO_BLOCK_SAMPLES; i++)
-      audio_buffer[i] *= vol;
+      for (uint8_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
+        audio_buffer[i] *= vol;
 #endif
-    queue1.playBuffer();
-  }
+      queue1.playBuffer();
+    }
 }
 
 void handle_input(void)
@@ -383,7 +376,7 @@ bool handle_master_key(uint8_t data)
         EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, num);
         update_eeprom_checksum();
 #ifdef I2C_DISPLAY
-        lcd.show(1, 0, 2, voice+1);
+        lcd.show(1, 0, 2, voice + 1);
         lcd.show(1, 2, 1, " ");
         lcd.show(1, 3, 10, voice_name);
 #endif
@@ -416,17 +409,17 @@ bool handle_master_key(uint8_t data)
       Serial.println(bank, DEC);
 #endif
 #ifdef I2C_DISPLAY
-if(get_bank_name(bank))
-{
-      lcd.show(0, 0, 2, bank+1);
-      lcd.show(0, 2, 1, " ");
-      lcd.show(0, 3, 10, bank_name);
-}
-else
-{
-      lcd.show(0, 0, 2, bank+1);
-      lcd.show(0, 2, 10, " *ERROR*");
-}
+      if (get_bank_name(bank))
+      {
+        lcd.show(0, 0, 2, bank + 1);
+        lcd.show(0, 2, 1, " ");
+        lcd.show(0, 3, 10, bank_name);
+      }
+      else
+      {
+        lcd.show(0, 0, 2, bank + 1);
+        lcd.show(0, 2, 10, " *ERROR*");
+      }
 #endif
       return (true);
     }
