@@ -149,11 +149,13 @@ void setup()
   // start up USB host
 #ifdef USE_ONBOARD_USB_HOST
   usb_host.begin();
+  Serial.println(F("USB-MIDI enabled."));
 #endif
 
 #ifdef MIDI_DEVICE
   // Start serial MIDI
   midi_serial.begin(DEFAULT_MIDI_CHANNEL);
+  Serial.println(F("Serial MIDI enabled"));
 #endif
 
   // start audio card
@@ -167,6 +169,9 @@ void setup()
   sgtl5000_1.autoVolumeDisable(); // turn off AGC
   sgtl5000_1.volume(1.0, 1.0);
   sgtl5000_1.lineOutLevel(31);
+  Serial.println(F("Teensy-Audio-Board enabled."));
+#else
+  Serial.println(F("PT8211 enabled."));
 #endif
   set_volume(vol, vol_left, vol_right);
 
@@ -175,7 +180,7 @@ void setup()
   SPI.setSCK(SDCARD_SCK_PIN);
   if (!SD.begin(SDCARD_CS_PIN))
   {
-    Serial.println(F("SD card not accessable"));
+    Serial.println(F("SD card not accessable."));
     strcpy(bank_name, "Default");
     strcpy(voice_name, "FM-Piano");
   }
@@ -223,7 +228,7 @@ void setup()
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
-  cpu_mem_millis = 0;
+  cpu_mem_millis -= SHOW_CPU_LOAD_MSEC;
 #endif
 
 #ifdef I2C_DISPLAY
@@ -737,10 +742,10 @@ uint32_t eeprom_crc32(uint16_t calc_start, uint16_t calc_bytes) // base code fro
 void show_cpu_and_mem_usage(void)
 {
   Serial.print(F("CPU: "));
-  Serial.print(AudioProcessorUsage(), DEC);
-  Serial.print(F("   CPU MAX: "));
-  Serial.print(AudioProcessorUsageMax(), DEC);
-  Serial.print(F("  MEM: "));
+  Serial.print(AudioProcessorUsage(), 2);
+  Serial.print(F("%   CPU MAX: "));
+  Serial.print(AudioProcessorUsageMax(), 2);
+  Serial.print(F("%  MEM: "));
   Serial.print(AudioMemoryUsage(), DEC);
   Serial.print(F("   MEM MAX: "));
   Serial.print(AudioMemoryUsageMax(), DEC);
@@ -752,6 +757,8 @@ void show_cpu_and_mem_usage(void)
   Serial.print(overload, DEC);
   Serial.print(F("   PEAK: "));
   Serial.print(peak, DEC);
+  Serial.print(F("Block-size:"));
+  Serial.print(AUDIO_BLOCK_SAMPLES,DEC);
   Serial.println();
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
