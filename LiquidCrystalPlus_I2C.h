@@ -23,7 +23,7 @@
 
 */
 
-#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_I2C.h> // https://www.arduinolibraries.info/libraries/liquid-crystal-i2-c
 
 #ifndef LIQUIDCRYSTALPLUS_I2C_H_INCLUDED
 #define LIQUIDCRYSTALPLUS_I2C_H_INCLUDED
