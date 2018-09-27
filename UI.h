@@ -34,21 +34,25 @@
 extern Encoder4 enc[2];
 extern int32_t enc_val[2];
 extern Bounce but[2];
+extern float vol_left;
+extern float vol_right;
+
+extern void set_volume(float v, float vr, float vl);
 
 void handle_ui(void);
 /* int32_t getEncPosition(uint8_t encoder_number);
-void setEncPosition(uint8_t encoder_number, int32_t value);*/
+  void setEncPosition(uint8_t encoder_number, int32_t value);*/
 
 class MyEncoder : public Encoder
 {
-  
-  int32_t read()
-  {
-    return(Encoder::read()/4);
-  }
-  void write(int32_t p)
-  {
-    Encoder::write(p*4);
-  }
+
+    int32_t read()
+    {
+      return (Encoder::read() / 4);
+    }
+    void write(int32_t p)
+    {
+      Encoder::write(p * 4);
+    }
 };
 #endif

@@ -181,7 +181,7 @@ void setup()
     // load default SYSEX data
     load_sysex(bank, voice);
 #ifdef I2C_DISPLAY
-    enc[0].write(bank);
+    enc[0].write(map(vol*100,0,100,0,20));
     enc[1].write(voice);
     but[0].update();
     but[1].update();

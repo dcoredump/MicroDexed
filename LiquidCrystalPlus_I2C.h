@@ -28,6 +28,8 @@
 #ifndef LIQUIDCRYSTALPLUS_I2C_H_INCLUDED
 #define LIQUIDCRYSTALPLUS_I2C_H_INCLUDED
 
+#define STRING_BUF_SIZE 21
+
 class LiquidCrystalPlus_I2C : public LiquidCrystal_I2C
 {
   public:
@@ -41,7 +43,7 @@ class LiquidCrystalPlus_I2C : public LiquidCrystal_I2C
 
     void show(uint8_t y, uint8_t x, uint8_t fs, long num)
     {
-      char _buf10[64];
+      char _buf10[STRING_BUF_SIZE];
 
       _show(y, x, fs, itoa(num, _buf10, 10), true, true);
     }
@@ -50,7 +52,7 @@ class LiquidCrystalPlus_I2C : public LiquidCrystal_I2C
     void _show(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, char *str, bool justify_right, bool fill_zero)
     {
       {
-        char tmp[64];
+        char tmp[STRING_BUF_SIZE];
         char *s = tmp;
         uint8_t l = strlen(str);
 

@@ -29,6 +29,10 @@
 
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 
+
+enum ui_state {UI_MAIN};
+uint8_t ui_state = UI_MAIN;
+
 void handle_ui(void)
 {
   for (uint8_t i = 0; i < NUM_ENCODER; i++)
@@ -48,6 +52,18 @@ void handle_ui(void)
       continue;
     else
     {
+      switch (i)
+      {
+        case 0: // left encoder moved
+          if (enc[i].read() <= 0)
+            enc[i].write(0);
+          else if (enc[i].read() >= 20)
+            enc[i].write(20);
+          set_volume(float(map(enc[i].read(), 0, 20, 0, 100))/100, vol_left, vol_right);
+          break;
+        case 1: // right encoder moved
+          break;
+      }
 #ifdef DEBUG
       Serial.print(F("Encoder "));
       Serial.print(i, DEC);
@@ -60,14 +76,14 @@ void handle_ui(void)
 }
 
 /*int32_t getEncPosition(uint8_t encoder_number)
-{
+  {
   return enc[encoder_number].read() / 4;
-}
+  }
 
-void setEncPosition(uint8_t encoder_number, int32_t value)
-{
+  void setEncPosition(uint8_t encoder_number, int32_t value)
+  {
   enc[encoder_number].write(value * 4);
   enc_val[encoder_number] = value * 4;
-}*/
+  }*/
 
 #endif
