@@ -40,10 +40,10 @@
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 #include "UI.h"
 #include <Bounce.h>
-#include <Encoder.h>
-#include <LiquidCrystalPlus_I2C.h>
+#include "Encoder4.h"
+#include "LiquidCrystalPlus_I2C.h"
 LiquidCrystalPlus_I2C lcd(LCD_I2C_ADDRESS, LCD_CHARS, LCD_LINES);
-Encoder enc[2] = {Encoder(ENC_L_PIN_A, ENC_L_PIN_B), Encoder(ENC_R_PIN_A, ENC_R_PIN_B)};
+Encoder4 enc[2] = {Encoder4(ENC_L_PIN_A, ENC_L_PIN_B), Encoder4(ENC_R_PIN_A, ENC_R_PIN_B)};
 int32_t enc_val[2] = {INITIAL_ENC_L_VALUE, INITIAL_ENC_R_VALUE};
 Bounce but[2] = {Bounce(BUT_L_PIN, BUT_DEBOUNCE_MS), Bounce(BUT_R_PIN, BUT_DEBOUNCE_MS)};
 elapsedMillis master_timer;
@@ -181,8 +181,8 @@ void setup()
     // load default SYSEX data
     load_sysex(bank, voice);
 #ifdef I2C_DISPLAY
-    setEncPosition(0,bank);
-    setEncPosition(1,voice);
+    enc[0].write(bank);
+    enc[1].write(voice);
     but[0].update();
     but[1].update();
 #endif

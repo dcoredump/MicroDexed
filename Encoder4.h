@@ -23,32 +23,26 @@
 
 */
 
-#include "config.h"
-#include <Bounce.h>
-#include "LiquidCrystalPlus_I2C.h"
-#include "Encoder4.h"
+#include <Encoder.h>
 
-#ifndef UI_H_INCLUDED
-#define UI_H_INCLUDED
+#ifndef ENCODER4_H_INCLUDED
+#define ENCODER4_H_INCLUDED
 
-extern Encoder4 enc[2];
-extern int32_t enc_val[2];
-extern Bounce but[2];
-
-void handle_ui(void);
-/* int32_t getEncPosition(uint8_t encoder_number);
-void setEncPosition(uint8_t encoder_number, int32_t value);*/
-
-class MyEncoder : public Encoder
+class Encoder4 : public Encoder
 {
-  
-  int32_t read()
-  {
-    return(Encoder::read()/4);
-  }
-  void write(int32_t p)
-  {
-    Encoder::write(p*4);
-  }
+  public:
+
+    using Encoder::Encoder;
+
+    int32_t read()
+    {
+      return (Encoder::read() / 4);
+    }
+
+    void write(int32_t p)
+    {
+      Encoder::write(p * 4);
+    }
 };
+
 #endif

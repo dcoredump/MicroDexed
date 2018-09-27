@@ -26,9 +26,6 @@
 #include <Arduino.h>
 #include "config.h"
 #include "UI.h"
-#include <Bounce.h>
-#include <Encoder.h>
-#include <LiquidCrystalPlus_I2C.h>
 
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 
@@ -47,7 +44,7 @@ void handle_ui(void)
 #endif
     }
 
-    if ((enc[i].read() / 4) == (enc_val[i] / 4))
+    if (enc[i].read() == enc_val[i])
       continue;
     else
     {
@@ -55,14 +52,14 @@ void handle_ui(void)
       Serial.print(F("Encoder "));
       Serial.print(i, DEC);
       Serial.print(F(": "));
-      Serial.println(getEncPosition(i), DEC);
+      Serial.println(enc[i].read(), DEC);
 #endif
     }
     enc_val[i] = enc[i].read();
   }
 }
 
-int32_t getEncPosition(uint8_t encoder_number)
+/*int32_t getEncPosition(uint8_t encoder_number)
 {
   return enc[encoder_number].read() / 4;
 }
@@ -71,5 +68,6 @@ void setEncPosition(uint8_t encoder_number, int32_t value)
 {
   enc[encoder_number].write(value * 4);
   enc_val[encoder_number] = value * 4;
-}
+}*/
+
 #endif
