@@ -29,12 +29,13 @@
 
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 
-
-enum ui_state {UI_MAIN};
-uint8_t ui_state = UI_MAIN;
+elapsedMillis ui_back_to_main;
 
 void handle_ui(void)
 {
+  if (ui_back_to_main >= UI_AUTO_BACK_MS && ui_state != UI_MAIN)
+    ui_show_main();
+
   for (uint8_t i = 0; i < NUM_ENCODER; i++)
   {
     but[i].update();
@@ -57,11 +58,13 @@ void handle_ui(void)
         case 0: // left encoder moved
           if (enc[i].read() <= 0)
             enc[i].write(0);
-          else if (enc[i].read() >= 20)
-            enc[i].write(20);
-          set_volume(float(map(enc[i].read(), 0, 20, 0, 100))/100, vol_left, vol_right);
+          else if (enc[i].read() >= ENC_VOL_STEPS)
+            enc[i].write(ENC_VOL_STEPS);
+          set_volume(float(map(enc[i].read(), 0, ENC_VOL_STEPS, 0, 100)) / 100, vol_left, vol_right);
+          ui_show_volume();
           break;
         case 1: // right encoder moved
+          ui_show_main();
           break;
       }
 #ifdef DEBUG
@@ -75,15 +78,33 @@ void handle_ui(void)
   }
 }
 
-/*int32_t getEncPosition(uint8_t encoder_number)
-  {
-  return enc[encoder_number].read() / 4;
-  }
+void ui_show_main(void)
+{
+  ui_state = UI_MAIN;
 
-  void setEncPosition(uint8_t encoder_number, int32_t value)
-  {
-  enc[encoder_number].write(value * 4);
-  enc_val[encoder_number] = value * 4;
-  }*/
+  lcd.clear();
+  lcd.show(0, 0, 2, bank + 1);
+  lcd.show(0, 2, 1, " ");
+  lcd.show(0, 3, 10, bank_name);
+  lcd.show(1, 0, 2, voice + 1);
+  lcd.show(1, 2, 1, " ");
+  lcd.show(1, 3, 10, voice_name);
+}
+
+void ui_show_volume(void)
+{
+  ui_back_to_main = 0;
+
+  if (ui_state != UI_VOLUME)
+    lcd.show(0, 0, LCD_CHARS, "Volume");
+
+  lcd.show(0, LCD_CHARS - 3, 3, vol * 100);
+  for (uint8_t i = 0; i < map(vol * 100, 0, 100, 0, LCD_CHARS); i++)
+    lcd.show(1, i, 1, "*");
+  for (uint8_t i = map(vol * 100, 0, 100, 0, LCD_CHARS); i < LCD_CHARS; i++)
+    lcd.show(1, i, 1, " ");
+
+  ui_state = UI_VOLUME;
+}
 
 #endif

@@ -92,8 +92,10 @@
 #define LCD_I2C_ADDRESS 0x27
 #define LCD_CHARS 16
 #define LCD_LINES 2
+#define UI_AUTO_BACK_MS 2000
 
 // Encoder with button
+#define ENC_VOL_STEPS 50
 #define TIMER_UI_HANDLING_MS 50
 #define NUM_ENCODER 2
 #define ENC_L_PIN_A  3
