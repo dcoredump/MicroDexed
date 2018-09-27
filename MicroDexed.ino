@@ -38,26 +38,15 @@
 #endif
 
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
+#include "UI.h"
 #include <Bounce.h>
 #include <Encoder.h>
-#endif
-#ifdef I2C_DISPLAY
 #include <LiquidCrystalPlus_I2C.h>
-#endif
-
-#ifdef I2C_DISPLAY
-Encoder enc_l(ENC_L_PIN_A, ENC_L_PIN_B);
-Bounce but_l = Bounce(BUT_L_PIN, 10);  // 10 ms debounce
-Encoder enc_r(ENC_R_PIN_A, ENC_R_PIN_B);
-Bounce but_r = Bounce(BUT_R_PIN, 10);  // 10 ms debounce
-#endif
-
-#ifdef I2C_DISPLAY
-// [I2C] SCL: Pin 19, SDA: Pin 18 (https://www.pjrc.com/teensy/td_libs_Wire.html)
-#define LCD_I2C_ADDRESS 0x27
-#define LCD_CHARS 16
-#define LCD_LINES 2
 LiquidCrystalPlus_I2C lcd(LCD_I2C_ADDRESS, LCD_CHARS, LCD_LINES);
+Encoder enc[2] = {Encoder(ENC_L_PIN_A, ENC_L_PIN_B), Encoder(ENC_R_PIN_A, ENC_R_PIN_B)};
+int32_t enc_val[2] = {INITIAL_ENC_L_VALUE, INITIAL_ENC_R_VALUE};
+Bounce but[2] = {Bounce(BUT_L_PIN, BUT_DEBOUNCE_MS), Bounce(BUT_R_PIN, BUT_DEBOUNCE_MS)};
+elapsedMillis master_timer;
 #endif
 
 // GUItool: begin automatically generated code
@@ -135,8 +124,8 @@ void setup()
   lcd.show(0, 0, 16, "   MicroDexed");
   lcd.show(1, 0, 16, "(c)parasiTstudio");
 
-  enc_l.write(INITIAL_ENC_L_VALUE);
-  enc_r.write(INITIAL_ENC_R_VALUE);
+  pinMode(BUT_L_PIN, INPUT_PULLUP);
+  pinMode(BUT_R_PIN, INPUT_PULLUP);
 #endif
 
   delay(220);
@@ -192,8 +181,10 @@ void setup()
     // load default SYSEX data
     load_sysex(bank, voice);
 #ifdef I2C_DISPLAY
-    enc_l.write(bank);
-    enc_r.write(voice);
+    setEncPosition(0,bank);
+    setEncPosition(1,voice);
+    but[0].update();
+    but[1].update();
 #endif
   }
 
@@ -228,7 +219,6 @@ void setup()
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
-  cpu_mem_millis -= SHOW_CPU_LOAD_MSEC;
 #endif
 
 #ifdef I2C_DISPLAY
@@ -262,36 +252,48 @@ void loop()
   const uint16_t audio_block_time_ms = 1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES);
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
-    if (cpu_mem_millis > SHOW_CPU_LOAD_MSEC)
-    {
-      show_cpu_and_mem_usage();
-      cpu_mem_millis = 0;
-    }
+  if (cpu_mem_millis >= SHOW_CPU_LOAD_MSEC)
+  {
+    cpu_mem_millis -= SHOW_CPU_LOAD_MSEC;
+    show_cpu_and_mem_usage();
+  }
 #endif
 
-    handle_input();
+  // MIDI input handling
+  handle_input();
 
-    if (queue1.available())
+  // Main sound calculation
+  if (queue1.available())
+  {
+    audio_buffer = queue1.getBuffer();
+
+    elapsedMicros t1;
+    dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
+    if (t1 > audio_block_time_ms) // everything greater 2.9ms is a buffer underrun!
+      xrun++;
+    if (t1 > render_time_max)
+      render_time_max = t1;
+    if (peak1.available())
     {
-      audio_buffer = queue1.getBuffer();
-
-      elapsedMicros t1;
-      dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
-      if (t1 > audio_block_time_ms) // everything greater 2.9ms is a buffer underrun!
-        xrun++;
-      if (t1 > render_time_max)
-        render_time_max = t1;
-      if (peak1.available())
-      {
-        if (peak1.read() > 0.99)
-          peak++;
-      }
+      if (peak1.read() > 0.99)
+        peak++;
+    }
 #ifndef TEENSY_AUDIO_BOARD
-      for (uint8_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
-        audio_buffer[i] *= vol;
+    for (uint8_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
+      audio_buffer[i] *= vol;
 #endif
-      queue1.playBuffer();
-    }
+    queue1.playBuffer();
+  }
+
+#ifdef I2C_DISPLAY
+  // UI
+  if (master_timer >= TIMER_UI_HANDLING_MS)
+  {
+    master_timer -= TIMER_UI_HANDLING_MS;
+
+    handle_ui();
+  }
+#endif
 }
 
 void handle_input(void)
@@ -757,8 +759,8 @@ void show_cpu_and_mem_usage(void)
   Serial.print(overload, DEC);
   Serial.print(F("   PEAK: "));
   Serial.print(peak, DEC);
-  Serial.print(F("Block-size:"));
-  Serial.print(AUDIO_BLOCK_SAMPLES,DEC);
+  Serial.print(F(" BLOCKSIZE: "));
+  Serial.print(AUDIO_BLOCK_SAMPLES, DEC);
   Serial.println();
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();

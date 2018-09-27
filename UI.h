@@ -24,20 +24,19 @@
 */
 
 #include "config.h"
+#include <Bounce.h>
+#include <Encoder.h>
+#include <LiquidCrystalPlus_I2C.h>
 
-#ifndef DEXED_SYSEX_H_INCLUDED
-#define DEXED_SYSEX_H_INCLUDED
+#ifndef UI_H_INCLUDED
+#define UI_H_INCLUDED
 
-extern bool sd_card_available;
-extern Dexed* dexed;
-extern uint16_t render_time_max;
-extern uint8_t bank;
-extern uint8_t voice;
-extern char bank_name[11];
-extern char voice_name[11];
+extern Encoder enc[2];
+extern int32_t enc_val[2];
+extern Bounce but[2];
 
-bool get_bank_name(uint8_t b);
-bool load_sysex(uint8_t b, uint8_t v);
-bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data);
+void handle_ui(void);
+int32_t getEncPosition(uint8_t encoder_number);
+void setEncPosition(uint8_t encoder_number, int32_t value);
 
 #endif

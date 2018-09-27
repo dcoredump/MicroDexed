@@ -23,21 +23,53 @@
 
 */
 
+#include <Arduino.h>
 #include "config.h"
+#include "UI.h"
+#include <Bounce.h>
+#include <Encoder.h>
+#include <LiquidCrystalPlus_I2C.h>
 
-#ifndef DEXED_SYSEX_H_INCLUDED
-#define DEXED_SYSEX_H_INCLUDED
+#ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 
-extern bool sd_card_available;
-extern Dexed* dexed;
-extern uint16_t render_time_max;
-extern uint8_t bank;
-extern uint8_t voice;
-extern char bank_name[11];
-extern char voice_name[11];
+void handle_ui(void)
+{
+  for (uint8_t i = 0; i < NUM_ENCODER; i++)
+  {
+    but[i].update();
 
-bool get_bank_name(uint8_t b);
-bool load_sysex(uint8_t b, uint8_t v);
-bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data);
+    if (but[i].risingEdge())
+    {
+      // Button pressed
+#ifdef DEBUG
+      Serial.print(F("Button "));
+      Serial.println(i, DEC);
+#endif
+    }
 
+    if ((enc[i].read() / 4) == (enc_val[i] / 4))
+      continue;
+    else
+    {
+#ifdef DEBUG
+      Serial.print(F("Encoder "));
+      Serial.print(i, DEC);
+      Serial.print(F(": "));
+      Serial.println(getEncPosition(i), DEC);
+#endif
+    }
+    enc_val[i] = enc[i].read();
+  }
+}
+
+int32_t getEncPosition(uint8_t encoder_number)
+{
+  return enc[encoder_number].read() / 4;
+}
+
+void setEncPosition(uint8_t encoder_number, int32_t value)
+{
+  enc[encoder_number].write(value * 4);
+  enc_val[encoder_number] = value * 4;
+}
 #endif

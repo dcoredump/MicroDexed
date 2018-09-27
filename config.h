@@ -28,11 +28,14 @@
 // ATTENTION! For better latency you have to redefine AUDIO_BLOCK_SAMPLES from
 // 128 to 64 in <ARDUINO-IDE-DIR>/cores/teensy3/AudioStream.h
 
+
+#ifndef CONFIG_H_INCLUDED
+#define CONFIG_H_INCLUDED
+
 // Initial values
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
 //#define TEENSY_AUDIO_BOARD 1
-#define I2C_DISPLAY 1
 #define VOLUME 0.6
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
@@ -83,15 +86,25 @@
 #define SDCARD_MOSI_PIN  11  // not actually used
 #define SDCARD_SCK_PIN   13  // not actually used
 
+// LCD Display
+#define I2C_DISPLAY 1
+// [I2C] SCL: Pin 19, SDA: Pin 18 (https://www.pjrc.com/teensy/td_libs_Wire.html)
+#define LCD_I2C_ADDRESS 0x27
+#define LCD_CHARS 16
+#define LCD_LINES 2
+
 // Encoder with button
-#define ENC_L_PIN_A  2
-#define ENC_L_PIN_B  3
+#define TIMER_UI_HANDLING_MS 50
+#define NUM_ENCODER 2
+#define ENC_L_PIN_A  3
+#define ENC_L_PIN_B  2
 #define BUT_L_PIN    4
 #define INITIAL_ENC_L_VALUE 0
-#define ENC_R_PIN_A  5
-#define ENC_R_PIN_B  24
-#define BUT_R_PIN    25
+#define ENC_R_PIN_A  28
+#define ENC_R_PIN_B  29
+#define BUT_R_PIN    30
 #define INITIAL_ENC_R_VALUE 0
+#define BUT_DEBOUNCE_MS 20
 
 // EEPROM address
 #define EEPROM_OFFSET 0
@@ -103,3 +116,5 @@
 #define EEPROM_MASTER_VOLUME_ADDR 2
 #define EEPROM_VOLUME_RIGHT_ADDR 3
 #define EEPROM_VOLUME_LEFT_ADDR 4
+
+#endif
