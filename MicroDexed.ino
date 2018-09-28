@@ -48,6 +48,7 @@ int32_t enc_val[2] = {INITIAL_ENC_L_VALUE, INITIAL_ENC_R_VALUE};
 Bounce but[2] = {Bounce(BUT_L_PIN, BUT_DEBOUNCE_MS), Bounce(BUT_R_PIN, BUT_DEBOUNCE_MS)};
 elapsedMillis master_timer;
 uint8_t ui_state = UI_MAIN;
+uint8_t ui_main_state = UI_MAIN_VOICE_SELECTED;
 #endif
 
 // GUItool: begin automatically generated code
@@ -183,7 +184,9 @@ void setup()
     load_sysex(bank, voice);
 #ifdef I2C_DISPLAY
     enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+    enc_val[0] = enc[0].read();
     enc[1].write(voice);
+    enc_val[1] = enc[1].read();
     but[0].update();
     but[1].update();
 #endif
@@ -216,8 +219,6 @@ void setup()
   sched_note_off.begin(note_off, 6333333);
 #endif
 
-  Serial.println(F("<setup end>"));
-
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
 #endif
@@ -225,6 +226,8 @@ void setup()
 #ifdef I2C_DISPLAY
   ui_show_main();
 #endif
+
+  Serial.println(F("<setup end>"));
 
 #ifdef TEST_NOTE
   //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_DEP] = 99;           // full pitch mod depth
@@ -411,7 +414,7 @@ bool handle_master_key(uint8_t data)
       Serial.println(bank, DEC);
 #endif
 #ifdef I2C_DISPLAY
-      if (get_bank_name(bank))
+      if (get_bank_voice_name(bank, voice))
       {
         lcd.show(0, 0, 2, bank + 1);
         lcd.show(0, 2, 1, " ");

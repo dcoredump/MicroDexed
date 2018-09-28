@@ -30,8 +30,9 @@
 #include "dexed.h"
 #include "dexed_sysex.h"
 #include "config.h"
+#include "UI.h"
 
-bool get_bank_name(uint8_t b)
+bool get_bank_voice_name(uint8_t b, uint8_t v)
 {
   File root;
   b %= MAX_BANKS;
@@ -65,12 +66,19 @@ bool get_bank_name(uint8_t b)
         if (!entry.isDirectory())
         {
           char *token;
+          uint8_t data[128];
 
-          token = strtok(entry.name(), ".");
-          if (token != NULL)
-            strcpy(bank_name, token);
+          if (get_sysex_voice(bankdir, entry, v, data))
+            strncpy(voice_name, (char*)&data[118], 10);
           else
+            strcpy(voice_name, "*ERROR*");
+            
+          token = strtok(entry.name(), ".");
+          if (token == NULL)
             strcpy(bank_name, "*ERROR*");
+          else
+            strcpy(bank_name, token);
+
           return (true);
         }
       }
@@ -84,7 +92,7 @@ bool load_sysex(uint8_t b, uint8_t v)
   File root;
   bool found = false;
 
-  v %= 32;
+  v %= MAX_VOICES;
   b %= MAX_BANKS;
 
   if (sd_card_available)
@@ -121,6 +129,8 @@ bool load_sysex(uint8_t b, uint8_t v)
           {
 #ifdef DEBUG
             char n[11];
+            bool r;
+
             strncpy(n, (char*)&data[118], 10);
             Serial.print("Loading sysex ");
             Serial.print(bankdir);
@@ -138,6 +148,7 @@ bool load_sysex(uint8_t b, uint8_t v)
               strcpy(bank_name, token);
             else
               strcpy(bank_name, "*ERROR*");
+
             return (dexed->loadSysexVoice(data));
           }
           else

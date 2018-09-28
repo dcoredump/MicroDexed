@@ -25,6 +25,8 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "dexed.h"
+#include "dexed_sysex.h"
 #include "UI.h"
 
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
@@ -43,6 +45,37 @@ void handle_ui(void)
     if (but[i].risingEdge())
     {
       // Button pressed
+      switch (i)
+      {
+        case 0: // left button pressed
+          switch (ui_main_state)
+          {
+            case UI_MAIN_BANK:
+              ui_main_state = UI_MAIN_VOICE;
+              enc[1].write(voice);
+              enc_val[1] = enc[1].read();
+              break;
+            case UI_MAIN_VOICE:
+              ui_main_state = UI_MAIN_VOICE_SELECTED;
+              enc[1].write(voice);
+              enc_val[1] = enc[1].read();
+              break;
+            case UI_MAIN_VOICE_SELECTED:
+              ui_main_state = UI_MAIN_BANK;
+              enc[1].write(bank);
+              enc_val[1] = enc[1].read();
+              break;
+          }
+          break;
+        case 1: // right button pressed
+          ui_main_state = UI_MAIN_VOICE_SELECTED;
+          load_sysex(bank, voice);
+          EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
+          EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
+          update_eeprom_checksum();
+          break;
+      }
+      ui_show_main();
 #ifdef DEBUG
       Serial.print(F("Button "));
       Serial.println(i, DEC);
@@ -64,6 +97,33 @@ void handle_ui(void)
           ui_show_volume();
           break;
         case 1: // right encoder moved
+          switch (ui_main_state)
+          {
+            case UI_MAIN_BANK:
+              if (enc[i].read() <= 0)
+                enc[i].write(0);
+              else if (enc[i].read() >= MAX_BANKS)
+                enc[i].write(MAX_BANKS);
+              bank = enc[i].read();
+              if (!get_bank_voice_name(bank, voice))
+              {
+                bank--;
+                enc[i].write(bank);
+                get_bank_voice_name(bank, voice);
+              }
+              break;
+            case UI_MAIN_VOICE:
+              if (enc[i].read() <= 0)
+                enc[i].write(0);
+              else if (enc[i].read() >= MAX_VOICES)
+                enc[i].write(MAX_VOICES);
+              voice = enc[i].read();
+              break;
+            case UI_MAIN_VOICE_SELECTED:
+              ui_main_state = UI_MAIN_VOICE;
+              break;
+          }
+          get_bank_voice_name(bank, voice);
           ui_show_main();
           break;
       }
@@ -85,10 +145,31 @@ void ui_show_main(void)
   lcd.clear();
   lcd.show(0, 0, 2, bank + 1);
   lcd.show(0, 2, 1, " ");
-  lcd.show(0, 3, 10, bank_name);
+  if (ui_main_state == UI_MAIN_BANK)
+  {
+    lcd.show(0, 2, 1, "[");
+    lcd.show(0, 3, 10, bank_name);
+    lcd.show(0, 14, 1, "]");
+  }
+  else
+    lcd.show(0, 3, 10, bank_name);
+
   lcd.show(1, 0, 2, voice + 1);
   lcd.show(1, 2, 1, " ");
-  lcd.show(1, 3, 10, voice_name);
+  if (ui_main_state == UI_MAIN_VOICE)
+  {
+    lcd.show(1, 2, 1, "<");
+    lcd.show(1, 3, 10, voice_name);
+    lcd.show(1, 14, 1, ">");
+  }
+  else if (ui_main_state == UI_MAIN_VOICE_SELECTED)
+  {
+    lcd.show(1, 2, 1, "[");
+    lcd.show(1, 3, 10, voice_name);
+    lcd.show(1, 14, 1, "]");
+  }
+  else
+    lcd.show(1, 3, 10, voice_name);
 }
 
 void ui_show_volume(void)

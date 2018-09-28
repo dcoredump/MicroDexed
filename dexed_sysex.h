@@ -35,8 +35,10 @@ extern uint8_t bank;
 extern uint8_t voice;
 extern char bank_name[11];
 extern char voice_name[11];
+extern uint8_t ui_state;
+extern uint8_t ui_main_state;
 
-bool get_bank_name(uint8_t b);
+bool get_bank_voice_name(uint8_t b, uint8_t v);
 bool load_sysex(uint8_t b, uint8_t v);
 bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data);
 

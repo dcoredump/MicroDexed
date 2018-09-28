@@ -48,6 +48,7 @@
 #endif
 #define SAMPLE_RATE 44100
 #define MAX_BANKS 99
+#define MAX_VOICES 32 // voices per bank
 
 #if !defined(__MK66FX1M0__) // check for Teensy-3.6
 #define MAX_NOTES 11        // No? 
