@@ -589,9 +589,9 @@ void set_volume(float v, float vr, float vl)
 #ifdef TEENSY_AUDIO_BOARD
   sgtl5000_1.dacVolume(log(vol * vol_left), log(vol * vol_right));
 #else
-  volume_master.gain(vol);
-  volume_r.gain(vr);
-  volume_l.gain(vl);
+  volume_master.gain(log(vol));
+  volume_r.gain(log(vr));
+  volume_l.gain(log(vl));
 #endif
 }
 
