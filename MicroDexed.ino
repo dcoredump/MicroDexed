@@ -555,11 +555,12 @@ void set_volume(float v, float vr, float vl)
   vol_right = vr;
   vol_left = vl;
 
+#ifndef I2C_DISPLAY
   EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
   EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
   EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
   update_eeprom_checksum();
-
+#endif
 #ifdef DEBUG
   uint8_t tmp;
   Serial.print(F("Setting volume: VOL="));
@@ -587,11 +588,13 @@ void set_volume(float v, float vr, float vl)
 #endif
 
 #ifdef TEENSY_AUDIO_BOARD
-  sgtl5000_1.dacVolume(log(vol * vol_left), log(vol * vol_right));
+  //sgtl5000_1.dacVolume(log(vol * vol_left)+1, log(vol * vol_right)+1); // https://stackoverflow.com/questions/19472747/convert-linear-scale-to-logarithmic
+  sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
+
 #else
-  volume_master.gain(log(vol));
-  volume_r.gain(log(vr));
-  volume_l.gain(log(vl));
+  volume_master.gain(lvol);
+  volume_r.gain(lvr);
+  volume_l.gain(vl);
 #endif
 }
 

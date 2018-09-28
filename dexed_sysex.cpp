@@ -129,7 +129,6 @@ bool load_sysex(uint8_t b, uint8_t v)
           {
 #ifdef DEBUG
             char n[11];
-            bool r;
 
             strncpy(n, (char*)&data[118], 10);
             Serial.print("Loading sysex ");

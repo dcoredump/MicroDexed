@@ -24,6 +24,7 @@
 */
 
 #include <Arduino.h>
+#include <limits.h>
 #include "config.h"
 #include "dexed.h"
 #include "dexed_sysex.h"
@@ -36,7 +37,13 @@ elapsedMillis ui_back_to_main;
 void handle_ui(void)
 {
   if (ui_back_to_main >= UI_AUTO_BACK_MS && ui_state != UI_MAIN)
+  {
     ui_show_main();
+    EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
+    update_eeprom_checksum();
+  }
 
   for (uint8_t i = 0; i < NUM_ENCODER; i++)
   {
@@ -121,6 +128,11 @@ void handle_ui(void)
               break;
             case UI_MAIN_VOICE_SELECTED:
               ui_main_state = UI_MAIN_VOICE;
+              if (enc[i].read() <= 0)
+                enc[i].write(0);
+              else if (enc[i].read() >= MAX_VOICES)
+                enc[i].write(MAX_VOICES);
+              voice = enc[i].read();
               break;
           }
           get_bank_voice_name(bank, voice);
