@@ -588,13 +588,12 @@ void set_volume(float v, float vr, float vl)
 #endif
 
 #ifdef TEENSY_AUDIO_BOARD
-  //sgtl5000_1.dacVolume(log(vol * vol_left)+1, log(vol * vol_right)+1); // https://stackoverflow.com/questions/19472747/convert-linear-scale-to-logarithmic
-  sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
-
+  //sgtl5000_1.dacVolume(log(vol * vol_left)+1, log(vol * vol_right)+1);
+  sgtl5000_1.dacVolume(1 - pow((1 - vol * vol_left), 2.7), (1 - pow((1 - vol * vol_right), 2.7)));
 #else
-  volume_master.gain(lvol);
-  volume_r.gain(lvr);
-  volume_l.gain(vl);
+  volume_master.gain(1 - pow(1 - lvol, 2.7));
+  volume_r.gain(1 - pow(1 - vr, 2.7));
+  volume_l.gain(1 - pow(1 - vl, 2.7));
 #endif
 }
 
