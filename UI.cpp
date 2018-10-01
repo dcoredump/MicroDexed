@@ -38,6 +38,7 @@ void handle_ui(void)
 {
   if (ui_back_to_main >= UI_AUTO_BACK_MS && ui_state != UI_MAIN)
   {
+    lcd.clear();
     ui_show_main();
     EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
     EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
@@ -58,15 +59,12 @@ void handle_ui(void)
           switch (ui_main_state)
           {
             case UI_MAIN_BANK:
+            case UI_MAIN_BANK_SELECTED:
               ui_main_state = UI_MAIN_VOICE;
               enc[1].write(voice);
               enc_val[1] = enc[1].read();
               break;
             case UI_MAIN_VOICE:
-              ui_main_state = UI_MAIN_VOICE_SELECTED;
-              enc[1].write(voice);
-              enc_val[1] = enc[1].read();
-              break;
             case UI_MAIN_VOICE_SELECTED:
               ui_main_state = UI_MAIN_BANK;
               enc[1].write(bank);
@@ -75,11 +73,14 @@ void handle_ui(void)
           }
           break;
         case 1: // right button pressed
-          ui_main_state = UI_MAIN_VOICE_SELECTED;
-          load_sysex(bank, voice);
-          EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
-          EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
-          update_eeprom_checksum();
+          if (ui_main_state == UI_MAIN_VOICE_SELECTED)
+          {
+            ui_main_state = UI_MAIN_VOICE;
+            load_sysex(bank, voice);
+            EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
+            EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
+            update_eeprom_checksum();
+          }
           break;
       }
       ui_show_main();
@@ -107,35 +108,25 @@ void handle_ui(void)
           switch (ui_main_state)
           {
             case UI_MAIN_BANK:
+              ui_main_state = UI_MAIN_BANK_SELECTED;
+            case UI_MAIN_BANK_SELECTED:
               if (enc[i].read() <= 0)
                 enc[i].write(0);
-              else if (enc[i].read() > max_loaded_banks-1)
-                enc[i].write(max_loaded_banks-1);
+              else if (enc[i].read() > max_loaded_banks - 1)
+                enc[i].write(max_loaded_banks - 1);
               bank = enc[i].read();
-              if (!get_voice_names_from_bank(bank))
-              {
-                bank--;
-                enc[i].write(bank);
-                get_voice_names_from_bank(bank);
-              }
+              get_voice_names_from_bank(bank);
               break;
             case UI_MAIN_VOICE:
-              if (enc[i].read() <= 0)
-                enc[i].write(0);
-              else if (enc[i].read() > MAX_VOICES-1)
-                enc[i].write(MAX_VOICES-1);
-              voice = enc[i].read();
-              break;
+              ui_main_state = UI_MAIN_VOICE_SELECTED;
             case UI_MAIN_VOICE_SELECTED:
-              ui_main_state = UI_MAIN_VOICE;
               if (enc[i].read() <= 0)
                 enc[i].write(0);
-              else if (enc[i].read() >= MAX_VOICES-1)
-                enc[i].write(MAX_VOICES);
+              else if (enc[i].read() > MAX_VOICES - 1)
+                enc[i].write(MAX_VOICES - 1);
               voice = enc[i].read();
               break;
           }
-          get_voice_names_from_bank(bank);
           ui_show_main();
           break;
       }
@@ -154,7 +145,6 @@ void ui_show_main(void)
 {
   ui_state = UI_MAIN;
 
-  lcd.clear();
   lcd.show(0, 0, 2, bank + 1);
   lcd.show(0, 2, 1, " ");
   strip_extension(bank_names[bank], bank_name);
@@ -165,25 +155,39 @@ void ui_show_main(void)
     lcd.show(0, 3, 10, bank_name);
     lcd.show(0, 14, 1, "]");
   }
-  else
+  else if (ui_main_state == UI_MAIN_BANK_SELECTED)
+  {
+    lcd.show(0, 2, 1, "<");
     lcd.show(0, 3, 10, bank_name);
+    lcd.show(0, 14, 1, ">");
+  }
+  else
+  {
+    lcd.show(0, 2, 1, " ");
+    lcd.show(0, 3, 10, bank_name);
+    lcd.show(0, 14, 1, " ");
+  }
 
   lcd.show(1, 0, 2, voice + 1);
   lcd.show(1, 2, 1, " ");
   if (ui_main_state == UI_MAIN_VOICE)
   {
-    lcd.show(1, 2, 1, "<");
-    lcd.show(1, 3, 10, voice_names[voice]);
-    lcd.show(1, 14, 1, ">");
-  }
-  else if (ui_main_state == UI_MAIN_VOICE_SELECTED)
-  {
     lcd.show(1, 2, 1, "[");
     lcd.show(1, 3, 10, voice_names[voice]);
     lcd.show(1, 14, 1, "]");
   }
-  else
+  else if (ui_main_state == UI_MAIN_VOICE_SELECTED)
+  {
+    lcd.show(1, 2, 1, "<");
     lcd.show(1, 3, 10, voice_names[voice]);
+    lcd.show(1, 14, 1, ">");
+  }
+  else
+  {
+    lcd.show(1, 2, 1, " ");
+    lcd.show(1, 3, 10, voice_names[voice]);
+    lcd.show(1, 14, 1, " ");
+  }
 }
 
 void ui_show_volume(void)

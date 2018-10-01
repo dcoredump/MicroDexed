@@ -253,7 +253,7 @@ bool load_sysex(uint8_t b, uint8_t v)
       Serial.print(sysex_file_name);
       Serial.print(F(" ["));
       Serial.print(voice_names[v]);
-      Serial.println(F(" ["));
+      Serial.println(F("]"));
 #endif
       return (dexed->loadSysexVoice(data));
     }

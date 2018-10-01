@@ -47,7 +47,7 @@ int32_t enc_val[2] = {INITIAL_ENC_L_VALUE, INITIAL_ENC_R_VALUE};
 Bounce but[2] = {Bounce(BUT_L_PIN, BUT_DEBOUNCE_MS), Bounce(BUT_R_PIN, BUT_DEBOUNCE_MS)};
 elapsedMillis master_timer;
 uint8_t ui_state = UI_MAIN;
-uint8_t ui_main_state = UI_MAIN_VOICE_SELECTED;
+uint8_t ui_main_state = UI_MAIN_VOICE;
 #endif
 
 // GUItool: begin automatically generated code
@@ -250,9 +250,10 @@ void setup()
 #endif
 
 #ifdef I2C_DISPLAY
+  lcd.clear();
   ui_show_main();
 #endif
-
+  
   Serial.println(F("<setup end>"));
 
 #ifdef TEST_NOTE

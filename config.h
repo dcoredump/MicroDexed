@@ -33,6 +33,7 @@
 #define CONFIG_H_INCLUDED
 
 // Initial values
+#define VERSION 1.0
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
 #define TEENSY_AUDIO_BOARD 1

@@ -54,7 +54,7 @@ void ui_show_main(void);
 void ui_show_volume(void);
 
 enum ui_states {UI_MAIN, UI_VOLUME};
-enum ui_main_states {UI_MAIN_BANK, UI_MAIN_VOICE, UI_MAIN_VOICE_SELECTED};
+enum ui_main_states {UI_MAIN_BANK, UI_MAIN_VOICE, UI_MAIN_BANK_SELECTED, UI_MAIN_VOICE_SELECTED};
 
 class MyEncoder : public Encoder
 {
