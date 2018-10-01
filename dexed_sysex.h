@@ -33,13 +33,19 @@ extern Dexed* dexed;
 extern uint16_t render_time_max;
 extern uint8_t bank;
 extern uint8_t voice;
-extern char bank_name[11];
-extern char voice_name[11];
+extern char bank_name[BANK_NAME_LEN];
+extern char voice_name[VOICE_NAME_LEN];
+extern char bank_names[MAX_BANKS][BANK_NAME_LEN];
+extern char voice_names[MAX_VOICES][VOICE_NAME_LEN];
 extern uint8_t ui_state;
 extern uint8_t ui_main_state;
 
+void create_sysex_filename(uint8_t b, char* sysex_file_name);
+void strip_extension(char* s, char *target);
+bool get_voice_names_from_bank(uint8_t b);
+uint8_t get_bank_names(void);
 bool get_bank_voice_name(uint8_t b, uint8_t v);
 bool load_sysex(uint8_t b, uint8_t v);
-bool get_sysex_voice(char* dir, File sysex, uint8_t voice_number, uint8_t* data);
+bool get_sysex_voice(File sysex, uint8_t voice_number, uint8_t* data);
 
 #endif

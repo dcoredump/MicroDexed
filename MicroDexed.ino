@@ -20,7 +20,6 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-
 */
 
 #include <Audio.h>
@@ -82,12 +81,15 @@ uint32_t overload = 0;
 uint32_t peak = 0;
 uint16_t render_time_max = 0;
 uint8_t bank = 0;
+uint8_t max_loaded_banks=0;
 uint8_t voice = 0;
 float vol = VOLUME;
 float vol_right = 1.0;
 float vol_left = 1.0;
-char bank_name[11];
-char voice_name[11];
+char bank_name[BANK_NAME_LEN];
+char voice_name[VOICE_NAME_LEN];
+char bank_names[MAX_BANKS][BANK_NAME_LEN];
+char voice_names[MAX_VOICES][VOICE_NAME_LEN];
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
 #endif
@@ -180,17 +182,41 @@ void setup()
     Serial.println(F("SD card found."));
     sd_card_available = true;
 
+    // read all bank names
+    max_loaded_banks=get_bank_names();
+    strip_extension(bank_names[bank],bank_name);
+
+    // read all voice name for actual bank
+    get_voice_names_from_bank(bank);
+#ifdef DEBUG
+    Serial.print(F("Bank ["));
+    Serial.print(bank_names[bank]);
+    Serial.print(F("/"));
+    Serial.print(bank_name);
+    Serial.println(F("]"));
+    for (uint8_t n = 0; n < MAX_VOICES; n++)
+    {
+      if (n < 10)
+        Serial.print(F(" "));
+      Serial.print(F("   "));
+      Serial.print(n, DEC);
+      Serial.print(F("["));
+      Serial.print(voice_names[n]);
+      Serial.println(F("]"));
+    }
+#endif
     // load default SYSEX data
     load_sysex(bank, voice);
-#ifdef I2C_DISPLAY
-    enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
-    enc_val[0] = enc[0].read();
-    enc[1].write(voice);
-    enc_val[1] = enc[1].read();
-    but[0].update();
-    but[1].update();
-#endif
   }
+
+#ifdef I2C_DISPLAY
+  enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+  enc_val[0] = enc[0].read();
+  enc[1].write(voice);
+  enc_val[1] = enc[1].read();
+  but[0].update();
+  but[1].update();
+#endif
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   // Initialize processor and memory measurements
@@ -383,7 +409,7 @@ bool handle_master_key(uint8_t data)
 #ifdef I2C_DISPLAY
         lcd.show(1, 0, 2, voice + 1);
         lcd.show(1, 2, 1, " ");
-        lcd.show(1, 3, 10, voice_name);
+        lcd.show(1, 3, 10, voice_names[voice]);
 #endif
       }
 #ifdef DEBUG
@@ -414,8 +440,9 @@ bool handle_master_key(uint8_t data)
       Serial.println(bank, DEC);
 #endif
 #ifdef I2C_DISPLAY
-      if (get_bank_voice_name(bank, voice))
+      if (get_voice_names_from_bank(bank))
       {
+        strip_extension(bank_names[bank],bank_name);
         lcd.show(0, 0, 2, bank + 1);
         lcd.show(0, 2, 1, " ");
         lcd.show(0, 3, 10, bank_name);
@@ -588,12 +615,12 @@ void set_volume(float v, float vr, float vl)
 #endif
 
 #ifdef TEENSY_AUDIO_BOARD
-  //sgtl5000_1.dacVolume(log(vol * vol_left)+1, log(vol * vol_right)+1);
-  sgtl5000_1.dacVolume(1 - pow((1 - vol * vol_left), 2.7), (1 - pow((1 - vol * vol_right), 2.7)));
+  //sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
+  sgtl5000_1.dacVolume(pow(vol * vol_left, 0.2), pow(vol * vol_right, 0.2));
 #else
-  volume_master.gain(1 - pow(1 - lvol, 2.7));
-  volume_r.gain(1 - pow(1 - vr, 2.7));
-  volume_l.gain(1 - pow(1 - vl, 2.7));
+  volume_master.gain(pow(lvol, 0.2));
+  volume_r.gain(pow(vr, 0.2));
+  volume_l.gain(pow(vl, 0.2));
 #endif
 }
 
@@ -772,7 +799,7 @@ void show_cpu_and_mem_usage(void)
 void show_patch(void)
 {
   uint8_t i;
-  char voicename[11];
+  char voicename[VOICE_NAME_LEN];
 
   memset(voicename, 0, sizeof(voicename));
   for (i = 0; i < 6; i++)

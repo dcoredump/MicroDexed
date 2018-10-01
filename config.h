@@ -49,6 +49,8 @@
 #define SAMPLE_RATE 44100
 #define MAX_BANKS 99
 #define MAX_VOICES 32 // voices per bank
+#define BANK_NAME_LEN 13 // FAT12 filenames (plus '\0')
+#define VOICE_NAME_LEN 11 // 10 (plus '\0')
 
 #if !defined(__MK66FX1M0__) // check for Teensy-3.6
 #define MAX_NOTES 11        // No? 
