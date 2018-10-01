@@ -257,8 +257,8 @@ bool load_sysex(uint8_t b, uint8_t v)
 #endif
       return (dexed->loadSysexVoice(data));
     }
-    else
 #ifdef DEBUG
+    else
       Serial.println(F("E : Cannot load voice data"));
 #endif
   }

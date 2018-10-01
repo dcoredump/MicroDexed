@@ -198,11 +198,20 @@ void ui_show_volume(void)
     lcd.show(0, 0, LCD_CHARS, "Volume");
 
   lcd.show(0, LCD_CHARS - 3, 3, vol * 100);
-  for (uint8_t i = 0; i < map(vol * 100, 0, 100, 0, LCD_CHARS); i++)
-    lcd.show(1, i, 1, "*");
-  for (uint8_t i = map(vol * 100, 0, 100, 0, LCD_CHARS); i < LCD_CHARS; i++)
-    lcd.show(1, i, 1, " ");
-
+  if (vol == 0.0)
+    lcd.show(1, 0, LCD_CHARS , " ");
+  else
+  {
+    if (vol < (float(LCD_CHARS) / 100))
+      lcd.show(1, 0, LCD_CHARS, "*");
+    else
+    {
+      for (uint8_t i = 0; i < map(vol * 100, 0, 100, 0, LCD_CHARS); i++)
+        lcd.show(1, i, 1, "*");
+      for (uint8_t i = map(vol * 100, 0, 100, 0, LCD_CHARS); i < LCD_CHARS; i++)
+        lcd.show(1, i, 1, " ");
+    }
+  }
   ui_state = UI_VOLUME;
 }
 

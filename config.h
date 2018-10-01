@@ -66,7 +66,7 @@
 
 // Debug output
 #define SERIAL_SPEED 38400
-#define DEBUG 1
+//#define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
@@ -99,8 +99,8 @@
 #define UI_AUTO_BACK_MS 2000
 
 // Encoder with button
-#define ENC_VOL_STEPS 50
-#define TIMER_UI_HANDLING_MS 50
+#define ENC_VOL_STEPS 43
+#define TIMER_UI_HANDLING_MS 100
 #define NUM_ENCODER 2
 #define ENC_L_PIN_A  3
 #define ENC_L_PIN_B  2
