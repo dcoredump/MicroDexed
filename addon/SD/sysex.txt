@@ -1,0 +1,18 @@
+Synth           10
+
+Piano           10
+EPiano          10
+Bass            5
+
+Strings         10
+Woodwind        5
+Brass           5
+Organ           5
+Perc            5
+
+Voice           5
+Bells           5
+
+FX              10
+Div             7
+ROM             8
