@@ -47,7 +47,7 @@
 #define AUDIO_MEM 80
 #endif
 #define SAMPLE_RATE 44100
-#define MAX_BANKS 99
+#define MAX_BANKS 100
 #define MAX_VOICES 32 // voices per bank
 #define BANK_NAME_LEN 13 // FAT12 filenames (plus '\0')
 #define VOICE_NAME_LEN 11 // 10 (plus '\0')
@@ -65,7 +65,7 @@
 
 // Debug output
 #define SERIAL_SPEED 38400
-#define DEBUG 1
+//#define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
@@ -95,7 +95,7 @@
 #define LCD_I2C_ADDRESS 0x27
 #define LCD_CHARS 16
 #define LCD_LINES 2
-#define UI_AUTO_BACK_MS 2000
+#define UI_AUTO_BACK_MS 3000
 #define AUTOSTORE_MS 5000
 
 // Encoder with button

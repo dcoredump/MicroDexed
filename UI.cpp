@@ -177,9 +177,12 @@ void handle_ui(void)
 
 void ui_show_main(void)
 {
-  ui_state = UI_MAIN;
+  if (ui_state != UI_MAIN)
+  {
+    lcd.clear();
+  }
 
-  lcd.show(0, 0, 2, bank + 1);
+  lcd.show(0, 0, 2, bank);
   lcd.show(0, 2, 1, " ");
   strip_extension(bank_names[bank], bank_name);
 
@@ -222,6 +225,8 @@ void ui_show_main(void)
     lcd.show(1, 3, 10, voice_names[voice]);
     lcd.show(1, 14, 1, " ");
   }
+
+  ui_state = UI_MAIN;
 }
 
 void ui_show_midichannel(void)
@@ -242,6 +247,7 @@ void ui_show_midichannel(void)
     if (midi_channel == 1)
       lcd.show(1, 2, 2, "  ");
   }
+  
   ui_state = UI_MIDICHANNEL;
 }
 
@@ -270,6 +276,7 @@ void ui_show_volume(void)
         lcd.show(1, i, 1, " ");
     }
   }
+  
   ui_state = UI_VOLUME;
 }
 #endif

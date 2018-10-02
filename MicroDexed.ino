@@ -432,13 +432,13 @@ bool handle_master_key(uint8_t data)
       if (get_voice_names_from_bank(bank))
       {
         strip_extension(bank_names[bank], bank_name);
-        lcd.show(0, 0, 2, bank + 1);
+        lcd.show(0, 0, 2, bank);
         lcd.show(0, 2, 1, " ");
         lcd.show(0, 3, 10, bank_name);
       }
       else
       {
-        lcd.show(0, 0, 2, bank + 1);
+        lcd.show(0, 0, 2, bank);
         lcd.show(0, 2, 10, " *ERROR*");
       }
 #endif
