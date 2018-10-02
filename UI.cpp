@@ -33,6 +33,7 @@
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 
 elapsedMillis ui_back_to_main;
+elapsedMillis autostore_sound;
 
 void handle_ui(void)
 {
@@ -40,10 +41,15 @@ void handle_ui(void)
   {
     lcd.clear();
     ui_show_main();
-    EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
-    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
-    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
-    update_eeprom_checksum();
+    eeprom_write_volume();
+    eeprom_write_midichannel();
+  }
+
+  if (autostore_sound >= AUTOSTORE_MS && (ui_main_state == UI_MAIN_VOICE_SELECTED || ui_main_state == UI_MAIN_BANK_SELECTED))
+  {
+    ui_main_state = UI_MAIN_VOICE;
+    ui_show_main();
+    eeprom_write_sound();
   }
 
   for (uint8_t i = 0; i < NUM_ENCODER; i++)
@@ -56,34 +62,44 @@ void handle_ui(void)
       switch (i)
       {
         case 0: // left button pressed
+          switch (ui_state)
+          {
+            case UI_MAIN:
+              enc[i].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+              enc_val[i] = enc[i].read();
+              ui_show_volume();
+              break;
+            case UI_VOLUME:
+              enc[i].write(midi_channel);
+              enc_val[i] = enc[i].read();
+              ui_show_midichannel();
+              break;
+            case UI_MIDICHANNEL:
+              enc[i].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+              enc_val[i] = enc[i].read();
+              ui_show_main();
+              break;
+          }
+          break;
+        case 1: // right button pressed
           switch (ui_main_state)
           {
             case UI_MAIN_BANK:
             case UI_MAIN_BANK_SELECTED:
               ui_main_state = UI_MAIN_VOICE;
-              enc[1].write(voice);
-              enc_val[1] = enc[1].read();
+              enc[i].write(voice);
+              enc_val[i] = enc[i].read();
               break;
             case UI_MAIN_VOICE:
             case UI_MAIN_VOICE_SELECTED:
               ui_main_state = UI_MAIN_BANK;
-              enc[1].write(bank);
-              enc_val[1] = enc[1].read();
+              enc[i].write(bank);
+              enc_val[i] = enc[i].read();
               break;
           }
-          break;
-        case 1: // right button pressed
-          if (ui_main_state == UI_MAIN_VOICE_SELECTED)
-          {
-            ui_main_state = UI_MAIN_VOICE;
-            load_sysex(bank, voice);
-            EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
-            EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
-            update_eeprom_checksum();
-          }
+          ui_show_main();
           break;
       }
-      ui_show_main();
 #ifdef DEBUG
       Serial.print(F("Button "));
       Serial.println(i, DEC);
@@ -97,12 +113,26 @@ void handle_ui(void)
       switch (i)
       {
         case 0: // left encoder moved
-          if (enc[i].read() <= 0)
-            enc[i].write(0);
-          else if (enc[i].read() >= ENC_VOL_STEPS)
-            enc[i].write(ENC_VOL_STEPS);
-          set_volume(float(map(enc[i].read(), 0, ENC_VOL_STEPS, 0, 100)) / 100, vol_left, vol_right);
-          ui_show_volume();
+          switch (ui_state)
+          {
+            case UI_MAIN:
+            case UI_VOLUME:
+              if (enc[i].read() <= 0)
+                enc[i].write(0);
+              else if (enc[i].read() >= ENC_VOL_STEPS)
+                enc[i].write(ENC_VOL_STEPS);
+              set_volume(float(map(enc[i].read(), 0, ENC_VOL_STEPS, 0, 100)) / 100, vol_left, vol_right);
+              ui_show_volume();
+              break;
+            case UI_MIDICHANNEL:
+              if (enc[i].read() <= 0)
+                enc[i].write(0);
+              else if (enc[i].read() >= 16)
+                enc[i].write(16);
+              midi_channel = enc[i].read();
+              ui_show_midichannel();
+              break;
+          }
           break;
         case 1: // right encoder moved
           switch (ui_main_state)
@@ -116,6 +146,8 @@ void handle_ui(void)
                 enc[i].write(max_loaded_banks - 1);
               bank = enc[i].read();
               get_voice_names_from_bank(bank);
+              load_sysex(bank, voice);
+              autostore_sound = 0;
               break;
             case UI_MAIN_VOICE:
               ui_main_state = UI_MAIN_VOICE_SELECTED;
@@ -125,6 +157,8 @@ void handle_ui(void)
               else if (enc[i].read() > MAX_VOICES - 1)
                 enc[i].write(MAX_VOICES - 1);
               voice = enc[i].read();
+              load_sysex(bank, voice);
+              autostore_sound = 0;
               break;
           }
           ui_show_main();
@@ -190,12 +224,36 @@ void ui_show_main(void)
   }
 }
 
+void ui_show_midichannel(void)
+{
+  ui_back_to_main = 0;
+
+  if (ui_state != UI_MIDICHANNEL)
+  {
+    lcd.clear();
+    lcd.show(0, 0, LCD_CHARS, "MIDI Channel");
+  }
+
+  if (midi_channel == MIDI_CHANNEL_OMNI)
+    lcd.show(1, 0, 4, "OMNI");
+  else
+  {
+    lcd.show(1, 0, 2, midi_channel);
+    if (midi_channel == 1)
+      lcd.show(1, 2, 2, "  ");
+  }
+  ui_state = UI_MIDICHANNEL;
+}
+
 void ui_show_volume(void)
 {
   ui_back_to_main = 0;
 
   if (ui_state != UI_VOLUME)
+  {
+    lcd.clear();
     lcd.show(0, 0, LCD_CHARS, "Volume");
+  }
 
   lcd.show(0, LCD_CHARS - 3, 3, vol * 100);
   if (vol == 0.0)
@@ -214,5 +272,4 @@ void ui_show_volume(void)
   }
   ui_state = UI_VOLUME;
 }
-
 #endif

@@ -28,12 +28,11 @@
 // ATTENTION! For better latency you have to redefine AUDIO_BLOCK_SAMPLES from
 // 128 to 64 in <ARDUINO-IDE-DIR>/cores/teensy3/AudioStream.h
 
-
 #ifndef CONFIG_H_INCLUDED
 #define CONFIG_H_INCLUDED
 
 // Initial values
-#define VERSION 1.0
+#define VERSION 1.0.0
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
 #define TEENSY_AUDIO_BOARD 1
@@ -43,9 +42,9 @@
 #define DEFAULT_SYSEXSOUND 0
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
 #ifndef TEENSY_AUDIO_BOARD
-#define AUDIO_MEM 4
+#define AUDIO_MEM 16
 #else
-#define AUDIO_MEM 2
+#define AUDIO_MEM 80
 #endif
 #define SAMPLE_RATE 44100
 #define MAX_BANKS 99
@@ -61,12 +60,12 @@
 #endif
 
 // Master key handling (comment for disabling)
-#define MASTER_KEY_MIDI MIDI_C7
+//#define MASTER_KEY_MIDI MIDI_C7
 #define MASTER_NUM1 MIDI_C2
 
 // Debug output
 #define SERIAL_SPEED 38400
-//#define DEBUG 1
+#define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
@@ -97,6 +96,7 @@
 #define LCD_CHARS 16
 #define LCD_LINES 2
 #define UI_AUTO_BACK_MS 2000
+#define AUTOSTORE_MS 5000
 
 // Encoder with button
 #define ENC_VOL_STEPS 43
@@ -114,7 +114,7 @@
 
 // EEPROM address
 #define EEPROM_OFFSET 0
-#define EEPROM_DATA_LENGTH 5
+#define EEPROM_DATA_LENGTH 6
 
 #define EEPROM_CRC32_ADDR EEPROM.length()-sizeof(uint32_t)
 #define EEPROM_BANK_ADDR 0
@@ -122,5 +122,5 @@
 #define EEPROM_MASTER_VOLUME_ADDR 2
 #define EEPROM_VOLUME_RIGHT_ADDR 3
 #define EEPROM_VOLUME_LEFT_ADDR 4
-
+#define EEPROM_MIDICHANNEL_ADDR 5
 #endif

@@ -56,7 +56,7 @@ void strip_extension(char* s, char* target)
   char tmp[BANK_NAME_LEN];
   char* token;
 
-  strcpy(tmp,s);
+  strcpy(tmp, s);
   token = strtok(tmp, ".");
   if (token == NULL)
     strcpy(target, "*ERROR*");
@@ -169,8 +169,8 @@ bool get_voice_names_from_bank(uint8_t b)
       return (false);
     }
   }
-  else
-    return (false);
+
+  return (false);
 }
 
 uint8_t get_bank_names(void)
@@ -219,8 +219,9 @@ uint8_t get_bank_names(void)
 
 bool load_sysex(uint8_t b, uint8_t v)
 {
+#if DEBUG
   bool found = false;
-
+#endif
   v %= MAX_VOICES;
   b %= MAX_BANKS;
 

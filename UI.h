@@ -26,6 +26,7 @@
 #include "config.h"
 #include <Bounce.h>
 #include <EEPROM.h>
+#include <MIDI.h>
 #include "LiquidCrystalPlus_I2C.h"
 #include "Encoder4.h"
 
@@ -46,14 +47,19 @@ extern char bank_name[BANK_NAME_LEN];
 extern char voice_name[VOICE_NAME_LEN];
 extern uint8_t ui_state;
 extern uint8_t ui_main_state;
+extern uint8_t midi_channel;
 extern void update_eeprom_checksum(void);
 extern void set_volume(float v, float vr, float vl);
+extern void eeprom_write_sound(void);
+extern void eeprom_write_volume(void);
+extern void eeprom_write_midichannel(void);
 
 void handle_ui(void);
 void ui_show_main(void);
 void ui_show_volume(void);
+void ui_show_midichannel(void);
 
-enum ui_states {UI_MAIN, UI_VOLUME};
+enum ui_states {UI_MAIN, UI_VOLUME, UI_MIDICHANNEL};
 enum ui_main_states {UI_MAIN_BANK, UI_MAIN_VOICE, UI_MAIN_BANK_SELECTED, UI_MAIN_VOICE_SELECTED};
 
 class MyEncoder : public Encoder
