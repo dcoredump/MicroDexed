@@ -39,7 +39,8 @@ void handle_ui(void)
 {
   if (ui_back_to_main >= UI_AUTO_BACK_MS && ui_state != UI_MAIN)
   {
-    lcd.clear();
+    enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+    enc_val[0] = enc[0].read();
     ui_show_main();
     eeprom_write_volume();
     eeprom_write_midichannel();
@@ -47,7 +48,6 @@ void handle_ui(void)
 
   if (autostore_sound >= AUTOSTORE_MS && (ui_main_state == UI_MAIN_VOICE_SELECTED || ui_main_state == UI_MAIN_BANK_SELECTED))
   {
-    ui_main_state = UI_MAIN_VOICE;
     ui_show_main();
     eeprom_write_sound();
   }
@@ -186,18 +186,18 @@ void ui_show_main(void)
   lcd.show(0, 2, 1, " ");
   strip_extension(bank_names[bank], bank_name);
 
-  if (ui_main_state == UI_MAIN_BANK)
+  if (ui_main_state == UI_MAIN_BANK || ui_main_state == UI_MAIN_BANK_SELECTED)
   {
     lcd.show(0, 2, 1, "[");
     lcd.show(0, 3, 10, bank_name);
     lcd.show(0, 14, 1, "]");
   }
-  else if (ui_main_state == UI_MAIN_BANK_SELECTED)
-  {
+  /* else if (ui_main_state == UI_MAIN_BANK_SELECTED)
+    {
     lcd.show(0, 2, 1, "<");
     lcd.show(0, 3, 10, bank_name);
     lcd.show(0, 14, 1, ">");
-  }
+    }*/
   else
   {
     lcd.show(0, 2, 1, " ");
@@ -207,18 +207,18 @@ void ui_show_main(void)
 
   lcd.show(1, 0, 2, voice + 1);
   lcd.show(1, 2, 1, " ");
-  if (ui_main_state == UI_MAIN_VOICE)
+  if (ui_main_state == UI_MAIN_VOICE || ui_main_state == UI_MAIN_VOICE_SELECTED)
   {
     lcd.show(1, 2, 1, "[");
     lcd.show(1, 3, 10, voice_names[voice]);
     lcd.show(1, 14, 1, "]");
   }
-  else if (ui_main_state == UI_MAIN_VOICE_SELECTED)
-  {
+  /* else if (ui_main_state == UI_MAIN_VOICE_SELECTED)
+    {
     lcd.show(1, 2, 1, "<");
     lcd.show(1, 3, 10, voice_names[voice]);
     lcd.show(1, 14, 1, ">");
-  }
+    }*/
   else
   {
     lcd.show(1, 2, 1, " ");
@@ -227,28 +227,6 @@ void ui_show_main(void)
   }
 
   ui_state = UI_MAIN;
-}
-
-void ui_show_midichannel(void)
-{
-  ui_back_to_main = 0;
-
-  if (ui_state != UI_MIDICHANNEL)
-  {
-    lcd.clear();
-    lcd.show(0, 0, LCD_CHARS, "MIDI Channel");
-  }
-
-  if (midi_channel == MIDI_CHANNEL_OMNI)
-    lcd.show(1, 0, 4, "OMNI");
-  else
-  {
-    lcd.show(1, 0, 2, midi_channel);
-    if (midi_channel == 1)
-      lcd.show(1, 2, 2, "  ");
-  }
-  
-  ui_state = UI_MIDICHANNEL;
 }
 
 void ui_show_volume(void)
@@ -276,7 +254,30 @@ void ui_show_volume(void)
         lcd.show(1, i, 1, " ");
     }
   }
-  
+
   ui_state = UI_VOLUME;
 }
+
+void ui_show_midichannel(void)
+{
+  ui_back_to_main = 0;
+
+  if (ui_state != UI_MIDICHANNEL)
+  {
+    lcd.clear();
+    lcd.show(0, 0, LCD_CHARS, "MIDI Channel");
+  }
+
+  if (midi_channel == MIDI_CHANNEL_OMNI)
+    lcd.show(1, 0, 4, "OMNI");
+  else
+  {
+    lcd.show(1, 0, 2, midi_channel);
+    if (midi_channel == 1)
+      lcd.show(1, 2, 2, "  ");
+  }
+
+  ui_state = UI_MIDICHANNEL;
+}
+
 #endif
