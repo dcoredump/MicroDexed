@@ -153,9 +153,25 @@ void handle_ui(void)
               ui_main_state = UI_MAIN_VOICE_SELECTED;
             case UI_MAIN_VOICE_SELECTED:
               if (enc[i].read() <= 0)
-                enc[i].write(0);
+              {
+                if (bank > 0)
+                {
+                  enc[i].write(MAX_VOICES - 1);
+                  bank--;
+                }
+                else
+                  enc[i].write(0);
+              }
               else if (enc[i].read() > MAX_VOICES - 1)
-                enc[i].write(MAX_VOICES - 1);
+              {
+                if (bank < MAX_BANKS - 1)
+                {
+                  enc[i].write(0);
+                  bank++;
+                }
+                else
+                  enc[i].write(MAX_VOICES - 1);
+              }
               voice = enc[i].read();
               load_sysex(bank, voice);
               autostore_sound = 0;
