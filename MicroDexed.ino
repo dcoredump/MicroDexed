@@ -358,7 +358,7 @@ void handle_input(void)
 #ifdef SHOW_MIDI_EVENT
 void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
-  Serial.print(F("MIDI-Channel: "));
+  Serial.print(F("Listen MIDI-Channel: "));
   if (midi_channel == MIDI_CHANNEL_OMNI)
     Serial.print(F("OMNI"));
   else
@@ -367,6 +367,8 @@ void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   if (type < 16)
     Serial.print(F("0"));
   Serial.print(type, HEX);
+  Serial.print(F(", incoming MIDI channel: "));
+  Serial.print((type & 0x0f) + 1, DEC);
   Serial.print(F(", data1: "));
   Serial.print(data1, DEC);
   Serial.print(F(", data2: "));
@@ -461,7 +463,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
   if (midi_channel != MIDI_CHANNEL_OMNI)
   {
     uint8_t c = type & 0x0f;
-    if (c != midi_channel)
+    if (c != midi_channel - 1)
     {
 #ifdef DEBUG
       Serial.print(F("Ignoring MIDI data on channel "));

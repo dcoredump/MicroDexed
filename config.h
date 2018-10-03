@@ -65,7 +65,7 @@
 
 // Debug output
 #define SERIAL_SPEED 38400
-//#define DEBUG 1
+#define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
