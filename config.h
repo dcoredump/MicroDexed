@@ -42,7 +42,7 @@
 #define DEFAULT_SYSEXSOUND 0
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
 #ifndef TEENSY_AUDIO_BOARD
-#define AUDIO_MEM 16
+#define AUDIO_MEM 80
 #else
 #define AUDIO_MEM 80
 #endif

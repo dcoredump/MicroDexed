@@ -606,7 +606,7 @@ void set_volume(float v, float vr, float vl)
   //sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
   sgtl5000_1.dacVolume(pow(vol * vol_left, 0.2), pow(vol * vol_right, 0.2));
 #else
-  volume_master.gain(pow(lvol, 0.2));
+  volume_master.gain(pow(vol, 0.2));
   volume_r.gain(pow(vr, 0.2));
   volume_l.gain(pow(vl, 0.2));
 #endif
