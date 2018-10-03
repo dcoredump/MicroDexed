@@ -170,6 +170,7 @@ void handle_ui(void)
                 {
                   enc[i].write(MAX_VOICES - 1);
                   bank--;
+                  get_voice_names_from_bank(bank);
                 }
                 else
                   enc[i].write(0);
@@ -180,6 +181,7 @@ void handle_ui(void)
                 {
                   enc[i].write(0);
                   bank++;
+                  get_voice_names_from_bank(bank);
                 }
                 else
                   enc[i].write(MAX_VOICES - 1);
