@@ -48,8 +48,20 @@ void handle_ui(void)
 
   if (autostore_sound >= AUTOSTORE_MS && (ui_main_state == UI_MAIN_VOICE_SELECTED || ui_main_state == UI_MAIN_BANK_SELECTED))
   {
+#ifdef DEBUG
+    Serial.println(F("Autostore triggered"));
+#endif
     ui_show_main();
     eeprom_write_sound();
+    switch (ui_main_state)
+    {
+      case UI_MAIN_VOICE_SELECTED:
+        ui_main_state = UI_MAIN_VOICE;
+        break;
+      case UI_MAIN_BANK_SELECTED:
+        ui_main_state = UI_MAIN_BANK;
+        break;
+    }
   }
 
   for (uint8_t i = 0; i < NUM_ENCODER; i++)
@@ -208,12 +220,6 @@ void ui_show_main(void)
     lcd.show(0, 3, 10, bank_name);
     lcd.show(0, 14, 1, "]");
   }
-  /* else if (ui_main_state == UI_MAIN_BANK_SELECTED)
-    {
-    lcd.show(0, 2, 1, "<");
-    lcd.show(0, 3, 10, bank_name);
-    lcd.show(0, 14, 1, ">");
-    }*/
   else
   {
     lcd.show(0, 2, 1, " ");
@@ -229,12 +235,6 @@ void ui_show_main(void)
     lcd.show(1, 3, 10, voice_names[voice]);
     lcd.show(1, 14, 1, "]");
   }
-  /* else if (ui_main_state == UI_MAIN_VOICE_SELECTED)
-    {
-    lcd.show(1, 2, 1, "<");
-    lcd.show(1, 3, 10, voice_names[voice]);
-    lcd.show(1, 14, 1, ">");
-    }*/
   else
   {
     lcd.show(1, 2, 1, " ");
