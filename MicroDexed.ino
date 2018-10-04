@@ -80,14 +80,18 @@ AudioAmplifier           volume_r;           //xy=818,370
 AudioAmplifier           volume_l;           //xy=818,411
 AudioConnection          patchCord1(queue1, peak1);
 AudioConnection          patchCord2(queue1, delay1);
-AudioConnection          patchCord3(queue1, 0, mixer1, 0);
-AudioConnection          patchCord4(delay1, 0, mixer1, 1);
-AudioConnection          patchCord5(mixer1, 0, volume_master, 0);
-AudioConnection          patchCord6(amp1, delay1); // feedback-loop
-AudioConnection          patchCord7(volume_master, volume_r);
-AudioConnection          patchCord8(volume_master, volume_l);
-AudioConnection          patchCord9(volume_r, 0, pt8211_1, 0);
-AudioConnection          patchCord10(volume_l, 0, pt8211_1, 1);
+AudioConnection          patchCord3(queue1, 0, filter1, 0);
+AudioConnection          patchCord4(filter1, 0, mixer1, 0);
+AudioConnection          patchCord5(delay1, 0, mixer1, 1);
+AudioConnection          patchCord6(mixer1, amp1);
+AudioConnection          patchCord7(mixer1, freeverb1);
+AudioConnection          patchCord8(freeverb1, amp2);
+AudioConnection          patchCord9(amp1, delay1);
+AudioConnection          patchCord10(amp2, 0, volume_master, 0);
+AudioConnection          patchCord11(volume_master, volume_r);
+AudioConnection          patchCord12(volume_master, volume_l);
+AudioConnection          patchCord13(volume_r, 0, pt8211_1, 0);
+AudioConnection          patchCord14(volume_l, 0, pt8211_1, 1);
 #endif
 // GUItool: end automatically generated code
 
@@ -306,17 +310,6 @@ void loop()
   int16_t* audio_buffer; // pointer to AUDIO_BLOCK_SAMPLES * int16_t
   const uint16_t audio_block_time_ms = 1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES);
 
-#if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
-  if (cpu_mem_millis >= SHOW_CPU_LOAD_MSEC)
-  {
-    cpu_mem_millis -= SHOW_CPU_LOAD_MSEC;
-    show_cpu_and_mem_usage();
-  }
-#endif
-
-  // MIDI input handling
-  handle_input();
-
   // Main sound calculation
   if (queue1.available())
   {
@@ -340,6 +333,8 @@ void loop()
     queue1.playBuffer();
   }
 
+  // MIDI input handling
+  handle_input();
 #ifdef I2C_DISPLAY
   // UI
   if (master_timer >= TIMER_UI_HANDLING_MS)
@@ -347,6 +342,14 @@ void loop()
     master_timer -= TIMER_UI_HANDLING_MS;
 
     handle_ui();
+  }
+#endif
+
+#if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
+  if (cpu_mem_millis >= SHOW_CPU_LOAD_MSEC)
+  {
+    cpu_mem_millis -= SHOW_CPU_LOAD_MSEC;
+    show_cpu_and_mem_usage();
   }
 #endif
 }
