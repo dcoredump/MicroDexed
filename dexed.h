@@ -35,6 +35,7 @@
 #include "EngineMkI.h"
 #include "EngineOpl.h"
 #include <Audio.h>
+#include "config.h"
 
 extern uint8_t bank;
 extern uint32_t overload;
@@ -182,7 +183,7 @@ class Dexed
     void keyup(uint8_t pitch);
     void keydown(uint8_t pitch, uint8_t velo);
 
-    static const uint8_t MAX_ACTIVE_NOTES = 16;
+    static const uint8_t MAX_ACTIVE_NOTES = MAX_NOTES;
     uint8_t max_notes = MAX_ACTIVE_NOTES;
     ProcessorVoice voices[MAX_ACTIVE_NOTES];
     uint8_t currentNote;

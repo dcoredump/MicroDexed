@@ -44,7 +44,7 @@
 #ifndef TEENSY_AUDIO_BOARD
 #define AUDIO_MEM 80
 #else
-#define AUDIO_MEM 80
+#define AUDIO_MEM 128
 #endif
 #define SAMPLE_RATE 44100
 #define MAX_BANKS 100
