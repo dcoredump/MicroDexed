@@ -33,7 +33,6 @@
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 
 elapsedMillis ui_back_to_main;
-elapsedMillis autostore_sound;
 
 void handle_ui(void)
 {
@@ -41,18 +40,21 @@ void handle_ui(void)
   {
     enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
     enc_val[0] = enc[0].read();
+    /* switch (ui_main_state)
+    {
+      case UI_VOLUME:
+        eeprom_write(EEPROM_UPDATE_VOL);
+        break;
+      case UI_MIDICHANNEL:
+        eeprom_write(EEPROM_UPDATE_MIDICHANNEL);
+        break;
+    }*/
     ui_show_main();
-    eeprom_write_volume();
-    eeprom_write_midichannel();
   }
 
-  if (autostore_sound >= AUTOSTORE_MS && (ui_main_state == UI_MAIN_VOICE_SELECTED || ui_main_state == UI_MAIN_BANK_SELECTED))
+  if (autostore >= AUTOSTORE_MS && (ui_main_state == UI_MAIN_VOICE_SELECTED || ui_main_state == UI_MAIN_BANK_SELECTED))
   {
-#ifdef DEBUG
-    Serial.println(F("Autostore triggered"));
-#endif
     ui_show_main();
-    eeprom_write_sound();
     switch (ui_main_state)
     {
       case UI_MAIN_VOICE_SELECTED:
@@ -134,6 +136,7 @@ void handle_ui(void)
               else if (enc[i].read() >= ENC_VOL_STEPS)
                 enc[i].write(ENC_VOL_STEPS);
               set_volume(float(map(enc[i].read(), 0, ENC_VOL_STEPS, 0, 100)) / 100, vol_left, vol_right);
+              eeprom_write(EEPROM_UPDATE_VOL);
               ui_show_volume();
               break;
             case UI_MIDICHANNEL:
@@ -142,6 +145,7 @@ void handle_ui(void)
               else if (enc[i].read() >= 16)
                 enc[i].write(16);
               midi_channel = enc[i].read();
+              eeprom_write(EEPROM_UPDATE_MIDICHANNEL);
               ui_show_midichannel();
               break;
           }
@@ -159,7 +163,7 @@ void handle_ui(void)
               bank = enc[i].read();
               get_voice_names_from_bank(bank);
               load_sysex(bank, voice);
-              autostore_sound = 0;
+              eeprom_write(EEPROM_UPDATE_BANK);
               break;
             case UI_MAIN_VOICE:
               ui_main_state = UI_MAIN_VOICE_SELECTED;
@@ -188,7 +192,7 @@ void handle_ui(void)
               }
               voice = enc[i].read();
               load_sysex(bank, voice);
-              autostore_sound = 0;
+              eeprom_write(EEPROM_UPDATE_VOICE);
               break;
           }
           ui_show_main();

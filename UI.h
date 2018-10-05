@@ -48,11 +48,9 @@ extern char voice_name[VOICE_NAME_LEN];
 extern uint8_t ui_state;
 extern uint8_t ui_main_state;
 extern uint8_t midi_channel;
-extern void update_eeprom_checksum(void);
+extern void eeprom_write(uint8_t status);
 extern void set_volume(float v, float vr, float vl);
-extern void eeprom_write_sound(void);
-extern void eeprom_write_volume(void);
-extern void eeprom_write_midichannel(void);
+extern elapsedMillis autostore;
 
 void handle_ui(void);
 void ui_show_main(void);

@@ -97,6 +97,10 @@ char bank_name[BANK_NAME_LEN];
 char voice_name[VOICE_NAME_LEN];
 char bank_names[MAX_BANKS][BANK_NAME_LEN];
 char voice_names[MAX_VOICES][VOICE_NAME_LEN];
+elapsedMillis autostore;
+uint8_t eeprom_update_status = 0;
+uint16_t autostore_value = AUTOSTORE_MS;
+
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
 #endif
@@ -315,6 +319,13 @@ void loop()
     queue1.playBuffer();
   }
 
+  // EEPROM update handling
+  if (eeprom_update_status > 0 && autostore >= autostore_value)
+  {
+    autostore=0;
+    eeprom_update();
+  }
+
   // MIDI input handling
   handle_input();
 #ifdef I2C_DISPLAY
@@ -413,7 +424,7 @@ bool handle_master_key(uint8_t data)
         Serial.print(F("Loading voice number "));
         Serial.println(num, DEC);
 #endif
-        eeprom_write_sound();
+        eeprom_write(EEPROM_UPDATE_VOICE);
 #ifdef I2C_DISPLAY
         lcd.show(1, 0, 2, voice + 1);
         lcd.show(1, 2, 1, " ");
@@ -445,6 +456,7 @@ bool handle_master_key(uint8_t data)
       Serial.print(F("Bank switch to: "));
       Serial.println(bank, DEC);
 #endif
+      eeprom_write(EEPROM_UPDATE_BANK);
 #ifdef I2C_DISPLAY
       if (get_voice_names_from_bank(bank))
       {
@@ -588,9 +600,6 @@ void set_volume(float v, float vr, float vl)
   vol_right = vr;
   vol_left = vl;
 
-#ifndef I2C_DISPLAY
-  eeprom_write_volume();
-#endif
 #ifdef DEBUG
   uint8_t tmp;
   Serial.print(F("Setting volume: VOL="));
@@ -708,9 +717,7 @@ void initial_values_from_eeprom(void)
 #ifdef DEBUG
     Serial.print(F(" - mismatch -> initializing EEPROM!"));
 #endif
-    eeprom_write_sound();
-    eeprom_write_volume();
-    eeprom_write_midichannel();
+    eeprom_write(EEPROM_UPDATE_BANK & EEPROM_UPDATE_VOICE & EEPROM_UPDATE_VOL & EEPROM_UPDATE_VOL_R & EEPROM_UPDATE_VOL_L & EEPROM_UPDATE_MIDICHANNEL);
   }
   else
   {
@@ -768,40 +775,91 @@ uint32_t eeprom_crc32(uint16_t calc_start, uint16_t calc_bytes) // base code fro
   return (crc);
 }
 
-void eeprom_write_sound(void)
+void eeprom_write(uint8_t status)
 {
-  EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
-  EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
-  update_eeprom_checksum();
+  eeprom_update_status |= status;
+  if (eeprom_update_status != 0)
+    autostore = 0;
 #ifdef DEBUG
-  Serial.println(F("Sound written to EEPROM"));
+  Serial.print(F("Updating EEPROM to state to: "));
+  Serial.println(eeprom_update_status);
 #endif
 }
 
-void eeprom_write_volume(void)
+void eeprom_update(void)
 {
-  EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
-  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
-  EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
-  update_eeprom_checksum();
-#ifdef DEBUG
-  Serial.println(F("Volume written to EEPROM"));
-#endif
-}
+  autostore_value = AUTOSTORE_DIST_MS;
 
-void eeprom_write_midichannel(void)
-{
-  EEPROM.update(EEPROM_OFFSET + EEPROM_MIDICHANNEL_ADDR, midi_channel);
-  update_eeprom_checksum();
+  if (eeprom_update_status & EEPROM_UPDATE_BANK)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
 #ifdef DEBUG
-  Serial.println(F("MIDI channel written to EEPROM"));
+    Serial.println(F("Bank written to EEPROM"));
 #endif
+    eeprom_update_status &= ~EEPROM_UPDATE_BANK;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_VOICE)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
+#ifdef DEBUG
+    Serial.println(F("Voice written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_VOICE;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_VOL)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
+#ifdef DEBUG
+    Serial.println(F("Volume written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_VOL;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_VOL_R)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
+#ifdef DEBUG
+    Serial.println(F("Volume right written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_VOL_R;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_VOL_L)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
+#ifdef DEBUG
+    Serial.println(F("Volume left written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_VOL_L;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_MIDICHANNEL )
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_MIDICHANNEL_ADDR, midi_channel);
+    update_eeprom_checksum();
+#ifdef DEBUG
+    Serial.println(F("MIDI channel written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_MIDICHANNEL;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_CHECKSUM)
+  {
+    update_eeprom_checksum();
+#ifdef DEBUG
+    Serial.println(F("Checksum written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_CHECKSUM;
+    autostore_value = AUTOSTORE_MS;
+    return;
+  }
+
+  if (eeprom_update_status == 0)
+    eeprom_update_status |= EEPROM_UPDATE_CHECKSUM;
 }
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
 void show_cpu_and_mem_usage(void)
 {
-  Serial.print(F("CPU: "));
+  Serial.print(F("EEPROM state: "));
+  Serial.print(eeprom_update_status, DEC);
+  Serial.print(F("    CPU: "));
   Serial.print(AudioProcessorUsage(), 2);
   Serial.print(F("%   CPU MAX: "));
   Serial.print(AudioProcessorUsageMax(), 2);
