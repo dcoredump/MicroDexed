@@ -97,7 +97,7 @@
 #define LCD_LINES 2
 #define UI_AUTO_BACK_MS 3000
 #define AUTOSTORE_MS 5000
-#define AUTOSTORE_DIST_MS 50
+#define AUTOSTORE_FAST_MS 50
 
 // Encoder with button
 #define ENC_VOL_STEPS 43

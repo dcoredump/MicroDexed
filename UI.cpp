@@ -223,14 +223,14 @@ void ui_show_main(void)
   if (ui_main_state == UI_MAIN_BANK || ui_main_state == UI_MAIN_BANK_SELECTED)
   {
     lcd.show(0, 2, 1, "[");
-    lcd.show(0, 3, 10, bank_name);
-    lcd.show(0, 14, 1, "]");
+    lcd.show(0, 3, 8, bank_name);
+    lcd.show(0, 11, 1, "]");
   }
   else
   {
     lcd.show(0, 2, 1, " ");
-    lcd.show(0, 3, 10, bank_name);
-    lcd.show(0, 14, 1, " ");
+    lcd.show(0, 3, 8, bank_name);
+    lcd.show(0, 11, 1, " ");
   }
 
   lcd.show(1, 0, 2, voice + 1);

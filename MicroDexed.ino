@@ -788,7 +788,7 @@ void eeprom_write(uint8_t status)
 
 void eeprom_update(void)
 {
-  autostore_value = AUTOSTORE_DIST_MS;
+  autostore_value = AUTOSTORE_FAST_MS;
 
   if (eeprom_update_status & EEPROM_UPDATE_BANK)
   {
@@ -857,8 +857,6 @@ void eeprom_update(void)
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
 void show_cpu_and_mem_usage(void)
 {
-  Serial.print(F("EEPROM state: "));
-  Serial.print(eeprom_update_status, DEC);
   Serial.print(F("    CPU: "));
   Serial.print(AudioProcessorUsage(), 2);
   Serial.print(F("%   CPU MAX: "));
