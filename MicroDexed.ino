@@ -51,47 +51,32 @@ uint8_t ui_main_state = UI_MAIN_VOICE;
 #endif
 
 // GUItool: begin automatically generated code
-AudioPlayQueue           queue1;         //xy=694.0277709960938,601.9166259765625
-AudioFilterStateVariable filter1;        //xy=434.44439697265625,456.6666564941406
-AudioEffectDelay         delay1;         //xy=895.5554809570312,542.2223510742188
-AudioAnalyzePeak         peak1;          //xy=987.25,722.25
-AudioMixer4              mixer1;         //xy=1054.6109619140625,591.2499389648438
-AudioEffectFreeverb      freeverb1;     //xy=1120,352.22222900390625
-AudioAmplifier           amp1;           //xy=1086.666748046875,537.7777709960938
-AudioAmplifier           amp2;           //xy=1206.6666666666667,416.66666666666663
-#ifdef TEENSY_AUDIO_BOARD
-AudioOutputI2S           i2s1;           //xy=1364.25,595.25
-AudioControlSGTL5000     sgtl5000_1;     //xy=371.33319091796875,513.8888549804688
+AudioPlayQueue           queue1;         //xy=179,325
+AudioAnalyzePeak         peak1;          //xy=348,478
+AudioFilterStateVariable filter1;        //xy=415,334
+AudioEffectDelay         delay1;         //xy=732,485
+AudioMixer4              mixer1;         //xy=734,245
 AudioConnection          patchCord1(queue1, peak1);
-AudioConnection          patchCord2(queue1, delay1);
-AudioConnection          patchCord3(queue1, 0, filter1, 0);
+AudioConnection          patchCord2(queue1, 0, filter1, 0);
+AudioConnection          patchCord3(filter1, 0, delay1, 0);
 AudioConnection          patchCord4(filter1, 0, mixer1, 0);
 AudioConnection          patchCord5(delay1, 0, mixer1, 1);
-AudioConnection          patchCord6(mixer1, amp1);
-AudioConnection          patchCord7(mixer1, freeverb1);
-AudioConnection          patchCord8(freeverb1, amp2);
-AudioConnection          patchCord9(amp1, delay1);
-AudioConnection          patchCord10(amp2, 0, i2s1, 0);
-AudioConnection          patchCord11(amp2, 0, i2s1, 1);
+AudioConnection          patchCord6(mixer1, delay1);
+#ifdef TEENSY_AUDIO_BOARD
+AudioOutputI2S           i2s1;           //xy=1200,432
+AudioControlSGTL5000     sgtl5000_1;     //xy=197,554
+AudioConnection          patchCord7(mixer1, 0, i2s1, 0);
+AudioConnection          patchCord8(mixer1, 0, i2s1, 1);
 #else
 AudioOutputPT8211        pt8211_1;       //xy=1079,320
 AudioAmplifier           volume_master;           //xy=678,393
 AudioAmplifier           volume_r;           //xy=818,370
 AudioAmplifier           volume_l;           //xy=818,411
-AudioConnection          patchCord1(queue1, peak1);
-AudioConnection          patchCord2(queue1, delay1);
-AudioConnection          patchCord3(queue1, 0, filter1, 0);
-AudioConnection          patchCord4(filter1, 0, mixer1, 0);
-AudioConnection          patchCord5(delay1, 0, mixer1, 1);
-AudioConnection          patchCord6(mixer1, amp1);
-AudioConnection          patchCord7(mixer1, freeverb1);
-AudioConnection          patchCord8(freeverb1, amp2);
-AudioConnection          patchCord9(amp1, delay1);
-AudioConnection          patchCord10(amp2, 0, volume_master, 0);
-AudioConnection          patchCord11(volume_master, volume_r);
-AudioConnection          patchCord12(volume_master, volume_l);
-AudioConnection          patchCord13(volume_r, 0, pt8211_1, 0);
-AudioConnection          patchCord14(volume_l, 0, pt8211_1, 1);
+AudioConnection          patchCord7(mixer1, 0, volume_master, 0);
+AudioConnection          patchCord8(volume_master, volume_r);
+AudioConnection          patchCord9(volume_master, volume_l);
+AudioConnection          patchCord10(volume_r, 0, pt8211_1, 0);
+AudioConnection          patchCord11(volume_l, 0, pt8211_1, 1);
 #endif
 // GUItool: end automatically generated code
 
@@ -230,13 +215,10 @@ void setup()
 
     // fixed delay options
     delay1.delay(0, 110);
-    mixer1.gain(0, 1.0); // original sigmal
-    mixer1.gain(1, 0.5); // delay tap sigmal
-    amp1.gain(0.1); // feedback level
-    // fixed reverb options
-    freeverb1.roomsize(0.5);
-    freeverb1.damping(0.5);
-    filter1.frequency(1000);
+    mixer1.gain(0, 1.0); // original signal
+    mixer1.gain(1, 0.5); // delay tap signal (feedback loop)
+    // fixed filter options
+    filter1.frequency(300);
     filter1.resonance(2);
     filter1.octaveControl(1);
     // load default SYSEX data
