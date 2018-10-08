@@ -222,8 +222,8 @@ void setup()
     mixer1.gain(0, 1.0); // original signal
     mixer1.gain(1, 0.5); // delay tap signal (feedback loop)
     // fixed filter options
-    filter1.frequency(300);
-    filter1.resonance(2);
+    filter1.frequency(20000);
+    filter1.resonance(1);
     filter1.octaveControl(1);
     // load default SYSEX data
     load_sysex(bank, voice);
