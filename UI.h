@@ -51,14 +51,26 @@ extern uint8_t midi_channel;
 extern void eeprom_write(uint8_t status);
 extern void set_volume(float v, float vr, float vl);
 extern elapsedMillis autostore;
+extern elapsedMillis long_button_pressed;
+extern uint16_t effect_filter_frq;
+extern uint8_t effect_filter_resonance;
+extern uint8_t effect_filter_octave;
+extern uint16_t effect_delay_time;
+extern uint8_t effect_delay_feedback;
+extern bool effect_delay_sync;
+extern AudioFilterStateVariable filter1;
+extern AudioEffectDelay delay1;
+extern AudioMixer4 mixer1;
 
 void handle_ui(void);
 void ui_show_main(void);
 void ui_show_volume(void);
 void ui_show_midichannel(void);
+void ui_show_effects_filter(void);
+void ui_show_effects_delay(void);
 
-enum ui_states {UI_MAIN, UI_VOLUME, UI_MIDICHANNEL};
-enum ui_main_states {UI_MAIN_BANK, UI_MAIN_VOICE, UI_MAIN_BANK_SELECTED, UI_MAIN_VOICE_SELECTED};
+enum ui_states {UI_MAIN, UI_VOLUME, UI_MIDICHANNEL, UI_EFFECTS_FILTER, UI_EFFECTS_DELAY};
+enum ui_main_states {UI_MAIN_BANK, UI_MAIN_VOICE, UI_MAIN_BANK_SELECTED, UI_MAIN_VOICE_SELECTED, UI_MAIN_FILTER_FRQ, UI_MAIN_FILTER_RES, UI_MAIN_FILTER_OCT, UI_MAIN_DELAY_TIME, UI_MAIN_DELAY_FEEDBACK, UI_MAIN_DELAY_VOLUME, UI_MAIN_DELAY_SYNC};
 
 class MyEncoder : public Encoder
 {

@@ -100,6 +100,16 @@ char voice_names[MAX_VOICES][VOICE_NAME_LEN];
 elapsedMillis autostore;
 uint8_t eeprom_update_status = 0;
 uint16_t autostore_value = AUTOSTORE_MS;
+uint8_t midi_timing_counter = 0; // 24 per qarter
+elapsedMillis midi_timing_timestep;
+uint16_t midi_timing_quarter = 0;
+elapsedMillis long_button_pressed;
+uint16_t effect_filter_frq=100;
+uint8_t effect_filter_resonance=0;
+uint8_t effect_filter_octave=0;
+uint16_t effect_delay_time=0;
+uint8_t effect_delay_feedback=0;
+bool effect_delay_sync=0;
 
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
@@ -186,7 +196,7 @@ void setup()
   {
     Serial.println(F("SD card not accessable."));
     strcpy(bank_name, "Default");
-    strcpy(voice_name, "FM-Piano");
+    strcpy(voice_name, "Default");
   }
   else
   {
@@ -218,9 +228,9 @@ void setup()
 #endif
 
     // fixed delay options
-    delay1.delay(0, 110);
+    delay1.delay(0, 1000);
     mixer1.gain(0, 1.0); // original signal
-    mixer1.gain(1, 0.5); // delay tap signal (feedback loop)
+    mixer1.gain(1, 0.0); // delay tap signal (feedback loop)
     // fixed filter options
     filter1.frequency(20000);
     filter1.resonance(1);
@@ -322,7 +332,7 @@ void loop()
   // EEPROM update handling
   if (eeprom_update_status > 0 && autostore >= autostore_value)
   {
-    autostore=0;
+    autostore = 0;
     eeprom_update();
   }
 
@@ -638,67 +648,103 @@ void set_volume(float v, float vr, float vl)
 
 void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
 {
-  if (sysex[1] != 0x43) // check for Yamaha sysex
+  if (sysex[0] != 240)
   {
+    switch (sysex[0])
+    {
+      case 241: // MIDI Time Code Quarter Frame
+        break;
+      case 248: // Timing Clock (24 frames per quarter note)
+        midi_timing_counter++;
+        if (midi_timing_counter % 24 == 0)
+        {
+          midi_timing_quarter = midi_timing_timestep;
+          midi_timing_counter = 0;
+          midi_timing_timestep = 0;
+          // Adjust delay control here
 #ifdef DEBUG
-    Serial.println(F("E: SysEx vendor not Yamaha."));
+          Serial.print(F("MIDI Timing: "));
+          Serial.print(60000 / midi_timing_quarter, DEC);
+          Serial.print(F("bpm ("));
+          Serial.print(midi_timing_quarter, DEC);
+          Serial.println(F("ms per quarter)"));
 #endif
-    return;
+        }
+        break;
+      case 255: // Reset To Power Up
+#ifdef DEBUG
+        Serial.println(F("MIDI SYSEX RESET"));
+#endif
+        dexed->notesOff();
+        dexed->panic();
+        dexed->resetControllers();
+        break;
+    }
   }
-
-  // parse parameter change
-  if (len == 7)
-  {
-
-    if ((sysex[3] & 0x7c) != 0 || (sysex[3] & 0x7c) != 2)
-    {
-#ifdef DEBUG
-      Serial.println(F("E: Not a SysEx parameter or function parameter change."));
-#endif
-      return;
-    }
-    if (sysex[6] != 0xf7)
-    {
-#ifdef DEBUG
-      Serial.println(F("E: SysEx end status byte not detected."));
-#endif
-      return;
-    }
-    if ((sysex[3] & 0x7c) == 0)
-    {
-      dexed->data[sysex[4]] = sysex[5]; // set parameter
-      dexed->doRefreshVoice();
-    }
-    else
-    {
-      dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set function parameter
-      dexed->controllers.values_[kControllerPitchRange] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE];
-      dexed->controllers.values_[kControllerPitchStep] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP];
-      dexed->controllers.wheel.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE]);
-      dexed->controllers.wheel.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN]);
-      dexed->controllers.foot.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE]);
-      dexed->controllers.foot.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN]);
-      dexed->controllers.breath.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE]);
-      dexed->controllers.breath.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN]);
-      dexed->controllers.at.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE]);
-      dexed->controllers.at.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN]);
-      dexed->controllers.masterTune = (dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE] * 0x4000 << 11) * (1.0 / 12);
-      dexed->controllers.refresh();
-    }
-#ifdef DEBUG
-    Serial.print(F("SysEx"));
-    if ((sysex[3] & 0x7c) == 0)
-      Serial.print(F(" function"));
-    Serial.print(F(" parameter "));
-    Serial.print(sysex[4], DEC);
-    Serial.print(F(" = "));
-    Serial.println(sysex[5], DEC);
-#endif
-  }
-#ifdef DEBUG
   else
-    Serial.println(F("E: SysEx parameter length wrong."));
+  {
+    if (sysex[1] != 0x43) // check for Yamaha sysex
+    {
+#ifdef DEBUG
+      Serial.println(F("E: SysEx vendor not Yamaha."));
 #endif
+      return;
+    }
+
+    // parse parameter change
+    if (len == 7)
+    {
+
+      if ((sysex[3] & 0x7c) != 0 || (sysex[3] & 0x7c) != 2)
+      {
+#ifdef DEBUG
+        Serial.println(F("E: Not a SysEx parameter or function parameter change."));
+#endif
+        return;
+      }
+      if (sysex[6] != 0xf7)
+      {
+#ifdef DEBUG
+        Serial.println(F("E: SysEx end status byte not detected."));
+#endif
+        return;
+      }
+      if ((sysex[3] & 0x7c) == 0)
+      {
+        dexed->data[sysex[4]] = sysex[5]; // set parameter
+        dexed->doRefreshVoice();
+      }
+      else
+      {
+        dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set function parameter
+        dexed->controllers.values_[kControllerPitchRange] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE];
+        dexed->controllers.values_[kControllerPitchStep] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP];
+        dexed->controllers.wheel.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE]);
+        dexed->controllers.wheel.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN]);
+        dexed->controllers.foot.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE]);
+        dexed->controllers.foot.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN]);
+        dexed->controllers.breath.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE]);
+        dexed->controllers.breath.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN]);
+        dexed->controllers.at.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE]);
+        dexed->controllers.at.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN]);
+        dexed->controllers.masterTune = (dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE] * 0x4000 << 11) * (1.0 / 12);
+        dexed->controllers.refresh();
+      }
+#ifdef DEBUG
+      Serial.print(F("SysEx"));
+      if ((sysex[3] & 0x7c) == 0)
+        Serial.print(F(" function"));
+      Serial.print(F(" parameter "));
+      Serial.print(sysex[4], DEC);
+      Serial.print(F(" = "));
+      Serial.println(sysex[5], DEC);
+#endif
+    }
+#ifdef DEBUG
+    else
+      Serial.println(F("E: SysEx parameter length wrong."));
+#endif
+  }
 }
 
 void initial_values_from_eeprom(void)
@@ -857,7 +903,7 @@ void eeprom_update(void)
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
 void show_cpu_and_mem_usage(void)
 {
-  Serial.print(F("    CPU: "));
+  Serial.print(F("CPU: "));
   Serial.print(AudioProcessorUsage(), 2);
   Serial.print(F("%   CPU MAX: "));
   Serial.print(AudioProcessorUsageMax(), 2);

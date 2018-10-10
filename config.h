@@ -59,6 +59,8 @@
 #define MAX_NOTES 16        // Yes
 #endif
 
+// EFFECTS
+
 // Master key handling (comment for disabling)
 //#define MASTER_KEY_MIDI MIDI_C7
 #define MASTER_NUM1 MIDI_C2
@@ -112,6 +114,7 @@
 #define BUT_R_PIN    30
 #define INITIAL_ENC_R_VALUE 0
 #define BUT_DEBOUNCE_MS 20
+#define LONG_BUTTON_PRESS 500
 
 // EEPROM address
 #define EEPROM_OFFSET 0

@@ -36,19 +36,10 @@ elapsedMillis ui_back_to_main;
 
 void handle_ui(void)
 {
-  if (ui_back_to_main >= UI_AUTO_BACK_MS && ui_state != UI_MAIN)
+  if (ui_back_to_main >= UI_AUTO_BACK_MS && (ui_state != UI_MAIN && ui_state != UI_EFFECTS_FILTER && ui_state != UI_EFFECTS_DELAY))
   {
     enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
     enc_val[0] = enc[0].read();
-    /* switch (ui_main_state)
-    {
-      case UI_VOLUME:
-        eeprom_write(EEPROM_UPDATE_VOL);
-        break;
-      case UI_MIDICHANNEL:
-        eeprom_write(EEPROM_UPDATE_MIDICHANNEL);
-        break;
-    }*/
     ui_show_main();
   }
 
@@ -70,49 +61,140 @@ void handle_ui(void)
   {
     but[i].update();
 
+    if (but[i].fallingEdge())
+      long_button_pressed = 0;
+
     if (but[i].risingEdge())
     {
-      // Button pressed
-      switch (i)
+      uint32_t button_released = long_button_pressed;
+
+      if (button_released > LONG_BUTTON_PRESS)
       {
-        case 0: // left button pressed
-          switch (ui_state)
-          {
-            case UI_MAIN:
-              enc[i].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
-              enc_val[i] = enc[i].read();
-              ui_show_volume();
-              break;
-            case UI_VOLUME:
-              enc[i].write(midi_channel);
-              enc_val[i] = enc[i].read();
-              ui_show_midichannel();
-              break;
-            case UI_MIDICHANNEL:
-              enc[i].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
-              enc_val[i] = enc[i].read();
-              ui_show_main();
-              break;
-          }
-          break;
-        case 1: // right button pressed
-          switch (ui_main_state)
-          {
-            case UI_MAIN_BANK:
-            case UI_MAIN_BANK_SELECTED:
-              ui_main_state = UI_MAIN_VOICE;
-              enc[i].write(voice);
-              enc_val[i] = enc[i].read();
-              break;
-            case UI_MAIN_VOICE:
-            case UI_MAIN_VOICE_SELECTED:
-              ui_main_state = UI_MAIN_BANK;
-              enc[i].write(bank);
-              enc_val[i] = enc[i].read();
-              break;
-          }
-          ui_show_main();
-          break;
+        // long pressing of button detected
+#ifdef DEBUG
+        Serial.print(F("Long button pressing detected for button "));
+        Serial.println(i, DEC);
+
+        switch (i)
+        {
+          case 0: // long press for left button
+            break;
+          case 1: // long press for right button
+            switch (ui_state)
+            {
+              case UI_MAIN:
+                ui_main_state = UI_MAIN_FILTER_FRQ;
+                enc[i].write(effect_filter_frq);
+                enc_val[i] = enc[i].read();
+                ui_show_effects_filter();
+                break;
+              case UI_EFFECTS_FILTER:
+                ui_main_state = UI_MAIN_DELAY_TIME;
+                enc[i].write(effect_delay_time);
+                enc_val[i] = enc[i].read();
+                ui_show_effects_delay();
+                break;
+              case UI_EFFECTS_DELAY:
+                ui_main_state = UI_MAIN_VOICE;
+                enc[i].write(voice);
+                enc_val[i] = enc[i].read();
+                ui_show_main();
+                break;
+            }
+            break;
+        }
+#endif
+      }
+      else
+      {
+        // Button pressed
+        switch (i)
+        {
+          case 0: // left button pressed
+            switch (ui_state)
+            {
+              case UI_MAIN:
+                enc[i].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+                enc_val[i] = enc[i].read();
+                ui_show_volume();
+                break;
+              case UI_VOLUME:
+                enc[i].write(midi_channel);
+                enc_val[i] = enc[i].read();
+                ui_show_midichannel();
+                break;
+              case UI_MIDICHANNEL:
+                enc[i].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+                enc_val[i] = enc[i].read();
+                ui_show_main();
+                break;
+            }
+            break;
+          case 1: // right button pressed
+            switch (ui_state)
+            {
+              case UI_MAIN:
+                switch (ui_main_state)
+                {
+                  case UI_MAIN_BANK:
+                  case UI_MAIN_BANK_SELECTED:
+                    ui_main_state = UI_MAIN_VOICE;
+                    enc[i].write(voice);
+                    enc_val[i] = enc[i].read();
+                    break;
+                  case UI_MAIN_VOICE:
+                  case UI_MAIN_VOICE_SELECTED:
+                    ui_main_state = UI_MAIN_BANK;
+                    enc[i].write(bank);
+                    enc_val[i] = enc[i].read();
+                    break;
+                }
+                ui_show_main();
+                break;
+              case UI_EFFECTS_FILTER:
+              case UI_EFFECTS_DELAY:
+                switch (ui_main_state)
+                {
+                  case UI_MAIN_FILTER_FRQ:
+                    ui_main_state = UI_MAIN_FILTER_RES;
+                    enc[i].write(effect_filter_resonance);
+                    enc_val[i] = enc[i].read();
+                    ui_show_effects_filter();
+                    break;
+                  case UI_MAIN_FILTER_RES:
+                    ui_main_state = UI_MAIN_FILTER_OCT;
+                    enc[i].write(effect_filter_octave);
+                    enc_val[i] = enc[i].read();
+                    ui_show_effects_filter();
+                    break;
+                  case UI_MAIN_FILTER_OCT:
+                    ui_main_state = UI_MAIN_FILTER_FRQ;
+                    enc[i].write(effect_filter_frq);
+                    enc_val[i] = enc[i].read();
+                    ui_show_effects_filter();
+                    break;
+                  case UI_MAIN_DELAY_TIME:
+                    ui_main_state = UI_MAIN_DELAY_FEEDBACK;
+                    enc[i].write(effect_delay_feedback);
+                    enc_val[i] = enc[i].read();
+                    ui_show_effects_delay();
+                    break;
+                  case UI_MAIN_DELAY_SYNC:
+                    ui_main_state = UI_MAIN_DELAY_TIME;
+                    enc[i].write(effect_delay_time);
+                    enc_val[i] = enc[i].read();
+                    ui_show_effects_delay();
+                    break;
+                  case UI_MAIN_DELAY_FEEDBACK:
+                    ui_main_state = UI_MAIN_DELAY_SYNC;
+                    enc[i].write(effect_delay_sync);
+                    enc_val[i] = enc[i].read();
+                    ui_show_effects_delay();
+                    break;
+                }
+                break;
+            }
+        }
       }
 #ifdef DEBUG
       Serial.print(F("Button "));
@@ -151,51 +233,89 @@ void handle_ui(void)
           }
           break;
         case 1: // right encoder moved
-          switch (ui_main_state)
+          switch (ui_state)
           {
-            case UI_MAIN_BANK:
-              ui_main_state = UI_MAIN_BANK_SELECTED;
-            case UI_MAIN_BANK_SELECTED:
-              if (enc[i].read() <= 0)
-                enc[i].write(0);
-              else if (enc[i].read() > max_loaded_banks - 1)
-                enc[i].write(max_loaded_banks - 1);
-              bank = enc[i].read();
-              get_voice_names_from_bank(bank);
-              load_sysex(bank, voice);
-              eeprom_write(EEPROM_UPDATE_BANK);
+            case UI_MAIN:
+              switch (ui_main_state)
+              {
+                case UI_MAIN_BANK:
+                  ui_main_state = UI_MAIN_BANK_SELECTED;
+                case UI_MAIN_BANK_SELECTED:
+                  if (enc[i].read() <= 0)
+                    enc[i].write(0);
+                  else if (enc[i].read() > max_loaded_banks - 1)
+                    enc[i].write(max_loaded_banks - 1);
+                  bank = enc[i].read();
+                  get_voice_names_from_bank(bank);
+                  load_sysex(bank, voice);
+                  eeprom_write(EEPROM_UPDATE_BANK);
+                  break;
+                case UI_MAIN_VOICE:
+                  ui_main_state = UI_MAIN_VOICE_SELECTED;
+                case UI_MAIN_VOICE_SELECTED:
+                  if (enc[i].read() <= 0)
+                  {
+                    if (bank > 0)
+                    {
+                      enc[i].write(MAX_VOICES - 1);
+                      bank--;
+                      get_voice_names_from_bank(bank);
+                    }
+                    else
+                      enc[i].write(0);
+                  }
+                  else if (enc[i].read() > MAX_VOICES - 1)
+                  {
+                    if (bank < MAX_BANKS - 1)
+                    {
+                      enc[i].write(0);
+                      bank++;
+                      get_voice_names_from_bank(bank);
+                    }
+                    else
+                      enc[i].write(MAX_VOICES - 1);
+                  }
+                  voice = enc[i].read();
+                  load_sysex(bank, voice);
+                  eeprom_write(EEPROM_UPDATE_VOICE);
+                  break;
+              }
+              ui_show_main();
               break;
-            case UI_MAIN_VOICE:
-              ui_main_state = UI_MAIN_VOICE_SELECTED;
-            case UI_MAIN_VOICE_SELECTED:
-              if (enc[i].read() <= 0)
+            case UI_EFFECTS_FILTER:
+              switch (ui_main_state)
               {
-                if (bank > 0)
-                {
-                  enc[i].write(MAX_VOICES - 1);
-                  bank--;
-                  get_voice_names_from_bank(bank);
-                }
-                else
-                  enc[i].write(0);
+                case UI_MAIN_FILTER_FRQ:
+                  if (enc[i].read() <= 0)
+                    enc[i].write(0);
+                  else if (enc[i].read() > 100)
+                    enc[i].write(100);
+                  effect_filter_frq = map(enc[i].read(), 0, 100, 0, 20000);
+                  filter1.frequency(effect_filter_frq);
+                  break;
+                case UI_MAIN_FILTER_RES:
+                  if (enc[i].read() <= 0)
+                    enc[i].write(0);
+                  else if (enc[i].read() > 100)
+                    enc[i].write(100);
+                  effect_filter_resonance = map(enc[i].read(), 0, 100, 0.7, 5.0);
+                  filter1.resonance(effect_filter_resonance);
+                  break;
+                case UI_MAIN_FILTER_OCT:
+                  if (enc[i].read() <= 0)
+                    enc[i].write(0);
+                  else if (enc[i].read() > 9)
+                    enc[i].write(100);
+                  effect_filter_octave = map(enc[i].read(), 0, 9, 0.0, 9.0);
+                  filter1.octaveControl(effect_filter_octave);
+                  break;
               }
-              else if (enc[i].read() > MAX_VOICES - 1)
-              {
-                if (bank < MAX_BANKS - 1)
-                {
-                  enc[i].write(0);
-                  bank++;
-                  get_voice_names_from_bank(bank);
-                }
-                else
-                  enc[i].write(MAX_VOICES - 1);
-              }
-              voice = enc[i].read();
-              load_sysex(bank, voice);
-              eeprom_write(EEPROM_UPDATE_VOICE);
+              ui_show_effects_filter();
+              break;
+            case UI_EFFECTS_DELAY:
+              ui_show_effects_delay();
               break;
           }
-          ui_show_main();
           break;
       }
 #ifdef DEBUG
@@ -302,4 +422,106 @@ void ui_show_midichannel(void)
   ui_state = UI_MIDICHANNEL;
 }
 
+void ui_show_effects_filter(void)
+{
+  if (ui_state != UI_EFFECTS_FILTER)
+  {
+    lcd.clear();
+    lcd.show(0, 0, LCD_CHARS, "Filter");
+    lcd.show(0, 7, 2, "F:");
+    lcd.show(1, 0, 4, "Res:");
+    lcd.show(1, 9, 4, "Oct:");
+  }
+
+  lcd.show(0, 10, 4, effect_filter_frq);
+  lcd.show(1, 5, 3, effect_filter_resonance);
+  lcd.show(1, 14, 1, effect_filter_octave);
+
+  if (ui_main_state == UI_MAIN_FILTER_FRQ)
+  {
+    lcd.show(0, 9, 1, "[");
+    lcd.show(0, 13, 1, "]");
+  }
+  else
+  {
+    lcd.show(0, 9, 1, " ");
+    lcd.show(0, 13, 1, " ");
+  }
+
+  if (ui_main_state == UI_MAIN_FILTER_RES)
+  {
+    lcd.show(1, 4, 1, "[");
+    lcd.show(1, 8, 1, "]");
+  }
+  else
+  {
+    lcd.show(1, 4, 1, " ");
+    lcd.show(1, 8, 1, " ");
+  }
+
+  if (ui_main_state == UI_MAIN_FILTER_OCT)
+  {
+    lcd.show(1, 13, 1, "[");
+    lcd.show(1, 15, 1, "]");
+  }
+  else
+  {
+    lcd.show(1, 13, 1, " ");
+    lcd.show(1, 15, 1, " ");
+  }
+
+  ui_state = UI_EFFECTS_FILTER;
+}
+
+void ui_show_effects_delay(void)
+{
+  if (ui_state != UI_EFFECTS_DELAY)
+  {
+    lcd.clear();
+    lcd.show(0, 0, 3, "Dly");
+    lcd.show(0, 6, 2, "T:");
+    lcd.show(0, 14, 2, "ms");
+    lcd.show(1, 0, 3, "FB:");
+    lcd.show(1, 8, 5, "Sync:");
+  }
+
+  lcd.show(0, 9, 4, effect_delay_time);
+  lcd.show(1, 4, 3, effect_delay_feedback);
+  lcd.show(1, 14, 1, effect_delay_sync);
+
+  if (ui_main_state == UI_MAIN_DELAY_TIME)
+  {
+    lcd.show(0, 8, 1, "[");
+    lcd.show(0, 13, 1, "]");
+  }
+  else
+  {
+    lcd.show(0, 8, 1, " ");
+    lcd.show(0, 13, 1, " ");
+  }
+
+  if (ui_main_state == UI_MAIN_DELAY_FEEDBACK)
+  {
+    lcd.show(1, 3, 1, "[");
+    lcd.show(1, 7, 1, "]");
+  }
+  else
+  {
+    lcd.show(1, 3, 1, " ");
+    lcd.show(1, 7, 1, " ");
+  }
+
+  if (ui_main_state == UI_MAIN_DELAY_SYNC)
+  {
+    lcd.show(1, 13, 1, "[");
+    lcd.show(1, 15, 1, "]");
+  }
+  else
+  {
+    lcd.show(1, 13, 1, " ");
+    lcd.show(1, 15, 1, " ");
+  }
+
+  ui_state = UI_EFFECTS_DELAY;
+}
 #endif

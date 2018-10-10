@@ -206,7 +206,7 @@ bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
         uint8_t value = data2;
 
         switch (ctrl) {
-          case 0: // BankSelect MSB
+          case 0: // ignore BankSelect MSB
             break;
           case 1:
             controllers.modwheel_cc = value;
