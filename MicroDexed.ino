@@ -227,14 +227,15 @@ void setup()
     }
 #endif
 
-    // fixed delay options
-    delay1.delay(0, 1000);
+    // Init effects
+    filter1.frequency(effect_filter_frq);
+    filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
+    filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
+    delay1.delay(0, map(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0, DELAY_MAX_TIME));
     mixer1.gain(0, 1.0); // original signal
-    mixer1.gain(1, 0.0); // delay tap signal (feedback loop)
+    mixer1.gain(1, mapfloat(effect_delay_feedback,0,99,0.0,1.0)); // delay tap signal (feedback loop)
     // fixed filter options
-    filter1.frequency(20000);
-    filter1.resonance(1);
-    filter1.octaveControl(1);
+
     // load default SYSEX data
     load_sysex(bank, voice);
   }

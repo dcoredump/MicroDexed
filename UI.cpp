@@ -307,7 +307,7 @@ void handle_ui(void)
                   else if (enc[i].read() > ENC_FILTER_OCT_STEPS)
                     enc[i].write(ENC_FILTER_OCT_STEPS);
                   effect_filter_octave = enc[i].read();
-                  filter1.octaveControl(mapfloat(enc[i].read(), 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
+                  filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
                   break;
               }
               ui_show_effects_filter();
