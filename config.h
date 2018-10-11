@@ -60,6 +60,8 @@
 #endif
 
 // EFFECTS
+#define FILTER_MAX_FREQ 1000
+#define DELAY_MAX_TIME 1200
 
 // Master key handling (comment for disabling)
 //#define MASTER_KEY_MIDI MIDI_C7
@@ -103,6 +105,11 @@
 
 // Encoder with button
 #define ENC_VOL_STEPS 43
+#define ENC_FILTER_FRQ_STEPS 50
+#define ENC_FILTER_RES_STEPS 35
+#define ENC_FILTER_OCT_STEPS 27
+#define ENC_DELAY_TIME_STEPS 50
+#define ENC_DELAY_FB_STEPS 35
 #define TIMER_UI_HANDLING_MS 100
 #define NUM_ENCODER 2
 #define ENC_L_PIN_A  3
