@@ -42,9 +42,9 @@
 #define DEFAULT_SYSEXSOUND 0
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
 #ifndef TEENSY_AUDIO_BOARD
-#define AUDIO_MEM 80
+#define AUDIO_MEM 450
 #else
-#define AUDIO_MEM 128
+#define AUDIO_MEM 900
 #endif
 #define SAMPLE_RATE 44100
 #define MAX_BANKS 100
@@ -61,7 +61,7 @@
 
 // EFFECTS
 #define FILTER_MAX_FREQ 10000
-#define DELAY_MAX_TIME 1200
+#define DELAY_MAX_TIME 1200.0
 
 // Master key handling (comment for disabling)
 //#define MASTER_KEY_MIDI MIDI_C7

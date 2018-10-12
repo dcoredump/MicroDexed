@@ -56,27 +56,31 @@ AudioAnalyzePeak         peak1;          //xy=348,478
 AudioFilterStateVariable filter1;        //xy=415,334
 AudioEffectDelay         delay1;         //xy=732,485
 AudioMixer4              mixer1;         //xy=734,245
+AudioMixer4              mixer2;         //xy=1055,317
 AudioConnection          patchCord1(queue1, peak1);
 AudioConnection          patchCord2(queue1, 0, filter1, 0);
 AudioConnection          patchCord3(filter1, 0, delay1, 0);
 AudioConnection          patchCord4(filter1, 0, mixer1, 0);
 AudioConnection          patchCord5(delay1, 0, mixer1, 1);
-AudioConnection          patchCord6(mixer1, delay1);
+AudioConnection          patchCord6(delay1, 0, mixer2, 1);
+AudioConnection          patchCord7(mixer1, delay1);
 #ifdef TEENSY_AUDIO_BOARD
 AudioOutputI2S           i2s1;           //xy=1200,432
 AudioControlSGTL5000     sgtl5000_1;     //xy=197,554
-AudioConnection          patchCord7(mixer1, 0, i2s1, 0);
-AudioConnection          patchCord8(mixer1, 0, i2s1, 1);
+AudioConnection          patchCord8(mixer1, 0, mixer2, 0);
+AudioConnection          patchCord9(mixer2, 0, i2s1, 0);
+AudioConnection          patchCord10(mixer2, 0, i2s1, 1);
 #else
 AudioOutputPT8211        pt8211_1;       //xy=1079,320
 AudioAmplifier           volume_master;           //xy=678,393
 AudioAmplifier           volume_r;           //xy=818,370
 AudioAmplifier           volume_l;           //xy=818,411
-AudioConnection          patchCord7(mixer1, 0, volume_master, 0);
-AudioConnection          patchCord8(volume_master, volume_r);
-AudioConnection          patchCord9(volume_master, volume_l);
-AudioConnection          patchCord10(volume_r, 0, pt8211_1, 0);
-AudioConnection          patchCord11(volume_l, 0, pt8211_1, 1);
+AudioConnection          patchCord7(mixer1, 0, mixer2, 0);
+AudioConnection          patchCord8(mixer2, 0, volume_master, 0);
+AudioConnection          patchCord9(volume_master, volume_r);
+AudioConnection          patchCord10(volume_master, volume_l);
+AudioConnection          patchCord11(volume_r, 0, pt8211_1, 0);
+AudioConnection          patchCord12(volume_l, 0, pt8211_1, 1);
 #endif
 // GUItool: end automatically generated code
 
@@ -104,12 +108,12 @@ uint8_t midi_timing_counter = 0; // 24 per qarter
 elapsedMillis midi_timing_timestep;
 uint16_t midi_timing_quarter = 0;
 elapsedMillis long_button_pressed;
-uint8_t effect_filter_frq=ENC_FILTER_FRQ_STEPS;
-uint8_t effect_filter_resonance=(0.07*ENC_FILTER_RES_STEPS/4.3)+0.5;
-uint8_t effect_filter_octave=(1.0*ENC_FILTER_RES_STEPS/8.0)+0.5;
-uint8_t effect_delay_time=0;
-uint8_t effect_delay_feedback=0;
-bool effect_delay_sync=0;
+uint8_t effect_filter_frq = ENC_FILTER_FRQ_STEPS;
+uint8_t effect_filter_resonance = (0.07 * ENC_FILTER_RES_STEPS / 4.3) + 0.5;
+uint8_t effect_filter_octave = (1.0 * ENC_FILTER_RES_STEPS / 8.0) + 0.5;
+uint8_t effect_delay_time = 0;
+uint8_t effect_delay_feedback = 0;
+bool effect_delay_sync = 0;
 
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
@@ -228,12 +232,14 @@ void setup()
 #endif
 
     // Init effects
-    filter1.frequency(effect_filter_frq);
+    filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
     filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
     filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
-    delay1.delay(0, map(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0, DELAY_MAX_TIME));
+    delay1.delay(0, mapfloat(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
     mixer1.gain(0, 1.0); // original signal
-    mixer1.gain(1, mapfloat(effect_delay_feedback,0,99,0.0,1.0)); // delay tap signal (feedback loop)
+    mixer2.gain(0, 1.0); // original signal
+    mixer2.gain(1, 1.0); // delay tap1
+    mixer1.gain(1, mapfloat(effect_delay_feedback, 0, 99, 0.0, 1.0)); // delay tap signal (feedback loop)
     // fixed filter options
 
     // load default SYSEX data

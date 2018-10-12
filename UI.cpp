@@ -333,7 +333,7 @@ void handle_ui(void)
                   else if (enc[i].read() > ENC_DELAY_TIME_STEPS)
                     enc[i].write(ENC_DELAY_TIME_STEPS);
                   effect_delay_time = enc[i].read();;
-                  delay1.delay(0, map(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0, DELAY_MAX_TIME));
+                  delay1.delay(0, mapfloat(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
 #ifdef DEBUG
                   Serial.print(F("Setting delay time to: "));
                   Serial.println(map(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0, DELAY_MAX_TIME));
