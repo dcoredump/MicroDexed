@@ -290,8 +290,12 @@ void handle_ui(void)
                     enc[i].write(0);
                   else if (enc[i].read() > ENC_FILTER_FRQ_STEPS)
                     enc[i].write(ENC_FILTER_FRQ_STEPS);
-                  effect_filter_frq = expf((float)map(enc[i].read(), 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0;
-                  filter1.frequency(effect_filter_frq);
+                  effect_filter_frq = enc[i].read();
+                  filter1.frequency(EXP_FUNC((float)map(enc[i].read(), 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
+#ifdef DEBUG
+                  Serial.print(F("Setting filter frequency to: "));
+                  Serial.println(EXP_FUNC((float)map(enc[i].read(), 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0, DEC);
+#endif
                   break;
                 case UI_MAIN_FILTER_RES:
                   if (enc[i].read() <= 0)
@@ -300,6 +304,10 @@ void handle_ui(void)
                     enc[i].write(ENC_FILTER_RES_STEPS);
                   effect_filter_resonance = enc[i].read();
                   filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
+#ifdef DEBUG
+                  Serial.print(F("Setting filter resonance to: "));
+                  Serial.println(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0), 2);
+#endif
                   break;
                 case UI_MAIN_FILTER_OCT:
                   if (enc[i].read() <= 0)
@@ -308,6 +316,10 @@ void handle_ui(void)
                     enc[i].write(ENC_FILTER_OCT_STEPS);
                   effect_filter_octave = enc[i].read();
                   filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
+#ifdef DEBUG
+                  Serial.print(F("Setting filter octave control to: "));
+                  Serial.println(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0), 2);
+#endif
                   break;
               }
               ui_show_effects_filter();
@@ -321,7 +333,11 @@ void handle_ui(void)
                   else if (enc[i].read() > ENC_DELAY_TIME_STEPS)
                     enc[i].write(ENC_DELAY_TIME_STEPS);
                   effect_delay_time = enc[i].read();;
-                  delay1.delay(0,map(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0, DELAY_MAX_TIME));
+                  delay1.delay(0, map(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0, DELAY_MAX_TIME));
+#ifdef DEBUG
+                  Serial.print(F("Setting delay time to: "));
+                  Serial.println(map(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0, DELAY_MAX_TIME));
+#endif
                   break;
                 case UI_MAIN_DELAY_FEEDBACK:
                   if (enc[i].read() <= 0)
@@ -329,7 +345,11 @@ void handle_ui(void)
                   else if (enc[i].read() > ENC_DELAY_FB_STEPS)
                     enc[i].write(ENC_DELAY_FB_STEPS);
                   effect_delay_feedback = enc[i].read();
-                  mixer1.gain(1, mapfloat(effect_delay_feedback,0,99,0.0,1.0));
+                  mixer1.gain(1, mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
+#ifdef DEBUG
+                  Serial.print(F("Setting delay feedback to: "));
+                  Serial.println(mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
+#endif
                   break;
                 case UI_MAIN_DELAY_SYNC:
                   if (enc[i].read() <= 0)
@@ -338,6 +358,10 @@ void handle_ui(void)
                     enc[i].write(1);
                   effect_delay_sync = enc[i].read();
                   // Nothing to do here
+#ifdef DEBUG
+                  Serial.print(F("Setting delay sync to: "));
+                  Serial.println(effect_delay_sync);
+#endif
                   break;
               }
               ui_show_effects_delay();
@@ -460,19 +484,19 @@ void ui_show_effects_filter(void)
     lcd.show(1, 8, 4, "Oct:");
   }
 
-  lcd.show(0, 10, 3, effect_filter_frq);
+  lcd.show(0, 10, 4, uint16_t(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.5));
   lcd.show(1, 5, 2, map(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0, 99));
   lcd.show(1, 13, 2, map(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0, 80));
 
   if (ui_main_state == UI_MAIN_FILTER_FRQ)
   {
     lcd.show(0, 9, 1, "[");
-    lcd.show(0, 13, 1, "]");
+    lcd.show(0, 14, 1, "]");
   }
   else
   {
     lcd.show(0, 9, 1, " ");
-    lcd.show(0, 13, 1, " ");
+    lcd.show(0, 14, 1, " ");
   }
 
   if (ui_main_state == UI_MAIN_FILTER_RES)
@@ -513,7 +537,7 @@ void ui_show_effects_delay(void)
   }
 
   lcd.show(0, 9, 4, map(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0, 1200));
-  lcd.show(1, 4, 2, map(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0, 99));
+  lcd.show(1, 4, 2, map(effect_delay_feedback, 0, ENC_DELAY_FB_STEPS, 0, 99));
   lcd.show(1, 14, 1, effect_delay_sync);
 
   if (ui_main_state == UI_MAIN_DELAY_TIME)
@@ -552,9 +576,8 @@ void ui_show_effects_delay(void)
   ui_state = UI_EFFECTS_DELAY;
 }
 
-float mapfloat(long x, long in_min, long in_max, long out_min, long out_max)
+float mapfloat(float val, float in_min, float in_max, float out_min, float out_max)
 {
-  return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
+  return (val - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
-
 #endif

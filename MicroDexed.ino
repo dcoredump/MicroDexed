@@ -104,7 +104,7 @@ uint8_t midi_timing_counter = 0; // 24 per qarter
 elapsedMillis midi_timing_timestep;
 uint16_t midi_timing_quarter = 0;
 elapsedMillis long_button_pressed;
-uint16_t effect_filter_frq=930;
+uint8_t effect_filter_frq=ENC_FILTER_FRQ_STEPS;
 uint8_t effect_filter_resonance=(0.07*ENC_FILTER_RES_STEPS/4.3)+0.5;
 uint8_t effect_filter_octave=(1.0*ENC_FILTER_RES_STEPS/8.0)+0.5;
 uint8_t effect_delay_time=0;

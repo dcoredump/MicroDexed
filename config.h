@@ -60,7 +60,7 @@
 #endif
 
 // EFFECTS
-#define FILTER_MAX_FREQ 1000
+#define FILTER_MAX_FREQ 10000
 #define DELAY_MAX_TIME 1200
 
 // Master key handling (comment for disabling)
