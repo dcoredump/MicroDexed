@@ -291,10 +291,10 @@ void handle_ui(void)
                   else if (enc[i].read() > ENC_FILTER_FRQ_STEPS)
                     enc[i].write(ENC_FILTER_FRQ_STEPS);
                   effect_filter_frq = enc[i].read();
-                  filter1.frequency(EXP_FUNC((float)map(enc[i].read(), 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
+                  filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
 #ifdef DEBUG
                   Serial.print(F("Setting filter frequency to: "));
-                  Serial.println(EXP_FUNC((float)map(enc[i].read(), 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0, DEC);
+                  Serial.println(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0, DEC);
 #endif
                   break;
                 case UI_MAIN_FILTER_RES:
