@@ -109,7 +109,7 @@ elapsedMillis midi_timing_timestep;
 uint16_t midi_timing_quarter = 0;
 elapsedMillis long_button_pressed;
 uint8_t effect_filter_frq = ENC_FILTER_FRQ_STEPS;
-uint8_t effect_filter_resonance = (0.07 * ENC_FILTER_RES_STEPS / 4.3) + 0.5;
+uint8_t effect_filter_resonance = ENC_FILTER_RES_STEPS;
 uint8_t effect_filter_octave = (1.0 * ENC_FILTER_RES_STEPS / 8.0) + 0.5;
 uint8_t effect_delay_time = 0;
 uint8_t effect_delay_feedback = 0;
@@ -234,14 +234,15 @@ void setup()
 
     // Init effects
     filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
-    filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
+    //filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
+    filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0))*0.044+0.61);
     filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
     delay1.delay(0, mapfloat(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
     // mixer1 is the feedback-adding mixer, mixer2 the whole delay (with/without feedback) mixer
     mixer1.gain(0, 1.0); // original signal
-    mixer1.gain(1, mapfloat(effect_delay_feedback, 0, 99, 0.0, 1.0)); // delay tap1 signal (feedback loop)
+    mixer1.gain(1, mapfloat(effect_delay_feedback, 0, 99, 0.0, 1.0)); // amount of feedback
     mixer2.gain(0, 1.0); // original signal
-    mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delay tap1 signal (with added feedback)
+    mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delayed signal (including feedback)
 
     // load default SYSEX data
     load_sysex(bank, voice);

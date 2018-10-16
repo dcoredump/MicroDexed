@@ -303,10 +303,12 @@ void handle_ui(void)
                   else if (enc[i].read() > ENC_FILTER_RES_STEPS)
                     enc[i].write(ENC_FILTER_RES_STEPS);
                   effect_filter_resonance = enc[i].read();
-                  filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
+                  //filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
+                  filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0))*0.044+0.61);
+
 #ifdef DEBUG
                   Serial.print(F("Setting filter resonance to: "));
-                  Serial.println(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0), 2);
+                  Serial.println(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0))*0.044+0.61, 2);
 #endif
                   break;
                 case UI_MAIN_FILTER_OCT:
