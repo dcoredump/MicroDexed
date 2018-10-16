@@ -179,15 +179,15 @@ void handle_ui(void)
                     enc_val[i] = enc[i].read();
                     ui_show_effects_delay();
                     break;
-                  case UI_MAIN_DELAY_SYNC:
+                  case UI_MAIN_DELAY_VOLUME:
                     ui_main_state = UI_MAIN_DELAY_TIME;
                     enc[i].write(effect_delay_time);
                     enc_val[i] = enc[i].read();
                     ui_show_effects_delay();
                     break;
                   case UI_MAIN_DELAY_FEEDBACK:
-                    ui_main_state = UI_MAIN_DELAY_SYNC;
-                    enc[i].write(effect_delay_sync);
+                    ui_main_state = UI_MAIN_DELAY_VOLUME;
+                    enc[i].write(effect_delay_volume);
                     enc_val[i] = enc[i].read();
                     ui_show_effects_delay();
                     break;
@@ -351,16 +351,16 @@ void handle_ui(void)
                   Serial.println(mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
 #endif
                   break;
-                case UI_MAIN_DELAY_SYNC:
+                case UI_MAIN_DELAY_VOLUME:
                   if (enc[i].read() <= 0)
                     enc[i].write(0);
-                  else if (enc[i].read() >= 1)
-                    enc[i].write(1);
-                  effect_delay_sync = enc[i].read();
-                  // Nothing to do here
+                  else if (enc[i].read() > ENC_DELAY_VOLUME_STEPS)
+                    enc[i].write(ENC_DELAY_VOLUME_STEPS);
+                  effect_delay_volume = enc[i].read();
+                  mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delay tap1 signal (with added feedback)
 #ifdef DEBUG
-                  Serial.print(F("Setting delay sync to: "));
-                  Serial.println(effect_delay_sync);
+                  Serial.print(F("Setting delay volume to: "));
+                  Serial.println(effect_delay_volume);
 #endif
                   break;
               }
@@ -529,16 +529,16 @@ void ui_show_effects_delay(void)
   if (ui_state != UI_EFFECTS_DELAY)
   {
     lcd.clear();
-    lcd.show(0, 0, 3, "Dly");
+    lcd.show(0, 0, 5, "Delay");
     lcd.show(0, 6, 2, "T:");
     lcd.show(0, 14, 2, "ms");
     lcd.show(1, 0, 3, "FB:");
-    lcd.show(1, 8, 5, "Sync:");
+    lcd.show(1, 8, 5, "Vol:");
   }
 
   lcd.show(0, 9, 4, map(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0, 1200));
   lcd.show(1, 4, 2, map(effect_delay_feedback, 0, ENC_DELAY_FB_STEPS, 0, 99));
-  lcd.show(1, 14, 1, effect_delay_sync);
+  lcd.show(1, 13, 2, map(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0, 99));
 
   if (ui_main_state == UI_MAIN_DELAY_TIME)
   {
@@ -562,14 +562,14 @@ void ui_show_effects_delay(void)
     lcd.show(1, 6, 1, " ");
   }
 
-  if (ui_main_state == UI_MAIN_DELAY_SYNC)
+  if (ui_main_state == UI_MAIN_DELAY_VOLUME)
   {
-    lcd.show(1, 13, 1, "[");
+    lcd.show(1, 12, 1, "[");
     lcd.show(1, 15, 1, "]");
   }
   else
   {
-    lcd.show(1, 13, 1, " ");
+    lcd.show(1, 12, 1, " ");
     lcd.show(1, 15, 1, " ");
   }
 
