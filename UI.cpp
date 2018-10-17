@@ -291,6 +291,18 @@ void handle_ui(void)
                   else if (enc[i].read() > ENC_FILTER_FRQ_STEPS)
                     enc[i].write(ENC_FILTER_FRQ_STEPS);
                   effect_filter_frq = enc[i].read();
+                  if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
+                  {
+                    // turn "off" filter
+                    mixer1.gain(0, 0.0); // filtered signal off
+                    mixer1.gain(3, 1.0); // original signal on
+                  }
+                  else
+                  {
+                    // turn "on" filter
+                    mixer1.gain(0, 1.0); // filtered signal on
+                    mixer1.gain(3, 0.0); // original signal off
+                  }
                   filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
 #ifdef DEBUG
                   Serial.print(F("Setting filter frequency to: "));
@@ -304,11 +316,11 @@ void handle_ui(void)
                     enc[i].write(ENC_FILTER_RES_STEPS);
                   effect_filter_resonance = enc[i].read();
                   //filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
-                  filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0))*0.044+0.61);
+                  filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
 
 #ifdef DEBUG
                   Serial.print(F("Setting filter resonance to: "));
-                  Serial.println(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0))*0.044+0.61, 2);
+                  Serial.println(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61, 2);
 #endif
                   break;
                 case UI_MAIN_FILTER_OCT:
@@ -486,7 +498,14 @@ void ui_show_effects_filter(void)
     lcd.show(1, 8, 4, "Oct:");
   }
 
-  lcd.show(0, 10, 4, uint16_t(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.5));
+  if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
+  {
+    lcd.show(0, 10, 4, "OFF ");
+  }
+  else
+  {
+    lcd.show(0, 10, 4, uint16_t(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.5));
+  }
   lcd.show(1, 5, 2, map(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0, 99));
   lcd.show(1, 13, 2, map(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0, 80));
 

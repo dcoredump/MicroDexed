@@ -64,23 +64,23 @@ AudioConnection          patchCord4(filter1, 0, mixer1, 0);
 AudioConnection          patchCord5(delay1, 0, mixer1, 1);
 AudioConnection          patchCord6(delay1, 0, mixer2, 1);
 AudioConnection          patchCord7(mixer1, delay1);
+AudioConnection          patchCord8(queue1, 0, mixer1, 3); // for disabling the filter
+AudioConnection          patchCord9(mixer1, 0, mixer2, 0);
 #ifdef TEENSY_AUDIO_BOARD
 AudioOutputI2S           i2s1;           //xy=1200,432
 AudioControlSGTL5000     sgtl5000_1;     //xy=197,554
-AudioConnection          patchCord8(mixer1, 0, mixer2, 0);
-AudioConnection          patchCord9(mixer2, 0, i2s1, 0);
-AudioConnection          patchCord10(mixer2, 0, i2s1, 1);
+AudioConnection          patchCord10(mixer2, 0, i2s1, 0);
+AudioConnection          patchCord11(mixer2, 0, i2s1, 1);
 #else
 AudioOutputPT8211        pt8211_1;       //xy=1079,320
 AudioAmplifier           volume_master;           //xy=678,393
 AudioAmplifier           volume_r;           //xy=818,370
 AudioAmplifier           volume_l;           //xy=818,411
-AudioConnection          patchCord7(mixer1, 0, mixer2, 0);
-AudioConnection          patchCord8(mixer2, 0, volume_master, 0);
-AudioConnection          patchCord9(volume_master, volume_r);
-AudioConnection          patchCord10(volume_master, volume_l);
-AudioConnection          patchCord11(volume_r, 0, pt8211_1, 0);
-AudioConnection          patchCord12(volume_l, 0, pt8211_1, 1);
+AudioConnection          patchCord10(mixer2, 0, volume_master, 0);
+AudioConnection          patchCord11(volume_master, volume_r);
+AudioConnection          patchCord12(volume_master, volume_l);
+AudioConnection          patchCord13(volume_r, 0, pt8211_1, 0);
+AudioConnection          patchCord14(volume_l, 0, pt8211_1, 1);
 #endif
 // GUItool: end automatically generated code
 
@@ -235,12 +235,14 @@ void setup()
     // Init effects
     filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
     //filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
-    filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0))*0.044+0.61);
+    filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
     filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
     delay1.delay(0, mapfloat(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
     // mixer1 is the feedback-adding mixer, mixer2 the whole delay (with/without feedback) mixer
     mixer1.gain(0, 1.0); // original signal
     mixer1.gain(1, mapfloat(effect_delay_feedback, 0, 99, 0.0, 1.0)); // amount of feedback
+    mixer1.gain(0, 0.0); // filtered signal off
+    mixer1.gain(3, 1.0); // original signal on
     mixer2.gain(0, 1.0); // original signal
     mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delayed signal (including feedback)
 
