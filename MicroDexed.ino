@@ -554,7 +554,53 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
     }
     else
 #endif
-      ret = dexed->processMidiMessage(type, data1, data2);
+    {
+      if (type == 0xb0)
+      {
+        switch (data1)
+        {
+          case 0x66:  // CC 102: filter frequency
+            effect_filter_frq = map(data2, 0, 127, 0, ENC_FILTER_FRQ_STEPS);
+            if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
+            {
+              // turn "off" filter
+              mixer1.gain(0, 0.0); // filtered signal off
+              mixer1.gain(3, 1.0); // original signal on
+            }
+            else
+            {
+              // turn "on" filter
+              mixer1.gain(0, 1.0); // filtered signal on
+              mixer1.gain(3, 0.0); // original signal off
+            }
+            filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
+            break;
+          case 0x67:  // CC 103: filter resonance
+            effect_filter_resonance = map(data2, 0, 127, 0, ENC_FILTER_RES_STEPS);
+            filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
+            break;
+          case 0x68:  // CC 104: filter octave
+            effect_filter_octave = map(data2, 0, 127, 0, ENC_FILTER_OCT_STEPS);
+            filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
+            break;
+          case 0x69:  // CC 105: delay time
+            effect_delay_time = map(data2, 0, 127, 0, ENC_DELAY_TIME_STEPS);
+            delay1.delay(0, mapfloat(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
+            break;
+          case 0x6A:  // CC 106: delay feedback
+            effect_delay_feedback = map(data2, 0, 127, 0, ENC_DELAY_FB_STEPS);
+            mixer1.gain(1, mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
+            break;
+          case 0x6B:  // CC 107: delay volume
+            effect_delay_volume = map(data2, 0, 127, 0, ENC_DELAY_VOLUME_STEPS);
+            mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delay tap1 signal (with added feedback)
+            break;
+          default:
+            ret = dexed->processMidiMessage(type, data1, data2);
+            break;
+        }
+      }
+    }
 
 #ifdef MASTER_KEY_MIDI
   }
