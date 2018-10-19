@@ -109,7 +109,7 @@ elapsedMillis midi_timing_timestep;
 uint16_t midi_timing_quarter = 0;
 elapsedMillis long_button_pressed;
 uint8_t effect_filter_frq = ENC_FILTER_FRQ_STEPS;
-uint8_t effect_filter_resonance = ENC_FILTER_RES_STEPS;
+uint8_t effect_filter_resonance = 0;
 uint8_t effect_filter_octave = (1.0 * ENC_FILTER_RES_STEPS / 8.0) + 0.5;
 uint8_t effect_delay_time = 0;
 uint8_t effect_delay_feedback = 0;
@@ -596,10 +596,11 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
             mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delay tap1 signal (with added feedback)
             break;
           default:
-            ret = dexed->processMidiMessage(type, data1, data2);
             break;
         }
       }
+      else
+        ret = dexed->processMidiMessage(type, data1, data2);
     }
 
 #ifdef MASTER_KEY_MIDI
