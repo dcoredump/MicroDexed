@@ -28,6 +28,9 @@
 #include <SD.h>
 #include <MIDI.h>
 #include <EEPROM.h>
+#if defined(USBCON)
+#include <midi_UsbTransport.h>
+#endif
 #include <limits.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
@@ -131,6 +134,12 @@ MIDI_CREATE_INSTANCE(HardwareSerial, MIDI_DEVICE, midi_serial);
 USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
 #endif
+#if defined(USBCON)
+static const unsigned sUsbTransportBufferSize = 16;
+typedef midi::UsbTransport<sUsbTransportBufferSize> UsbTransport;
+UsbTransport sUsbTransport;
+MIDI_CREATE_INSTANCE(UsbTransport, sUsbTransport, midi_onboard_usb);
+#endif
 
 #ifdef TEST_NOTE
 IntervalTimer sched_note_on;
@@ -169,6 +178,12 @@ void setup()
 #ifdef USE_ONBOARD_USB_HOST
   usb_host.begin();
   Serial.println(F("USB-MIDI enabled."));
+#endif
+
+  // check for onboard USB-MIDI
+#if defined(USBCON)
+  midi_onboard_usb.begin();
+  Serial.println(F("Onboard USB-MIDI enabled."));
 #endif
 
 #ifdef MIDI_DEVICE
@@ -370,6 +385,25 @@ void loop()
 
 void handle_input(void)
 {
+#if defined(USBCON)
+  while (midi_onboard_usb.read())
+  {
+#ifdef DEBUG
+    Serial.println(F("[ONBOARD-MIDI-USB]"));
+#endif
+    if (midi_onboard_usb.getType() >= 0xf0) // SysEX
+    {
+      handle_sysex_parameter(midi_onboard_usb.getSysExArray(), midi_onboard_usb.getSysExArrayLength());
+    }
+    else
+    {
+      queue_midi_event(midi_onboard_usb.getType(), midi_onboard_usb.getData1(), midi_onboard_usb.getData2())
+#ifdef MIDI_MERGE_THRU
+      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+    }
+  }
+#endif
 #ifdef USE_ONBOARD_USB_HOST
   usb_host.Task();
   while (midi_usb.read())
@@ -381,8 +415,13 @@ void handle_input(void)
     {
       handle_sysex_parameter(midi_usb.getSysExArray(), midi_usb.getSysExArrayLength());
     }
-    else if (queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2()))
-      return;
+    else
+    {
+      queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
+#ifdef MIDI_MERGE_THRU
+      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+    }
   }
 #endif
 #ifdef MIDI_DEVICE
@@ -395,8 +434,13 @@ void handle_input(void)
     {
       handle_sysex_parameter(midi_serial.getSysExArray(), midi_serial.getSysExArrayLength());
     }
-    else if (queue_midi_event(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2()))
-      return;
+    else
+    {
+      queue_midi_event(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2());
+#ifdef MIDI_MERGE_THRU
+      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+    }
   }
 #endif
 }
