@@ -399,6 +399,10 @@ void handle_input(void)
     {
       queue_midi_event(midi_onboard_usb.getType(), midi_onboard_usb.getData1(), midi_onboard_usb.getData2())
 #ifdef MIDI_MERGE_THRU
+#ifdef USB_CON
+      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
       midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
 #endif
     }
@@ -419,6 +423,10 @@ void handle_input(void)
     {
       queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
 #ifdef MIDI_MERGE_THRU
+#ifdef USB_CON
+      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
       midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
 #endif
     }
@@ -438,6 +446,10 @@ void handle_input(void)
     {
       queue_midi_event(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2());
 #ifdef MIDI_MERGE_THRU
+#ifdef USB_CON
+      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
       midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
 #endif
     }

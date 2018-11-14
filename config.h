@@ -36,7 +36,7 @@
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
 #define MIDI_MERGE_THRU 1
-#define TEENSY_AUDIO_BOARD 1
+//#define TEENSY_AUDIO_BOARD 1
 #define VOLUME 0.6
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
 #define DEFAULT_SYSEXBANK 0
@@ -70,7 +70,7 @@
 
 // Debug output
 #define SERIAL_SPEED 38400
-#define DEBUG 1
+//#define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
