@@ -255,11 +255,11 @@ void setup()
     delay1.delay(0, mapfloat(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
     // mixer1 is the feedback-adding mixer, mixer2 the whole delay (with/without feedback) mixer
     mixer1.gain(0, 1.0); // original signal
-    mixer1.gain(1, mapfloat(effect_delay_feedback, 0, 99, 0.0, 1.0)); // amount of feedback
+    mixer1.gain(1, mapfloat(effect_delay_feedback, 0, ENC_DELAY_FB_STEPS, 0.0, 1.0)); // amount of feedback
     mixer1.gain(0, 0.0); // filtered signal off
     mixer1.gain(3, 1.0); // original signal on
     mixer2.gain(0, 1.0); // original signal
-    mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delayed signal (including feedback)
+    mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delayed signal (including feedback)
 
     // load default SYSEX data
     load_sysex(bank, voice);
@@ -649,7 +649,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
             break;
           case 0x6B:  // CC 107: delay volume
             effect_delay_volume = map(data2, 0, 127, 0, ENC_DELAY_VOLUME_STEPS);
-            mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delay tap1 signal (with added feedback)
+            mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delay tap1 signal (with added feedback)
             break;
           default:
             break;

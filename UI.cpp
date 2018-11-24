@@ -371,7 +371,7 @@ void handle_ui(void)
                   else if (enc[i].read() > ENC_DELAY_VOLUME_STEPS)
                     enc[i].write(ENC_DELAY_VOLUME_STEPS);
                   effect_delay_volume = enc[i].read();
-                  mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delay tap1 signal (with added feedback)
+                  mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delay tap1 signal (with added feedback)
 #ifdef DEBUG
                   Serial.print(F("Setting delay volume to: "));
                   Serial.println(effect_delay_volume);
