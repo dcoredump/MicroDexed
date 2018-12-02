@@ -334,7 +334,7 @@ void loop()
   const uint16_t audio_block_time_us = 1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES);
 
   // Main sound calculation
-  if (queue1.available() && fill_audio_buffer > audio_block_time_us-10)
+  if (queue1.available() && fill_audio_buffer > audio_block_time_us - 10)
   {
     fill_audio_buffer = 0;
 
@@ -644,6 +644,7 @@ bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
             mixer2.gain(1, mapfloat(effect_delay_volume, 0, 99, 0.0, 1.0)); // delay tap1 signal (with added feedback)
             break;
           default:
+            ret = dexed->processMidiMessage(type, data1, data2);
             break;
         }
       }

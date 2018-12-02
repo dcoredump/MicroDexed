@@ -74,6 +74,7 @@ void handle_ui(void)
 #ifdef DEBUG
         Serial.print(F("Long button pressing detected for button "));
         Serial.println(i, DEC);
+#endif
 
         switch (i)
         {
@@ -103,7 +104,6 @@ void handle_ui(void)
             }
             break;
         }
-#endif
       }
       else
       {
