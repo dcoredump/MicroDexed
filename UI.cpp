@@ -557,7 +557,7 @@ void ui_show_effects_delay(void)
     lcd.show(1, 8, 5, "Vol:");
   }
 
-  lcd.show(0, 9, 4, map(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0, 1200));
+  lcd.show(0, 9, 4, map(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0, DELAY_MAX_TIME));
   lcd.show(1, 4, 2, map(effect_delay_feedback, 0, ENC_DELAY_FB_STEPS, 0, 99));
   lcd.show(1, 13, 2, map(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0, 99));
 

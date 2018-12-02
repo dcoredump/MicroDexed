@@ -35,7 +35,7 @@
 #define VERSION 1.0.0
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
-//#define MIDI_MERGE_THRU 1
+#define MIDI_MERGE_THRU 1
 #define TEENSY_AUDIO_BOARD 1
 #define VOLUME 0.6
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
@@ -44,8 +44,10 @@
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
 #ifndef TEENSY_AUDIO_BOARD
 #define AUDIO_MEM 450
+#define DELAY_MAX_TIME 600.0
 #else
 #define AUDIO_MEM 900
+#define DELAY_MAX_TIME 1200.0
 #endif
 #define SAMPLE_RATE 44100
 #define MAX_BANKS 100
@@ -62,7 +64,6 @@
 
 // EFFECTS
 #define FILTER_MAX_FREQ 10000
-#define DELAY_MAX_TIME 1200.0
 
 // Master key handling (comment for disabling)
 //#define MASTER_KEY_MIDI MIDI_C7
@@ -70,7 +71,7 @@
 
 // Debug output
 #define SERIAL_SPEED 38400
-//#define DEBUG 1
+#define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
@@ -78,7 +79,7 @@
 // Some optimizations
 #define USE_TEENSY_DSP 1
 #define SUM_UP_AS_INT 1
-#define REDUCE_LOUDNESS 1
+#define REDUCE_LOUDNESS 0
 
 // Enable TEST_NOTE for adding code to drop some midi notes for testing without keyboard
 //#define TEST_NOTE MIDI_E2
