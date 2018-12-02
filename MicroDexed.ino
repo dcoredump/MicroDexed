@@ -118,6 +118,7 @@ uint8_t effect_delay_time = 0;
 uint8_t effect_delay_feedback = 0;
 uint8_t effect_delay_volume = 0;
 bool effect_delay_sync = 0;
+elapsedMicros fill_audio_buffer;
 
 #ifdef MASTER_KEY_MIDI
 bool master_key_enabled = false;
@@ -330,16 +331,18 @@ void setup()
 void loop()
 {
   int16_t* audio_buffer; // pointer to AUDIO_BLOCK_SAMPLES * int16_t
-  const uint16_t audio_block_time_ms = 1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES);
+  const uint16_t audio_block_time_us = 1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES);
 
   // Main sound calculation
-  if (queue1.available())
+  if (queue1.available() && fill_audio_buffer > audio_block_time_us-10)
   {
+    fill_audio_buffer = 0;
+
     audio_buffer = queue1.getBuffer();
 
     elapsedMicros t1;
     dexed->getSamples(AUDIO_BLOCK_SAMPLES, audio_buffer);
-    if (t1 > audio_block_time_ms) // everything greater 2.9ms is a buffer underrun!
+    if (t1 > audio_block_time_us) // everything greater 2.9ms is a buffer underrun!
       xrun++;
     if (t1 > render_time_max)
       render_time_max = t1;
@@ -364,6 +367,7 @@ void loop()
 
   // MIDI input handling
   handle_input();
+
 #ifdef I2C_DISPLAY
   // UI
   if (master_timer >= TIMER_UI_HANDLING_MS)
