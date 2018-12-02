@@ -71,7 +71,7 @@
 
 // Debug output
 #define SERIAL_SPEED 38400
-#define DEBUG 1
+//#define DEBUG 1
 #define SHOW_MIDI_EVENT 1
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
@@ -79,7 +79,7 @@
 // Some optimizations
 #define USE_TEENSY_DSP 1
 #define SUM_UP_AS_INT 1
-#define REDUCE_LOUDNESS 0
+#define REDUCE_LOUDNESS 1
 
 // Enable TEST_NOTE for adding code to drop some midi notes for testing without keyboard
 //#define TEST_NOTE MIDI_E2
