@@ -64,26 +64,27 @@ AudioConnection          patchCord1(queue1, peak1);
 AudioConnection          patchCord2(queue1, 0, filter1, 0);
 AudioConnection          patchCord3(filter1, 0, delay1, 0);
 AudioConnection          patchCord4(filter1, 0, mixer1, 0);
-AudioConnection          patchCord5(delay1, 0, mixer1, 1);
-AudioConnection          patchCord6(delay1, 0, mixer2, 1);
-AudioConnection          patchCord7(mixer1, delay1);
-AudioConnection          patchCord8(queue1, 0, mixer1, 3); // for disabling the filter
-AudioConnection          patchCord9(mixer1, 0, mixer2, 0);
+AudioConnection          patchCord5(filter1, 0, mixer2, 0);
+AudioConnection          patchCord6(delay1, 0, mixer1, 1);
+AudioConnection          patchCord7(delay1, 0, mixer2, 2);
+AudioConnection          patchCord8(mixer1, delay1);
+AudioConnection          patchCord9(queue1, 0, mixer1, 3); // for disabling the filter
+AudioConnection          patchCord10(mixer1, 0, mixer2, 1);
 #ifdef TEENSY_AUDIO_BOARD
 AudioOutputI2S           i2s1;           //xy=1200,432
 AudioControlSGTL5000     sgtl5000_1;     //xy=197,554
-AudioConnection          patchCord10(mixer2, 0, i2s1, 0);
-AudioConnection          patchCord11(mixer2, 0, i2s1, 1);
+AudioConnection          patchCord11(mixer2, 0, i2s1, 0);
+AudioConnection          patchCord12(mixer2, 0, i2s1, 1);
 #else
 AudioOutputPT8211        pt8211_1;       //xy=1079,320
 AudioAmplifier           volume_master;           //xy=678,393
 AudioAmplifier           volume_r;           //xy=818,370
 AudioAmplifier           volume_l;           //xy=818,411
-AudioConnection          patchCord10(mixer2, 0, volume_master, 0);
-AudioConnection          patchCord11(volume_master, volume_r);
-AudioConnection          patchCord12(volume_master, volume_l);
-AudioConnection          patchCord13(volume_r, 0, pt8211_1, 0);
-AudioConnection          patchCord14(volume_l, 0, pt8211_1, 1);
+AudioConnection          patchCord11(mixer2, 0, volume_master, 0);
+AudioConnection          patchCord12(volume_master, volume_r);
+AudioConnection          patchCord13(volume_master, volume_l);
+AudioConnection          patchCord14(volume_r, 0, pt8211_1, 0);
+AudioConnection          patchCord15(volume_l, 0, pt8211_1, 1);
 #endif
 // GUItool: end automatically generated code
 
@@ -258,8 +259,9 @@ void setup()
     mixer1.gain(1, mapfloat(effect_delay_feedback, 0, ENC_DELAY_FB_STEPS, 0.0, 1.0)); // amount of feedback
     mixer1.gain(0, 0.0); // filtered signal off
     mixer1.gain(3, 1.0); // original signal on
-    mixer2.gain(0, 1.0); // original signal
+    mixer2.gain(0, 1.0 - mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // original signal
     mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delayed signal (including feedback)
+    mixer2.gain(2, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // only delayed signal (without feedback)
 
     // load default SYSEX data
     load_sysex(bank, voice);
