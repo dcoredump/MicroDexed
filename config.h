@@ -35,6 +35,7 @@
 #define VERSION "0.9.1"
 #define MIDI_DEVICE Serial1
 #define USE_ONBOARD_USB_HOST 1
+#define USBCON 1  // enabling onboard MIDI via programing connector
 #define MIDI_MERGE_THRU 1
 #define TEENSY_AUDIO_BOARD 1
 #define VOLUME 0.6
@@ -43,10 +44,18 @@
 #define DEFAULT_SYSEXSOUND 0
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
 #ifndef TEENSY_AUDIO_BOARD
-#define AUDIO_MEM 250
+#if AUDIO_BLOCK_SAMPLES == 64
+#define AUDIO_MEM 450
+#else
+#define AUDIO_MEM 225
+#endif
 #define DELAY_MAX_TIME 600.0
 #else
-#define AUDIO_MEM 500
+#if AUDIO_BLOCK_SAMPLES == 64
+#define AUDIO_MEM 900
+#else
+#define AUDIO_MEM 450
+#endif
 #define DELAY_MAX_TIME 1200.0
 #endif
 #define SAMPLE_RATE 44100
