@@ -162,7 +162,8 @@ void setup()
   lcd.noAutoscroll();
   lcd.clear();
   lcd.display();
-  lcd.show(0, 0, 16, "   MicroDexed");
+  lcd.show(0, 0, 16, "MicroDexed");
+  lcd.show(0, 11, 16, VERSION);
   lcd.show(1, 0, 16, "(c)parasiTstudio");
 
   pinMode(BUT_L_PIN, INPUT_PULLUP);
@@ -419,7 +420,7 @@ void handle_input(void)
   while (midi_usb.read())
   {
 #ifdef DEBUG
-    Serial.println(F("[MIDI-USB]"));
+    Serial.println(F("[MIDI-USB-HOST]"));
 #endif
     if (midi_usb.getType() >= 0xf0) // SysEX
     {
