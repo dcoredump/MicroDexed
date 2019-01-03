@@ -22,6 +22,7 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include "config.h"
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -34,7 +35,6 @@
 #include <limits.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
-#include "config.h"
 #ifdef USE_ONBOARD_USB_HOST
 #include <USBHost_t36.h>
 #endif
@@ -162,7 +162,8 @@ void setup()
   lcd.noAutoscroll();
   lcd.clear();
   lcd.display();
-  lcd.show(0, 0, 16, "   MicroDexed");
+  lcd.show(0, 0, 16, "MicroDexed");
+  lcd.show(0, 11, 16, VERSION);
   lcd.show(1, 0, 16, "(c)parasiTstudio");
 
   pinMode(BUT_L_PIN, INPUT_PULLUP);
@@ -403,12 +404,14 @@ void handle_input(void)
     }
     else
     {
-      queue_midi_event(midi_onboard_usb.getType(), midi_onboard_usb.getData1(), midi_onboard_usb.getData2())
+      queue_midi_event(midi_onboard_usb.getType(), midi_onboard_usb.getData1(), midi_onboard_usb.getData2());
 #ifdef MIDI_MERGE_THRU
 #ifdef USB_CON
       midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
 #endif
+#ifdef USE_ONBOARD_USB_HOST
       midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
       midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
 #endif
     }
@@ -419,7 +422,7 @@ void handle_input(void)
   while (midi_usb.read())
   {
 #ifdef DEBUG
-    Serial.println(F("[MIDI-USB]"));
+    Serial.println(F("[MIDI-USB-HOST]"));
 #endif
     if (midi_usb.getType() >= 0xf0) // SysEX
     {
@@ -432,7 +435,9 @@ void handle_input(void)
 #ifdef USB_CON
       midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
 #endif
+#ifdef USE_ONBOARD_USB_HOST
       midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
       midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
 #endif
     }
