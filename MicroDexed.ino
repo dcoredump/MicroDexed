@@ -29,15 +29,10 @@
 #include <SD.h>
 #include <MIDI.h>
 #include <EEPROM.h>
-#if defined(USBCON)
-#include <midi_UsbTransport.h>
-#endif
+#include "midi_devices.hpp"
 #include <limits.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
-#ifdef USE_ONBOARD_USB_HOST
-#include <USBHost_t36.h>
-#endif
 
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 #include "UI.h"
@@ -129,20 +124,6 @@ bool master_key_enabled = false;
 elapsedMillis cpu_mem_millis;
 #endif
 
-#ifdef MIDI_DEVICE
-MIDI_CREATE_INSTANCE(HardwareSerial, MIDI_DEVICE, midi_serial);
-#endif
-#ifdef USE_ONBOARD_USB_HOST
-USBHost usb_host;
-MIDIDevice midi_usb(usb_host);
-#endif
-#if defined(USBCON)
-static const unsigned sUsbTransportBufferSize = 16;
-typedef midi::UsbTransport<sUsbTransportBufferSize> UsbTransport;
-UsbTransport sUsbTransport;
-MIDI_CREATE_INSTANCE(UsbTransport, sUsbTransport, midi_onboard_usb);
-#endif
-
 #ifdef TEST_NOTE
 IntervalTimer sched_note_on;
 IntervalTimer sched_note_off;
@@ -177,23 +158,7 @@ void setup()
   Serial.println(F("<setup start>"));
   initial_values_from_eeprom();
 
-  // start up USB host
-#ifdef USE_ONBOARD_USB_HOST
-  usb_host.begin();
-  Serial.println(F("USB-MIDI enabled."));
-#endif
-
-  // check for onboard USB-MIDI
-#if defined(USBCON)
-  midi_onboard_usb.begin();
-  Serial.println(F("Onboard USB-MIDI enabled."));
-#endif
-
-#ifdef MIDI_DEVICE
-  // Start serial MIDI
-  midi_serial.begin(DEFAULT_MIDI_CHANNEL);
-  Serial.println(F("Serial MIDI enabled"));
-#endif
+  setup_midi_devices();
 
   // start audio card
   AudioMemory(AUDIO_MEM);
@@ -369,7 +334,7 @@ void loop()
   }
 
   // MIDI input handling
-  handle_input();
+  check_midi_devices();
 
 #ifdef I2C_DISPLAY
   // UI
@@ -390,106 +355,132 @@ void loop()
 #endif
 }
 
-void handle_input(void)
+void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity)
 {
-#if defined(USBCON)
-  while (midi_onboard_usb.read())
+  if (checkMidiChannel(inChannel))
   {
-#ifdef DEBUG
-    Serial.println(F("[ONBOARD-MIDI-USB]"));
-#endif
-    if (midi_onboard_usb.getType() >= 0xf0) // SysEX
-    {
-      handle_sysex_parameter(midi_onboard_usb.getSysExArray(), midi_onboard_usb.getSysExArrayLength());
-    }
-    else
-    {
-      queue_midi_event(midi_onboard_usb.getType(), midi_onboard_usb.getData1(), midi_onboard_usb.getData2());
-#ifdef MIDI_MERGE_THRU
-#ifdef USB_CON
-      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-#endif
-#ifdef USE_ONBOARD_USB_HOST
-      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-#endif
-      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-#endif
-    }
+    ;
   }
-#endif
-#ifdef USE_ONBOARD_USB_HOST
-  usb_host.Task();
-  while (midi_usb.read())
-  {
-#ifdef DEBUG
-    Serial.println(F("[MIDI-USB-HOST]"));
-#endif
-    if (midi_usb.getType() >= 0xf0) // SysEX
-    {
-      handle_sysex_parameter(midi_usb.getSysExArray(), midi_usb.getSysExArrayLength());
-    }
-    else
-    {
-      queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
-#ifdef MIDI_MERGE_THRU
-#ifdef USB_CON
-      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-#endif
-#ifdef USE_ONBOARD_USB_HOST
-      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-#endif
-      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-#endif
-    }
-  }
-#endif
-#ifdef MIDI_DEVICE
-  while (midi_serial.read())
-  {
-#ifdef DEBUG
-    Serial.print(F("[MIDI-Serial] "));
-#endif
-    if (midi_serial.getType() >= 0xf0) // SYSEX
-    {
-      handle_sysex_parameter(midi_serial.getSysExArray(), midi_serial.getSysExArrayLength());
-    }
-    else
-    {
-      queue_midi_event(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2());
-#ifdef MIDI_MERGE_THRU
-#ifdef USB_CON
-      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-#endif
-      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
-#endif
-    }
-  }
-#endif
 }
 
-#ifdef DEBUG
-#ifdef SHOW_MIDI_EVENT
-void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
+void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity)
 {
-  Serial.print(F("Listen MIDI-Channel: "));
-  if (midi_channel == MIDI_CHANNEL_OMNI)
-    Serial.print(F("OMNI"));
-  else
-    Serial.print(midi_channel, DEC);
-  Serial.print(F(", MIDI event type: 0x"));
-  if (type < 16)
-    Serial.print(F("0"));
-  Serial.print(type, HEX);
-  Serial.print(F(", incoming MIDI channel: "));
-  Serial.print((type & 0x0f) + 1, DEC);
-  Serial.print(F(", data1: "));
-  Serial.print(data1, DEC);
-  Serial.print(F(", data2: "));
-  Serial.println(data2, DEC);
+  if (checkMidiChannel(inChannel))
+  {
+    ;
+  }
 }
+
+void handleControlChange(byte inChannel, byte inData1, byte inData2)
+{
+  if (checkMidiChannel(inChannel))
+  {
+    ;
+  }
+}
+
+
+
+void handleAfterTouch(byte inChannel, byte inPressure)
+{
+  ;
+}
+
+void handlePitchBend(byte inChannel, int inPitch)
+{
+  ;
+}
+
+void handleProgramChange(byte inChannel, byte inProgram)
+{
+  ;
+}
+
+void handleSystemExclusive(byte *data, uint len)
+{
+  handle_sysex_parameter(data, len);
+}
+
+void handleSystemExclusiveChunk(const byte *data, uint16_t len, bool last)
+{
+  ;
+}
+
+void handleTimeCodeQuarterFrame(byte data)
+{
+  ;
+}
+
+void handleAfterTouchPoly(byte inChannel, byte inNumber, byte inVelocity)
+{
+  ;
+}
+
+void handleSongSelect(byte inSong)
+{
+  ;
+}
+
+void handleTuneRequest(void)
+{
+  ;
+}
+
+void handleClock(void)
+{
+  ;
+}
+
+void handleStart(void)
+{
+  ;
+}
+
+void handleContinue(void)
+{
+  ;
+}
+
+void handleStop(void)
+{
+  ;
+}
+
+void handleActiveSensing(void)
+{
+  ;
+}
+
+void handleSystemReset(void)
+{
+  ;
+}
+
+void handleRealTimeSystem(void)
+{
+  ;
+}
+
+bool checkMidiChannel(byte inChannel)
+{
+  // check for MIDI channel
+  if (midi_channel == MIDI_CHANNEL_OMNI)
+  {
+    return (true);
+  }
+  else if (inChannel != midi_channel)
+  {
+#ifdef DEBUG
+    Serial.print(F("Ignoring MIDI data on channel "));
+    Serial.print(inChannel);
+    Serial.print(F("(listening on "));
+    Serial.print(midi_channel);
+    Serial.println(F(")"));
 #endif
-#endif
+    return (false);
+  }
+  return (true);
+}
 
 #ifdef MASTER_KEY_MIDI
 bool handle_master_key(uint8_t data)
@@ -569,10 +560,6 @@ bool handle_master_key(uint8_t data)
 bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
 {
   bool ret = false;
-
-#if defined(DEBUG) && defined(SHOW_MIDI_EVENT)
-  print_midi_event(type, data1, data2);
-#endif
 
   // check for MIDI channel
   if (midi_channel != MIDI_CHANNEL_OMNI)
