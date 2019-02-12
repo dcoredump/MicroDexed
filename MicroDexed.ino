@@ -48,13 +48,12 @@ uint8_t ui_state = UI_MAIN;
 uint8_t ui_main_state = UI_MAIN_VOICE;
 #endif
 
-// GUItool: begin automatically generated code
-AudioPlayQueue           queue1;         //xy=179,325
-AudioAnalyzePeak         peak1;          //xy=348,478
-AudioFilterStateVariable filter1;        //xy=415,334
-AudioEffectDelay         delay1;         //xy=732,485
-AudioMixer4              mixer1;         //xy=734,245
-AudioMixer4              mixer2;         //xy=1055,317
+AudioPlayQueue           queue1;
+AudioAnalyzePeak         peak1;
+AudioFilterStateVariable filter1;
+AudioEffectDelay         delay1;
+AudioMixer4              mixer1;
+AudioMixer4              mixer2;
 AudioConnection          patchCord1(queue1, peak1);
 AudioConnection          patchCord2(queue1, 0, filter1, 0);
 AudioConnection          patchCord3(filter1, 0, delay1, 0);
@@ -65,23 +64,26 @@ AudioConnection          patchCord7(delay1, 0, mixer2, 2);
 AudioConnection          patchCord8(mixer1, delay1);
 AudioConnection          patchCord9(queue1, 0, mixer1, 3); // for disabling the filter
 AudioConnection          patchCord10(mixer1, 0, mixer2, 1);
-#ifdef TEENSY_AUDIO_BOARD
-AudioOutputI2S           i2s1;           //xy=1200,432
-AudioControlSGTL5000     sgtl5000_1;     //xy=197,554
+#if defined(TEENSY_AUDIO_BOARD) || defined(TGA_AUDIO_BOARD)
+AudioOutputI2S           i2s1;
 AudioConnection          patchCord11(mixer2, 0, i2s1, 0);
 AudioConnection          patchCord12(mixer2, 0, i2s1, 1);
+#ifdef TEENSY_AUDIO_BOARD
+AudioControlSGTL5000     sgtl5000_1;
 #else
-AudioOutputPT8211        pt8211_1;       //xy=1079,320
-AudioAmplifier           volume_master;           //xy=678,393
-AudioAmplifier           volume_r;           //xy=818,370
-AudioAmplifier           volume_l;           //xy=818,411
+AudioControlWM8731master wm8731_1;
+#endif
+#else
+AudioOutputPT8211        pt8211_1;
+AudioAmplifier           volume_master;
+AudioAmplifier           volume_r;
+AudioAmplifier           volume_l;
 AudioConnection          patchCord11(mixer2, 0, volume_master, 0);
 AudioConnection          patchCord12(volume_master, volume_r);
 AudioConnection          patchCord13(volume_master, volume_l);
 AudioConnection          patchCord14(volume_r, 0, pt8211_1, 0);
 AudioConnection          patchCord15(volume_l, 0, pt8211_1, 1);
 #endif
-// GUItool: end automatically generated code
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
@@ -157,7 +159,9 @@ void setup()
   setup_midi_devices();
 
   // start audio card
+  AudioNoInterrupts();
   AudioMemory(AUDIO_MEM);
+
 #ifdef TEENSY_AUDIO_BOARD
   sgtl5000_1.enable();
   sgtl5000_1.dacVolumeRamp();
@@ -168,9 +172,14 @@ void setup()
   sgtl5000_1.volume(1.0, 1.0);
   sgtl5000_1.lineOutLevel(31);
   Serial.println(F("Teensy-Audio-Board enabled."));
+#elif defined(TGA_AUDIO_BOARD)
+  wm8731_1.enable();
+  wm8731_1.volume(1.0);
+  Serial.println(F("TGA board enabled."));
 #else
   Serial.println(F("PT8211 enabled."));
 #endif
+
   set_volume(vol, vol_left, vol_right);
 
   // start SD card
@@ -275,6 +284,7 @@ void setup()
   ui_show_main();
 #endif
 
+  AudioInterrupts();
   Serial.println(F("<setup end>"));
 
 #ifdef TEST_NOTE

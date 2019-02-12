@@ -23,26 +23,50 @@
 
 */
 
+#ifndef CONFIG_H_INCLUDED
+#define CONFIG_H_INCLUDED
+
 #include "midinotes.h"
 
 // ATTENTION! For better latency you have to redefine AUDIO_BLOCK_SAMPLES from
 // 128 to 64 in <ARDUINO-IDE-DIR>/cores/teensy3/AudioStream.h
 
-#ifndef CONFIG_H_INCLUDED
-#define CONFIG_H_INCLUDED
+#define VERSION "0.9.2"
 
-// Initial values
-#define VERSION "0.9.1"
-#define MIDI_DEVICE Serial1
-#define USE_ONBOARD_USB_HOST 1
-#define USBCON 1  // enabling onboard MIDI via programing connector
-#define MIDI_MERGE_THRU 1
-#define TEENSY_AUDIO_BOARD 1
-#define VOLUME 0.6
+//*************************************************************************************************
+//* DEVICE SETTINGS
+//*************************************************************************************************
+
+// MIDI
+#define MIDI_DEVICE_DIN Serial1
+#define MIDI_DEVICE_USB 1
+#define MIDI_DEVICE_USB_HOST 1
+
+// AUDIO
+//#define TEENSY_AUDIO_BOARD 1
+//#define TGA_AUDIO_BOARD 
+
+//*************************************************************************************************
+//* MIDI SETTINGS
+//*************************************************************************************************
+
 #define DEFAULT_MIDI_CHANNEL MIDI_CHANNEL_OMNI
+#define MIDI_MERGE_THRU 1
 #define DEFAULT_SYSEXBANK 0
 #define DEFAULT_SYSEXSOUND 0
+
+//*************************************************************************************************
+//* DEXED AND EFECTS SETTINGS
+//*************************************************************************************************
 //#define DEXED_ENGINE DEXED_ENGINE_MODERN
+// EFFECTS
+#define FILTER_MAX_FREQ 10000
+
+//*************************************************************************************************
+//* AUDIO SETTINGS
+//*************************************************************************************************
+
+#define VOLUME 0.8
 #ifndef TEENSY_AUDIO_BOARD
 #if AUDIO_BLOCK_SAMPLES == 64
 #define AUDIO_MEM 450
@@ -59,56 +83,29 @@
 #define DELAY_MAX_TIME 1200.0
 #endif
 #define SAMPLE_RATE 44100
-#define MAX_BANKS 100
-#define MAX_VOICES 32 // voices per bank
-#define BANK_NAME_LEN 13 // FAT12 filenames (plus '\0')
-#define VOICE_NAME_LEN 11 // 10 (plus '\0')
+#define REDUCE_LOUDNESS 1
 
-#if !defined(__MK66FX1M0__) // check for Teensy-3.6
-#define MAX_NOTES 11        // No? 
-#undef USE_ONBOARD_USB_HOST
-#else
-#define MAX_NOTES 16        // Yes
-#endif
+//*************************************************************************************************
+//* DEBUG OUTPUT SETTINGS
+//*************************************************************************************************
 
-// EFFECTS
-#define FILTER_MAX_FREQ 10000
-
-// Debug output
-#define SERIAL_SPEED 38400
 #define DEBUG 1
-#define SHOW_MIDI_EVENT 1
+#define SERIAL_SPEED 38400
 #define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
 
-// Some optimizations
-#define USE_TEENSY_DSP 1
-#define SUM_UP_AS_INT 1
-#define REDUCE_LOUDNESS 1
+//*************************************************************************************************
+//* HARDWARE SETTINGS
+//*************************************************************************************************
 
-// Enable TEST_NOTE for adding code to drop some midi notes for testing without keyboard
-//#define TEST_NOTE MIDI_E2
-#define TEST_VEL_MIN 60
-#define TEST_VEL_MAX 110
-
-// Use these with the Teensy Audio Shield
+// Teensy Audio Shield:
 //#define SDCARD_CS_PIN    10
 //#define SDCARD_MOSI_PIN  7
 //#define SDCARD_SCK_PIN   14
-// Use these with the Teensy 3.5 & 3.6 SD card
+// Teensy 3.5 & 3.6 SD card
 #define SDCARD_CS_PIN    BUILTIN_SDCARD
 #define SDCARD_MOSI_PIN  11  // not actually used
 #define SDCARD_SCK_PIN   13  // not actually used
-
-// LCD Display
-#define I2C_DISPLAY 1
-// [I2C] SCL: Pin 19, SDA: Pin 18 (https://www.pjrc.com/teensy/td_libs_Wire.html)
-#define LCD_I2C_ADDRESS 0x27
-#define LCD_CHARS 16
-#define LCD_LINES 2
-#define UI_AUTO_BACK_MS 3000
-#define AUTOSTORE_MS 5000
-#define AUTOSTORE_FAST_MS 50
 
 // Encoder with button
 #define ENC_VOL_STEPS 43
@@ -131,6 +128,16 @@
 #define BUT_DEBOUNCE_MS 20
 #define LONG_BUTTON_PRESS 500
 
+// LCD Display
+#define I2C_DISPLAY 1
+// [I2C] SCL: Pin 19, SDA: Pin 18 (https://www.pjrc.com/teensy/td_libs_Wire.html)
+#define LCD_I2C_ADDRESS 0x27
+#define LCD_CHARS 16
+#define LCD_LINES 2
+#define UI_AUTO_BACK_MS 3000
+#define AUTOSTORE_MS 5000
+#define AUTOSTORE_FAST_MS 50
+
 // EEPROM address
 #define EEPROM_OFFSET 0
 #define EEPROM_DATA_LENGTH 6
@@ -150,4 +157,48 @@
 #define EEPROM_UPDATE_VOL_L (1<<4)
 #define EEPROM_UPDATE_MIDICHANNEL (1<<5)
 #define EEPROM_UPDATE_CHECKSUM (1<<7)
+
+#define MAX_BANKS 100
+#define MAX_VOICES 32 // voices per bank
+#define BANK_NAME_LEN 13 // FAT12 filenames (plus '\0')
+#define VOICE_NAME_LEN 11 // 10 (plus '\0')
+
+
+//*************************************************************************************************
+//* DO NO CHANGE ANYTHING BEYOND IF YOU DON'T KNOW WHAT YOU ARE DOING !!!
+//*************************************************************************************************
+// MIDI
+#ifdef MIDI_DEVICE_USB
+#define USBCON 1
 #endif
+#if !defined(__MK66FX1M0__) // check for Teensy-3.6
+#define MAX_NOTES 11        // No? 
+#undef USE_ONBOARD_USB_HOST
+#else
+#define MAX_NOTES 16        // Yes
+#endif
+
+// MIDI
+#ifdef MIDI_DEVICE_USB
+#define USBCON 1
+#endif
+#if defined(__MK66FX1M0__)
+// Teensy-3.6 settings
+#define MIDI_DEVICE_USB_HOST 1
+#else
+// Teensy-3.5 settings
+#undef MIDI_DEVICE_USB_HOST
+#endif
+// Engine
+#if defined(__MK66FX1M0__)
+// Teensy-3.6 settings
+#define MAX_NOTES 16
+#else
+#define MAX_NOTES 11
+#endif
+
+// Some optimizations
+#define USE_TEENSY_DSP 1
+#define SUM_UP_AS_INT 1
+
+#endif // CONFIG_H_INCLUDED
