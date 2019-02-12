@@ -74,10 +74,6 @@
 // EFFECTS
 #define FILTER_MAX_FREQ 10000
 
-// Master key handling (comment for disabling)
-//#define MASTER_KEY_MIDI MIDI_C7
-#define MASTER_NUM1 MIDI_C2
-
 // Debug output
 #define SERIAL_SPEED 38400
 #define DEBUG 1

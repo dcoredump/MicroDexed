@@ -37,7 +37,6 @@
 #include <Audio.h>
 #include "config.h"
 
-extern uint8_t bank;
 extern uint32_t overload;
 extern bool load_sysex(uint8_t bank, uint8_t voice_number);
 extern AudioControlSGTL5000 sgtl5000_1;
@@ -149,15 +148,20 @@ class Dexed
     bool isMonoMode(void);
     void setMonoMode(bool mode);
     void getSamples(uint16_t n_samples, int16_t* buffer);
-    bool processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2);
     void panic(void);
     void notesOff(void);
     void resetControllers(void);
     void setMaxNotes(uint8_t n);
+    uint8_t getMaxNotes(void);
     void doRefreshVoice(void);
     void setOPs(uint8_t ops);
     bool loadSysexVoice(uint8_t* data);
+    void keyup(uint8_t pitch);
+    void keydown(uint8_t pitch, uint8_t velo);
+    void setSustain(bool sustain);
+    bool getSustain(void);
 
+    ProcessorVoice voices[MAX_NOTES];
     Controllers controllers;
 
     uint8_t data[173] = {
@@ -179,13 +183,8 @@ class Dexed
     }; // FM-Piano
 
   protected:
-    //void onParam(uint8_t param_num,float param_val);
-    void keyup(uint8_t pitch);
-    void keydown(uint8_t pitch, uint8_t velo);
-
     static const uint8_t MAX_ACTIVE_NOTES = MAX_NOTES;
     uint8_t max_notes = MAX_ACTIVE_NOTES;
-    ProcessorVoice voices[MAX_ACTIVE_NOTES];
     uint8_t currentNote;
     bool sustain;
     bool monoMode;

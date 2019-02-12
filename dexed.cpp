@@ -190,119 +190,6 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
   }
 }
 
-bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
-{
-  switch (type & 0xf0) {
-    case 0x80 :
-      keyup(data1);
-      return (false);
-      break;
-    case 0x90 :
-      keydown(data1, data2);
-      return (false);
-      break;
-    case 0xb0 : {
-        uint8_t ctrl = data1;
-        uint8_t value = data2;
-
-        switch (ctrl) {
-          case 0: // ignore BankSelect MSB
-            break;
-          case 1:
-            controllers.modwheel_cc = value;
-            controllers.refresh();
-            break;
-          case 2:
-            controllers.breath_cc = value;
-            controllers.refresh();
-            break;
-          case 4:
-            controllers.foot_cc = value;
-            controllers.refresh();
-            break;
-          case 7: // Volume
-            vol = float(value) / 0x7f;
-            set_volume(vol, vol_left, vol_right);
-            break;
-          case 10: // Pan
-            if (value < 64)
-            {
-              vol_left = 1.0;
-              vol_right = float(value) / 0x40;
-              set_volume(vol, vol_left, vol_right);
-            }
-            else if (value > 64)
-            {
-              vol_left = float(0x7f - value) / 0x40;
-              vol_right = 1.0;
-              set_volume(vol, vol_left, vol_right);
-            }
-            else
-            {
-              vol_left = 1.0;
-              vol_right = 1.0;
-              set_volume(vol, vol_left, vol_right);
-            }
-            break;
-          case 32: // BankSelect LSB
-            bank = data2;
-            break;
-          case 64:
-            sustain = value > 63;
-            if (!sustain) {
-              for (uint8_t note = 0; note < max_notes; note++) {
-                if (voices[note].sustained && !voices[note].keydown) {
-                  voices[note].dx7_note->keyup();
-                  voices[note].sustained = false;
-                }
-              }
-            }
-            break;
-          case 120:
-            panic();
-            return (true);
-            break;
-          case 121:
-            resetControllers();
-            return (true);
-            break;
-          case 123:
-            notesOff();
-            return (true);
-            break;
-          case 126:
-            setMonoMode(true);
-            return (true);
-            break;
-          case 127:
-            setMonoMode(false);
-            return (true);
-            break;
-        }
-        break;
-      }
-
-    case 0xc0 : // ProgramChange
-      load_sysex(bank, data1);
-      break;
-
-    // channel aftertouch
-    case 0xd0 :
-      controllers.aftertouch_cc = data1;
-      controllers.refresh();
-      break;
-    // pitchbend
-    case 0xe0 :
-      controllers.values_[kControllerPitch] = data1 | (data2 << 7);
-      break;
-
-    default:
-      break;
-  }
-
-  return (false);
-}
-
 void Dexed::keydown(uint8_t pitch, uint8_t velo) {
   if ( velo == 0 ) {
     keyup(pitch);
@@ -400,6 +287,7 @@ void Dexed::doRefreshVoice(void)
 {
   refreshVoice = true;
 }
+
 void Dexed::setOPs(uint8_t ops)
 {
   controllers.opSwitch = ops;
@@ -530,6 +418,19 @@ void Dexed::setMonoMode(bool mode) {
   monoMode = mode;
 }
 
+void Dexed::setSustain(bool s)
+{
+  if (sustain == s)
+    return;
+
+  sustain = s;
+}
+
+bool Dexed::getSustain(void)
+{
+  return sustain;
+}
+
 void Dexed::panic(void) {
   for (uint8_t i = 0; i < MAX_ACTIVE_NOTES; i++)
   {
@@ -572,6 +473,11 @@ void Dexed::setMaxNotes(uint8_t n) {
     panic();
     controllers.refresh();
   }
+}
+
+uint8_t Dexed::getMaxNotes(void)
+{
+  return max_notes;
 }
 
 bool Dexed::loadSysexVoice(uint8_t* new_data)
@@ -680,7 +586,7 @@ bool Dexed::loadSysexVoice(uint8_t* new_data)
   //activate();
 
   strncpy(voice_name, (char *)&data[145], sizeof(voice_name) - 1);
-  
+
 #ifdef DEBUG
   //char voicename[11];
   //memset(voicename, 0, sizeof(voicename));

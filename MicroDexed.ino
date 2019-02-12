@@ -116,10 +116,6 @@ uint8_t effect_delay_volume = 0;
 bool effect_delay_sync = 0;
 elapsedMicros fill_audio_buffer;
 
-#ifdef MASTER_KEY_MIDI
-bool master_key_enabled = false;
-#endif
-
 #ifdef SHOW_CPU_LOAD_MSEC
 elapsedMillis cpu_mem_millis;
 #endif
@@ -359,7 +355,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity)
 {
   if (checkMidiChannel(inChannel))
   {
-    ;
+    dexed->keydown(inNumber, inVelocity);
   }
 }
 
@@ -367,15 +363,119 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity)
 {
   if (checkMidiChannel(inChannel))
   {
-    ;
+    dexed->keyup(inNumber);
   }
 }
 
-void handleControlChange(byte inChannel, byte inData1, byte inData2)
+void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
 {
   if (checkMidiChannel(inChannel))
   {
-    ;
+    switch (inCtrl) {
+      case 0: // ignore BankSelect MSB
+        break;
+      case 1:
+        dexed->controllers.modwheel_cc = inValue;
+        dexed->controllers.refresh();
+        break;
+      case 2:
+        dexed->controllers.breath_cc = inValue;
+        dexed->controllers.refresh();
+        break;
+      case 4:
+        dexed->controllers.foot_cc = inValue;
+        dexed->controllers.refresh();
+        break;
+      case 7: // Volume
+        vol = float(inValue) / 0x7f;
+        set_volume(vol, vol_left, vol_right);
+        break;
+      case 10: // Pan
+        if (inValue < 64)
+        {
+          vol_left = 1.0;
+          vol_right = float(inValue) / 0x40;
+          set_volume(vol, vol_left, vol_right);
+        }
+        else if (inValue > 64)
+        {
+          vol_left = float(0x7f - inValue) / 0x40;
+          vol_right = 1.0;
+          set_volume(vol, vol_left, vol_right);
+        }
+        else
+        {
+          vol_left = 1.0;
+          vol_right = 1.0;
+          set_volume(vol, vol_left, vol_right);
+        }
+        break;
+      case 32: // BankSelect LSB
+        bank = inValue;
+        break;
+      case 64:
+        dexed->setSustain(inValue > 63);
+        if (!dexed->getSustain()) {
+          for (uint8_t note = 0; note < dexed->getMaxNotes(); note++) {
+            if (dexed->voices[note].sustained && !dexed->voices[note].keydown) {
+              dexed->voices[note].dx7_note->keyup();
+              dexed->voices[note].sustained = false;
+            }
+          }
+        }
+        break;
+      case 0x66:  // CC 102: filter frequency
+        effect_filter_frq = map(inValue, 0, 127, 0, ENC_FILTER_FRQ_STEPS);
+        if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
+        {
+          // turn "off" filter
+          mixer1.gain(0, 0.0); // filtered signal off
+          mixer1.gain(3, 1.0); // original signal on
+        }
+        else
+        {
+          // turn "on" filter
+          mixer1.gain(0, 1.0); // filtered signal on
+          mixer1.gain(3, 0.0); // original signal off
+        }
+        filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
+        break;
+      case 0x67:  // CC 103: filter resonance
+        effect_filter_resonance = map(inValue, 0, 127, 0, ENC_FILTER_RES_STEPS);
+        filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
+        break;
+      case 0x68:  // CC 104: filter octave
+        effect_filter_octave = map(inValue, 0, 127, 0, ENC_FILTER_OCT_STEPS);
+        filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
+        break;
+      case 0x69:  // CC 105: delay time
+        effect_delay_time = map(inValue, 0, 127, 0, ENC_DELAY_TIME_STEPS);
+        delay1.delay(0, mapfloat(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
+        break;
+      case 0x6A:  // CC 106: delay feedback
+        effect_delay_feedback = map(inValue, 0, 127, 0, ENC_DELAY_FB_STEPS);
+        mixer1.gain(1, mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
+        break;
+      case 0x6B:  // CC 107: delay volume
+        effect_delay_volume = map(inValue, 0, 127, 0, ENC_DELAY_VOLUME_STEPS);
+        mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delay tap1 signal (with added feedback)
+        break;
+      case 120:
+        dexed->panic();
+        break;
+      case 121:
+        dexed->resetControllers();
+        break;
+      case 123:
+        dexed->notesOff();
+        break;
+      case 126:
+        dexed->setMonoMode(true);
+        break;
+      case 127:
+        dexed->setMonoMode(false);
+        break;
+    }
   }
 }
 
@@ -396,14 +496,68 @@ void handleProgramChange(byte inChannel, byte inProgram)
   ;
 }
 
-void handleSystemExclusive(byte *data, uint len)
+void handleSystemExclusive(byte *sysex, uint len)
 {
-  handle_sysex_parameter(data, len);
-}
+  if (sysex[1] != 0x43) // check for Yamaha sysex
+  {
+#ifdef DEBUG
+    Serial.println(F("E: SysEx vendor not Yamaha."));
+#endif
+    return;
+  }
 
-void handleSystemExclusiveChunk(const byte *data, uint16_t len, bool last)
-{
-  ;
+  // parse parameter change
+  if (len == 7)
+  {
+    if ((sysex[3] & 0x7c) != 0 || (sysex[3] & 0x7c) != 2)
+    {
+#ifdef DEBUG
+      Serial.println(F("E: Not a SysEx parameter or function parameter change."));
+#endif
+      return;
+    }
+    if (sysex[6] != 0xf7)
+    {
+#ifdef DEBUG
+      Serial.println(F("E: SysEx end status byte not detected."));
+#endif
+      return;
+    }
+    if ((sysex[3] & 0x7c) == 0)
+    {
+      dexed->data[sysex[4]] = sysex[5]; // set parameter
+      dexed->doRefreshVoice();
+    }
+    else
+    {
+      dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set function parameter
+      dexed->controllers.values_[kControllerPitchRange] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE];
+      dexed->controllers.values_[kControllerPitchStep] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP];
+      dexed->controllers.wheel.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE]);
+      dexed->controllers.wheel.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN]);
+      dexed->controllers.foot.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE]);
+      dexed->controllers.foot.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN]);
+      dexed->controllers.breath.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE]);
+      dexed->controllers.breath.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN]);
+      dexed->controllers.at.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE]);
+      dexed->controllers.at.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN]);
+      dexed->controllers.masterTune = (dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE] * 0x4000 << 11) * (1.0 / 12);
+      dexed->controllers.refresh();
+    }
+#ifdef DEBUG
+    Serial.print(F("SysEx"));
+    if ((sysex[3] & 0x7c) == 0)
+      Serial.print(F(" function"));
+    Serial.print(F(" parameter "));
+    Serial.print(sysex[4], DEC);
+    Serial.print(F(" = "));
+    Serial.println(sysex[5], DEC);
+#endif
+  }
+#ifdef DEBUG
+  else
+    Serial.println(F("E: SysEx parameter length wrong."));
+#endif
 }
 
 void handleTimeCodeQuarterFrame(byte data)
@@ -428,7 +582,21 @@ void handleTuneRequest(void)
 
 void handleClock(void)
 {
-  ;
+  midi_timing_counter++;
+  if (midi_timing_counter % 24 == 0)
+  {
+    midi_timing_quarter = midi_timing_timestep;
+    midi_timing_counter = 0;
+    midi_timing_timestep = 0;
+    // Adjust delay control here
+#ifdef DEBUG
+    Serial.print(F("MIDI Timing: "));
+    Serial.print(60000 / midi_timing_quarter, DEC);
+    Serial.print(F("bpm ("));
+    Serial.print(midi_timing_quarter, DEC);
+    Serial.println(F("ms per quarter)"));
+#endif
+  }
 }
 
 void handleStart(void)
@@ -453,12 +621,12 @@ void handleActiveSensing(void)
 
 void handleSystemReset(void)
 {
-  ;
-}
-
-void handleRealTimeSystem(void)
-{
-  ;
+#ifdef DEBUG
+  Serial.println(F("MIDI SYSEX RESET"));
+#endif
+  dexed->notesOff();
+  dexed->panic();
+  dexed->resetControllers();
 }
 
 bool checkMidiChannel(byte inChannel)
@@ -481,241 +649,6 @@ bool checkMidiChannel(byte inChannel)
   }
   return (true);
 }
-
-#ifdef MASTER_KEY_MIDI
-bool handle_master_key(uint8_t data)
-{
-  int8_t num = num_key_base_c(data);
-
-#ifdef DEBUG
-  Serial.print(F("Master-Key: "));
-  Serial.println(num, DEC);
-#endif
-
-  if (num > 0)
-  {
-    // a white key!
-    if (num <= 32)
-    {
-      if (load_sysex(bank, num))
-      {
-#ifdef DEBUG
-        Serial.print(F("Loading voice number "));
-        Serial.println(num, DEC);
-#endif
-        eeprom_write(EEPROM_UPDATE_VOICE);
-#ifdef I2C_DISPLAY
-        lcd.show(1, 0, 2, voice + 1);
-        lcd.show(1, 2, 1, " ");
-        lcd.show(1, 3, 10, voice_names[voice]);
-#endif
-      }
-#ifdef DEBUG
-      else
-      {
-        Serial.print(F("E: cannot load voice number "));
-        Serial.println(num, DEC);
-      }
-#endif
-    }
-    return (true);
-  }
-  else
-  {
-    // a black key!
-    num = abs(num);
-    if (num <= 10)
-    {
-      set_volume(float(num * 0.1), vol_left, vol_right);
-    }
-    else if (num > 10 && num <= 20)
-    {
-      bank = num - 10;
-#ifdef DEBUG
-      Serial.print(F("Bank switch to: "));
-      Serial.println(bank, DEC);
-#endif
-      eeprom_write(EEPROM_UPDATE_BANK);
-#ifdef I2C_DISPLAY
-      if (get_voice_names_from_bank(bank))
-      {
-        strip_extension(bank_names[bank], bank_name);
-        lcd.show(0, 0, 2, bank);
-        lcd.show(0, 2, 1, " ");
-        lcd.show(0, 3, 10, bank_name);
-      }
-      else
-      {
-        lcd.show(0, 0, 2, bank);
-        lcd.show(0, 2, 10, " *ERROR*");
-      }
-#endif
-      return (true);
-    }
-  }
-  return (false);
-}
-#endif
-
-bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
-{
-  bool ret = false;
-
-  // check for MIDI channel
-  if (midi_channel != MIDI_CHANNEL_OMNI)
-  {
-    uint8_t c = type & 0x0f;
-    if (c != midi_channel - 1)
-    {
-#ifdef DEBUG
-      Serial.print(F("Ignoring MIDI data on channel "));
-      Serial.print(c);
-      Serial.print(F("(listening on "));
-      Serial.print(midi_channel);
-      Serial.println(F(")"));
-#endif
-      return (false);
-    }
-  }
-
-  // now throw away the MIDI channel information
-  type &= 0xf0;
-
-#ifdef MASTER_KEY_MIDI
-  if (type == 0x80 && data1 == MASTER_KEY_MIDI) // Master key released
-  {
-    master_key_enabled = false;
-#ifdef DEBUG
-    Serial.println(F("Master key disabled"));
-#endif
-  }
-  else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
-  {
-    master_key_enabled = true;
-#ifdef DEBUG
-    Serial.println(F("Master key enabled"));
-#endif
-  }
-  else
-  {
-    if (master_key_enabled)
-    {
-      if (type == 0x80) // handle when note is released
-      {
-        dexed->notesOff();
-        handle_master_key(data1);
-      }
-    }
-    else
-#endif
-    {
-      if (type == 0xb0)
-      {
-        switch (data1)
-        {
-          case 0x66:  // CC 102: filter frequency
-            effect_filter_frq = map(data2, 0, 127, 0, ENC_FILTER_FRQ_STEPS);
-            if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
-            {
-              // turn "off" filter
-              mixer1.gain(0, 0.0); // filtered signal off
-              mixer1.gain(3, 1.0); // original signal on
-            }
-            else
-            {
-              // turn "on" filter
-              mixer1.gain(0, 1.0); // filtered signal on
-              mixer1.gain(3, 0.0); // original signal off
-            }
-            filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
-            break;
-          case 0x67:  // CC 103: filter resonance
-            effect_filter_resonance = map(data2, 0, 127, 0, ENC_FILTER_RES_STEPS);
-            filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
-            break;
-          case 0x68:  // CC 104: filter octave
-            effect_filter_octave = map(data2, 0, 127, 0, ENC_FILTER_OCT_STEPS);
-            filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
-            break;
-          case 0x69:  // CC 105: delay time
-            effect_delay_time = map(data2, 0, 127, 0, ENC_DELAY_TIME_STEPS);
-            delay1.delay(0, mapfloat(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
-            break;
-          case 0x6A:  // CC 106: delay feedback
-            effect_delay_feedback = map(data2, 0, 127, 0, ENC_DELAY_FB_STEPS);
-            mixer1.gain(1, mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
-            break;
-          case 0x6B:  // CC 107: delay volume
-            effect_delay_volume = map(data2, 0, 127, 0, ENC_DELAY_VOLUME_STEPS);
-            mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delay tap1 signal (with added feedback)
-            break;
-          default:
-            ret = dexed->processMidiMessage(type, data1, data2);
-            break;
-        }
-      }
-      else
-        ret = dexed->processMidiMessage(type, data1, data2);
-    }
-
-#ifdef MASTER_KEY_MIDI
-  }
-#endif
-  return (ret);
-}
-
-#ifdef MASTER_KEY_MIDI
-int8_t num_key_base_c(uint8_t midi_note)
-{
-  int8_t num = 0;
-
-  switch (midi_note % 12)
-  {
-    // positive numbers are white keys, negative black ones
-    case 0:
-      num = 1;
-      break;
-    case 1:
-      num = -1;
-      break;
-    case 2:
-      num = 2;
-      break;
-    case 3:
-      num = -2;
-      break;
-    case 4:
-      num = 3;
-      break;
-    case 5:
-      num = 4;
-      break;
-    case 6:
-      num = -3;
-      break;
-    case 7:
-      num = 5;
-      break;
-    case 8:
-      num = -4;
-      break;
-    case 9:
-      num = 6;
-      break;
-    case 10:
-      num = -5;
-      break;
-    case 11:
-      num = 7;
-      break;
-  }
-
-  if (num > 0)
-    return (num + (((midi_note - MASTER_NUM1) / 12) * 7));
-  else
-    return (num + ((((midi_note - MASTER_NUM1) / 12) * 5) * -1));
-}
-#endif
 
 void set_volume(float v, float vr, float vl)
 {
@@ -757,107 +690,6 @@ void set_volume(float v, float vr, float vl)
   volume_r.gain(pow(vr, 0.2));
   volume_l.gain(pow(vl, 0.2));
 #endif
-}
-
-void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
-{
-  if (sysex[0] != 240)
-  {
-    switch (sysex[0])
-    {
-      case 241: // MIDI Time Code Quarter Frame
-        break;
-      case 248: // Timing Clock (24 frames per quarter note)
-        midi_timing_counter++;
-        if (midi_timing_counter % 24 == 0)
-        {
-          midi_timing_quarter = midi_timing_timestep;
-          midi_timing_counter = 0;
-          midi_timing_timestep = 0;
-          // Adjust delay control here
-#ifdef DEBUG
-          Serial.print(F("MIDI Timing: "));
-          Serial.print(60000 / midi_timing_quarter, DEC);
-          Serial.print(F("bpm ("));
-          Serial.print(midi_timing_quarter, DEC);
-          Serial.println(F("ms per quarter)"));
-#endif
-        }
-        break;
-      case 255: // Reset To Power Up
-#ifdef DEBUG
-        Serial.println(F("MIDI SYSEX RESET"));
-#endif
-        dexed->notesOff();
-        dexed->panic();
-        dexed->resetControllers();
-        break;
-    }
-  }
-  else
-  {
-    if (sysex[1] != 0x43) // check for Yamaha sysex
-    {
-#ifdef DEBUG
-      Serial.println(F("E: SysEx vendor not Yamaha."));
-#endif
-      return;
-    }
-
-    // parse parameter change
-    if (len == 7)
-    {
-
-      if ((sysex[3] & 0x7c) != 0 || (sysex[3] & 0x7c) != 2)
-      {
-#ifdef DEBUG
-        Serial.println(F("E: Not a SysEx parameter or function parameter change."));
-#endif
-        return;
-      }
-      if (sysex[6] != 0xf7)
-      {
-#ifdef DEBUG
-        Serial.println(F("E: SysEx end status byte not detected."));
-#endif
-        return;
-      }
-      if ((sysex[3] & 0x7c) == 0)
-      {
-        dexed->data[sysex[4]] = sysex[5]; // set parameter
-        dexed->doRefreshVoice();
-      }
-      else
-      {
-        dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set function parameter
-        dexed->controllers.values_[kControllerPitchRange] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE];
-        dexed->controllers.values_[kControllerPitchStep] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP];
-        dexed->controllers.wheel.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE]);
-        dexed->controllers.wheel.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN]);
-        dexed->controllers.foot.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE]);
-        dexed->controllers.foot.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN]);
-        dexed->controllers.breath.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE]);
-        dexed->controllers.breath.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN]);
-        dexed->controllers.at.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE]);
-        dexed->controllers.at.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN]);
-        dexed->controllers.masterTune = (dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE] * 0x4000 << 11) * (1.0 / 12);
-        dexed->controllers.refresh();
-      }
-#ifdef DEBUG
-      Serial.print(F("SysEx"));
-      if ((sysex[3] & 0x7c) == 0)
-        Serial.print(F(" function"));
-      Serial.print(F(" parameter "));
-      Serial.print(sysex[4], DEC);
-      Serial.print(F(" = "));
-      Serial.println(sysex[5], DEC);
-#endif
-    }
-#ifdef DEBUG
-    else
-      Serial.println(F("E: SysEx parameter length wrong."));
-#endif
-  }
 }
 
 void initial_values_from_eeprom(void)
