@@ -54,7 +54,7 @@ void handleAfterTouch(byte inChannel, byte inPressure);
 void handlePitchBend(byte inChannel, int inPitch);
 void handleProgramChange(byte inChannel, byte inProgram);
 void handleSystemExclusive(byte *data, uint len);
-void handleSystemExclusiveChunk(const byte *data, uint len, bool last);
+//void handleSystemExclusiveChunk(const byte *data, uint len, bool last);
 void handleTimeCodeQuarterFrame(byte data);
 void handleAfterTouchPoly(byte inChannel, byte inNumber, byte inVelocity);
 void handleSongSelect(byte inSong);
@@ -65,7 +65,7 @@ void handleContinue(void);
 void handleStop(void);
 void handleActiveSensing(void);
 void handleSystemReset(void);
-void handleRealTimeSystem(void);
+//void handleRealTimeSystem(void);
 
 /*****************************************
    MIDI_DEVICE_DIN
@@ -246,7 +246,7 @@ void handleSystemExclusive_MIDI_DEVICE_DIN(byte *data, uint len)
 #endif
 }
 
-void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
+/* void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
 {
   handleSystemExclusiveChunk(data, len, last);
 #ifdef DEBUG
@@ -269,7 +269,7 @@ void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
   Serial.println();
 #endif
 #endif
-}
+} */
 
 void handleTimeCodeQuarterFrame_MIDI_DEVICE_DIN(byte data)
 {
@@ -521,7 +521,7 @@ void handleSystemReset_MIDI_DEVICE_DIN(void)
 #endif
 }
 
-void handlRealTimeSysteme_MIDI_DEVICE_DIN(byte inRealTime)
+/* void handlRealTimeSysteme_MIDI_DEVICE_DIN(byte inRealTime)
 {
   handleRealTimeSystem();
 #ifdef DEBUG
@@ -544,7 +544,7 @@ void handlRealTimeSysteme_MIDI_DEVICE_DIN(byte inRealTime)
   Serial.println();
 #endif
 #endif
-}
+} */
 #endif // MIDI_DEVICE_DIN
 
 /*****************************************
@@ -726,7 +726,7 @@ void handleSystemExclusive_MIDI_DEVICE_USB_HOST(byte *data, uint len)
 #endif
 }
 
-void handleSystemExclusiveChunk_MIDI_DEVICE_USB_HOST(byte *data, uint len, bool last)
+/* void handleSystemExclusiveChunk_MIDI_DEVICE_USB_HOST(byte *data, uint len, bool last)
 {
   handleSystemExclusiveChunk(data, len, last);
 #ifdef DEBUG
@@ -749,7 +749,7 @@ void handleSystemExclusiveChunk_MIDI_DEVICE_USB_HOST(byte *data, uint len, bool 
   Serial.println();
 #endif
 #endif
-}
+} */
 
 void handleTimeCodeQuarterFrame_MIDI_DEVICE_USB_HOST(midi::DataByte data)
 {
@@ -1000,7 +1000,8 @@ void handleSystemReset_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 }
-void handlRealTimeSysteme_MIDI_DEVICE_USB_HOST(midi::MidiType inRealTime)
+
+/* void handlRealTimeSysteme_MIDI_DEVICE_USB_HOST(midi::MidiType inRealTime)
 {
   handleRealTimeSystem();
 #ifdef DEBUG
@@ -1023,7 +1024,7 @@ void handlRealTimeSysteme_MIDI_DEVICE_USB_HOST(midi::MidiType inRealTime)
   Serial.println();
 #endif
 #endif
-}
+} */
 #endif // MIDI_DEVICE_USB_HOST
 
 /*****************************************
@@ -1205,7 +1206,7 @@ void handleSystemExclusive_MIDI_DEVICE_USB(byte *data, uint len)
 #endif
 }
 
-void handleSystemExclusiveChunk_MIDI_DEVICE_USB(byte *data, uint len, bool last)
+/* void handleSystemExclusiveChunk_MIDI_DEVICE_USB(byte *data, uint len, bool last)
 {
   handleSystemExclusiveChunk(data, len, last);
 #ifdef DEBUG
@@ -1228,7 +1229,7 @@ void handleSystemExclusiveChunk_MIDI_DEVICE_USB(byte *data, uint len, bool last)
   Serial.println();
 #endif
 #endif
-}
+} */
 
 void handleTimeCodeQuarterFrame_MIDI_DEVICE_USB(midi::DataByte data)
 {
@@ -1479,7 +1480,8 @@ void handleSystemReset_MIDI_DEVICE_USB(void)
 #endif
 #endif
 }
-void handleRealTimeSystem_MIDI_DEVICE_USB(byte inRealTime)
+
+/* void handleRealTimeSystem_MIDI_DEVICE_USB(byte inRealTime)
 {
   handleRealTimeSystem();
 #ifdef DEBUG
@@ -1502,7 +1504,7 @@ void handleRealTimeSystem_MIDI_DEVICE_USB(byte inRealTime)
   Serial.println();
 #endif
 #endif
-}
+} */
 #endif // MIDI_DEVICE_USB
 
 /*****************************************
@@ -1542,7 +1544,7 @@ void setup_midi_devices(void)
   midi_usb.setHandleNoteOff(handleNoteOff_MIDI_DEVICE_USB_HOST);
   midi_usb.setHandleControlChange(handleControlChange_MIDI_DEVICE_USB_HOST);
   midi_usb.setHandleAfterTouchChannel(handleAfterTouch_MIDI_DEVICE_USB_HOST);
-  //midi_usb.setHandlePitchBend(handlePitchBend_MIDI_DEVICE_USB_HOST);
+  midi_usb.setHandlePitchChange(handlePitchBend_MIDI_DEVICE_USB_HOST);
   midi_usb.setHandleProgramChange(handleProgramChange_MIDI_DEVICE_USB_HOST);
   midi_usb.setHandleSystemExclusive(handleSystemExclusive_MIDI_DEVICE_USB_HOST);
   //midi_usb.setHandleSystemExclusiveChunk(handleSystemExclusiveChunk_MIDI_DEVICE_USB_HOST);

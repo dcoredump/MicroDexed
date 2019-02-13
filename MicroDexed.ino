@@ -274,12 +274,6 @@ void setup()
   Serial.print(1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES));
   Serial.println(F("ms)"));
 
-#ifdef TEST_NOTE
-  Serial.println(F("MIDI test enabled"));
-  sched_note_on.begin(note_on, 2000000);
-  sched_note_off.begin(note_off, 6333333);
-#endif
-
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
 #endif
@@ -291,20 +285,6 @@ void setup()
 
   AudioInterrupts();
   Serial.println(F("<setup end>"));
-
-#ifdef TEST_NOTE
-  //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_DEP] = 99;           // full pitch mod depth
-  //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_SENS] = 99;          // full pitch mod sense
-  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_MODWHEEL_ASSIGN] = 7;   // mod wheel assign all
-  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_FOOTCTRL_ASSIGN] = 7;   // foot ctrl assign all
-  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_BREATHCTRL_ASSIGN] = 7; // breath ctrl assign all
-  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+AT_ASSIGN] = 7;               // at ctrl assign all
-  //queue_midi_event(0xb0, 1, 99); // test mod wheel
-  //queue_midi_event(0xb0, 2, 99); // test breath ctrl
-  //queue_midi_event(0xb0, 4, 99); // test food switch
-  //queue_midi_event(0xd0, 4, 99); // test at
-  //queue_midi_event(0xe0, 0xff, 0xff); // test pitch bend
-#endif
 }
 
 void loop()
@@ -387,7 +367,12 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
   if (checkMidiChannel(inChannel))
   {
     switch (inCtrl) {
-      case 0: // ignore BankSelect MSB
+      case 0:
+        if (inValue < MAX_BANKS)
+        {
+          bank = inValue;
+          handle_ui();
+        }
         break;
       case 1:
         dexed->controllers.modwheel_cc = inValue;
@@ -454,26 +439,32 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           mixer1.gain(3, 0.0); // original signal off
         }
         filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
+        handle_ui();
         break;
       case 0x67:  // CC 103: filter resonance
         effect_filter_resonance = map(inValue, 0, 127, 0, ENC_FILTER_RES_STEPS);
         filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
+        handle_ui();
         break;
       case 0x68:  // CC 104: filter octave
         effect_filter_octave = map(inValue, 0, 127, 0, ENC_FILTER_OCT_STEPS);
         filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
+        handle_ui();
         break;
       case 0x69:  // CC 105: delay time
         effect_delay_time = map(inValue, 0, 127, 0, ENC_DELAY_TIME_STEPS);
         delay1.delay(0, mapfloat(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
+        handle_ui();
         break;
       case 0x6A:  // CC 106: delay feedback
         effect_delay_feedback = map(inValue, 0, 127, 0, ENC_DELAY_FB_STEPS);
         mixer1.gain(1, mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
+        handle_ui();
         break;
       case 0x6B:  // CC 107: delay volume
         effect_delay_volume = map(inValue, 0, 127, 0, ENC_DELAY_VOLUME_STEPS);
         mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delay tap1 signal (with added feedback)
+        handle_ui();
         break;
       case 120:
         dexed->panic();
@@ -494,21 +485,24 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
   }
 }
 
-
-
 void handleAfterTouch(byte inChannel, byte inPressure)
 {
-  ;
+  dexed->controllers.aftertouch_cc = inPressure;
+  dexed->controllers.refresh();
 }
 
 void handlePitchBend(byte inChannel, int inPitch)
 {
-  ;
+  dexed->controllers.values_[kControllerPitch] = inPitch;
 }
 
 void handleProgramChange(byte inChannel, byte inProgram)
 {
-  ;
+  if (inProgram < MAX_VOICES)
+  {
+    load_sysex(bank, inProgram);
+    handle_ui();
+  }
 }
 
 void handleSystemExclusive(byte *sysex, uint len)
@@ -605,7 +599,7 @@ void handleClock(void)
     midi_timing_timestep = 0;
     // Adjust delay control here
 #ifdef DEBUG
-    Serial.print(F("MIDI Timing: "));
+    Serial.print(F("MIDI Clock: "));
     Serial.print(60000 / midi_timing_quarter, DEC);
     Serial.print(F("bpm ("));
     Serial.print(midi_timing_quarter, DEC);
@@ -987,56 +981,5 @@ void show_patch(void)
   }
 
   Serial.println();
-}
-#endif
-
-#ifdef TEST_NOTE
-void note_on(void)
-{
-  randomSeed(analogRead(A0));
-  queue_midi_event(0x90, TEST_NOTE, random(TEST_VEL_MIN, TEST_VEL_MAX));           // 1
-  queue_midi_event(0x90, TEST_NOTE + 5, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 2
-  queue_midi_event(0x90, TEST_NOTE + 8, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 3
-  queue_midi_event(0x90, TEST_NOTE + 12, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 4
-  queue_midi_event(0x90, TEST_NOTE + 17, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 5
-  queue_midi_event(0x90, TEST_NOTE + 20, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 6
-  queue_midi_event(0x90, TEST_NOTE + 24, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 7
-  queue_midi_event(0x90, TEST_NOTE + 29, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 8
-  queue_midi_event(0x90, TEST_NOTE + 32, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 9
-  queue_midi_event(0x90, TEST_NOTE + 37, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 10
-  queue_midi_event(0x90, TEST_NOTE + 40, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 11
-  queue_midi_event(0x90, TEST_NOTE + 46, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 12
-  queue_midi_event(0x90, TEST_NOTE + 49, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 13
-  queue_midi_event(0x90, TEST_NOTE + 52, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 14
-  queue_midi_event(0x90, TEST_NOTE + 57, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 15
-  queue_midi_event(0x90, TEST_NOTE + 60, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 16
-}
-
-void note_off(void)
-{
-  queue_midi_event(0x80, TEST_NOTE, 0);           // 1
-  queue_midi_event(0x80, TEST_NOTE + 5, 0);       // 2
-  queue_midi_event(0x80, TEST_NOTE + 8, 0);       // 3
-  queue_midi_event(0x80, TEST_NOTE + 12, 0);      // 4
-  queue_midi_event(0x80, TEST_NOTE + 17, 0);      // 5
-  queue_midi_event(0x80, TEST_NOTE + 20, 0);      // 6
-  queue_midi_event(0x80, TEST_NOTE + 24, 0);      // 7
-  queue_midi_event(0x80, TEST_NOTE + 29, 0);      // 8
-  queue_midi_event(0x80, TEST_NOTE + 32, 0);      // 9
-  queue_midi_event(0x80, TEST_NOTE + 37, 0);      // 10
-  queue_midi_event(0x80, TEST_NOTE + 40, 0);      // 11
-  queue_midi_event(0x80, TEST_NOTE + 46, 0);      // 12
-  queue_midi_event(0x80, TEST_NOTE + 49, 0);      // 13
-  queue_midi_event(0x80, TEST_NOTE + 52, 0);      // 14
-  queue_midi_event(0x80, TEST_NOTE + 57, 0);      // 15
-  queue_midi_event(0x80, TEST_NOTE + 60, 0);      // 16
-
-  bool success = load_sysex(DEFAULT_SYSEXBANK, (++_voice_counter) - 1);
-  if (success == false)
-#ifdef DEBUG
-    Serial.println(F("E: Cannot load SYSEX data"));
-#endif
-  else
-    show_patch();
 }
 #endif
