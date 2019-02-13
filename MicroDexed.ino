@@ -350,7 +350,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity)
 {
   if (checkMidiChannel(inChannel))
   {
-    dexed->keydown(inNumber, inVelocity);
+    dexed->keydown(inNumber+12, inVelocity);
   }
 }
 
@@ -358,7 +358,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity)
 {
   if (checkMidiChannel(inChannel))
   {
-    dexed->keyup(inNumber);
+    dexed->keyup(inNumber+12);
   }
 }
 

@@ -59,7 +59,7 @@
 //*************************************************************************************************
 //* DEXED AND EFECTS SETTINGS
 //*************************************************************************************************
-#define DEXED_ENGINE DEXED_ENGINE_MODERN # DEXED_ENGINE_MARKI // DEXED_ENGINE_OPL
+#define DEXED_ENGINE DEXED_ENGINE_MODERN // DEXED_ENGINE_MARKI // DEXED_ENGINE_OPL
 
 // EFFECTS
 #define FILTER_MAX_FREQ 10000
