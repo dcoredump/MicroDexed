@@ -76,7 +76,7 @@ Dexed::Dexed(int rate)
 
   sustain = false;
 
-  setEngineType(DEXED_ENGINE_MODERN);
+  setEngineType(DEXED_ENGINE);
 }
 
 Dexed::~Dexed()
