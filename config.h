@@ -43,7 +43,8 @@
 #define MIDI_DEVICE_USB_HOST 1
 
 // AUDIO
-//#define TEENSY_AUDIO_BOARD 1
+// If nothing is defined PT8211 is used as audio output device!
+#define TEENSY_AUDIO_BOARD 1
 //#define TGA_AUDIO_BOARD 
 
 //*************************************************************************************************
@@ -171,30 +172,19 @@
 #ifdef MIDI_DEVICE_USB
 #define USBCON 1
 #endif
-#if !defined(__MK66FX1M0__) // check for Teensy-3.6
-#define MAX_NOTES 11        // No? 
-#undef USE_ONBOARD_USB_HOST
-#else
-#define MAX_NOTES 16        // Yes
-#endif
-
-// MIDI
-#ifdef MIDI_DEVICE_USB
-#define USBCON 1
-#endif
-#if defined(__MK66FX1M0__)
+#if defined(__MK66FX1M0__) // Teensy-3.6
 // Teensy-3.6 settings
 #define MIDI_DEVICE_USB_HOST 1
+#define MAX_NOTES 16
 #else
 // Teensy-3.5 settings
 #undef MIDI_DEVICE_USB_HOST
-#endif
-// Engine
-#if defined(__MK66FX1M0__)
-// Teensy-3.6 settings
-#define MAX_NOTES 16
-#else
 #define MAX_NOTES 11
+#endif
+
+// Audio
+#ifdef TGA_AUDIO_BOARD
+#define REDUCE_LOUDNESS 2
 #endif
 
 // Some optimizations

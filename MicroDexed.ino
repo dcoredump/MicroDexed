@@ -54,35 +54,40 @@ AudioFilterStateVariable filter1;
 AudioEffectDelay         delay1;
 AudioMixer4              mixer1;
 AudioMixer4              mixer2;
-AudioConnection          patchCord1(queue1, peak1);
-AudioConnection          patchCord2(queue1, 0, filter1, 0);
-AudioConnection          patchCord3(filter1, 0, delay1, 0);
-AudioConnection          patchCord4(filter1, 0, mixer1, 0);
-AudioConnection          patchCord5(filter1, 0, mixer2, 0);
-AudioConnection          patchCord6(delay1, 0, mixer1, 1);
-AudioConnection          patchCord7(delay1, 0, mixer2, 2);
-AudioConnection          patchCord8(mixer1, delay1);
-AudioConnection          patchCord9(queue1, 0, mixer1, 3); // for disabling the filter
-AudioConnection          patchCord10(mixer1, 0, mixer2, 1);
-#if defined(TEENSY_AUDIO_BOARD) || defined(TGA_AUDIO_BOARD)
+AudioConnection          patchCord0(queue1, peak1);
+AudioConnection          patchCord1(queue1, 0, filter1, 0);
+AudioConnection          patchCord2(filter1, 0, delay1, 0);
+AudioConnection          patchCord3(filter1, 0, mixer1, 0);
+AudioConnection          patchCord4(filter1, 0, mixer2, 0);
+AudioConnection          patchCord5(delay1, 0, mixer1, 1);
+AudioConnection          patchCord6(delay1, 0, mixer2, 2);
+AudioConnection          patchCord7(mixer1, delay1);
+AudioConnection          patchCord8(queue1, 0, mixer1, 3); // for disabling the filter
+AudioConnection          patchCord9(mixer1, 0, mixer2, 1);
+#if defined(TEENSY_AUDIO_BOARD)
 AudioOutputI2S           i2s1;
-AudioConnection          patchCord11(mixer2, 0, i2s1, 0);
-AudioConnection          patchCord12(mixer2, 0, i2s1, 1);
-#ifdef TEENSY_AUDIO_BOARD
+AudioConnection          patchCord110(mixer2, 0, i2s1, 0);
+AudioConnection          patchCord111(mixer2, 0, i2s1, 1);
 AudioControlSGTL5000     sgtl5000_1;
-#else
+#elif defined(TGA_AUDIO_BOARD)
+AudioOutputI2S           i2s1;
+AudioAmplifier           volume_r;
+AudioAmplifier           volume_l;
+AudioConnection          patchCord10(mixer2, volume_r);
+AudioConnection          patchCord11(mixer2, volume_l);
+AudioConnection          patchCord12(volume_r, 0, i2s1, 1);
+AudioConnection          patchCord13(volume_l, 0, i2s1, 0);
 AudioControlWM8731master wm8731_1;
-#endif
 #else
 AudioOutputPT8211        pt8211_1;
 AudioAmplifier           volume_master;
 AudioAmplifier           volume_r;
 AudioAmplifier           volume_l;
-AudioConnection          patchCord11(mixer2, 0, volume_master, 0);
-AudioConnection          patchCord12(volume_master, volume_r);
-AudioConnection          patchCord13(volume_master, volume_l);
-AudioConnection          patchCord14(volume_r, 0, pt8211_1, 0);
-AudioConnection          patchCord15(volume_l, 0, pt8211_1, 1);
+AudioConnection          patchCord10(mixer2, 0, volume_master, 0);
+AudioConnection          patchCord11(volume_master, volume_r);
+AudioConnection          patchCord12(volume_master, volume_l);
+AudioConnection          patchCord13(volume_r, 0, pt8211_1, 0);
+AudioConnection          patchCord14(volume_l, 0, pt8211_1, 1);
 #endif
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
