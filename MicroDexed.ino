@@ -350,7 +350,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity)
 {
   if (checkMidiChannel(inChannel))
   {
-    dexed->keydown(inNumber+12, inVelocity);
+    dexed->keydown(inNumber, inVelocity);
   }
 }
 
@@ -358,7 +358,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity)
 {
   if (checkMidiChannel(inChannel))
   {
-    dexed->keyup(inNumber+12);
+    dexed->keyup(inNumber);
   }
 }
 
@@ -424,7 +424,7 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           }
         }
         break;
-      case 0x66:  // CC 102: filter frequency
+      case 102:  // CC 102: filter frequency
         effect_filter_frq = map(inValue, 0, 127, 0, ENC_FILTER_FRQ_STEPS);
         if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
         {
@@ -441,27 +441,27 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
         filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
         handle_ui();
         break;
-      case 0x67:  // CC 103: filter resonance
+      case 103:  // CC 103: filter resonance
         effect_filter_resonance = map(inValue, 0, 127, 0, ENC_FILTER_RES_STEPS);
         filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
         handle_ui();
         break;
-      case 0x68:  // CC 104: filter octave
+      case 104:  // CC 104: filter octave
         effect_filter_octave = map(inValue, 0, 127, 0, ENC_FILTER_OCT_STEPS);
         filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
         handle_ui();
         break;
-      case 0x69:  // CC 105: delay time
+      case 105:  // CC 105: delay time
         effect_delay_time = map(inValue, 0, 127, 0, ENC_DELAY_TIME_STEPS);
         delay1.delay(0, mapfloat(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
         handle_ui();
         break;
-      case 0x6A:  // CC 106: delay feedback
+      case 106:  // CC 106: delay feedback
         effect_delay_feedback = map(inValue, 0, 127, 0, ENC_DELAY_FB_STEPS);
         mixer1.gain(1, mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
         handle_ui();
         break;
-      case 0x6B:  // CC 107: delay volume
+      case 107:  // CC 107: delay volume
         effect_delay_volume = map(inValue, 0, 127, 0, ENC_DELAY_VOLUME_STEPS);
         mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delay tap1 signal (with added feedback)
         handle_ui();
@@ -493,7 +493,7 @@ void handleAfterTouch(byte inChannel, byte inPressure)
 
 void handlePitchBend(byte inChannel, int inPitch)
 {
-  dexed->controllers.values_[kControllerPitch] = inPitch;
+  dexed->controllers.values_[kControllerPitch] = inPitch + 0x2000; // -8192 to +8191 --> 0 to 16383
 }
 
 void handleProgramChange(byte inChannel, byte inProgram)

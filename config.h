@@ -182,6 +182,7 @@
 #undef MIDI_DEVICE_USB_HOST
 #define MAX_NOTES 11
 #endif
+#define TRANSPOSE_FIX 24
 
 // Audio
 #ifdef TGA_AUDIO_BOARD

@@ -244,7 +244,7 @@ void Dexed::keydown(uint8_t pitch, uint8_t velo) {
 }
 
 void Dexed::keyup(uint8_t pitch) {
-  pitch += data[144] - 24;
+  pitch += data[144] - TRANSPOSE_FIX;
 
   uint8_t note;
   for (note = 0; note < max_notes; ++note) {
