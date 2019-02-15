@@ -534,6 +534,7 @@ void handleSystemExclusive(byte *sysex, uint len)
     }
     if ((sysex[3] & 0x7c) == 0)
     {
+      dexed->notesOff();
       dexed->data[sysex[4]] = sysex[5]; // set parameter
       dexed->doRefreshVoice();
     }
