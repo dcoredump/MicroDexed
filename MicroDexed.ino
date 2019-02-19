@@ -5,7 +5,7 @@
    (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
-   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+   (c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -101,8 +101,7 @@ uint8_t bank = 0;
 uint8_t max_loaded_banks = 0;
 uint8_t voice = 0;
 float vol = VOLUME;
-float vol_right = 1.0;
-float vol_left = 1.0;
+float pan = 0.5f;
 char bank_name[BANK_NAME_LEN];
 char voice_name[VOICE_NAME_LEN];
 char bank_names[MAX_BANKS][BANK_NAME_LEN];
@@ -156,9 +155,11 @@ void setup()
 
   delay(220);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
-  Serial.println(F("(c)2018 H. Wirtz <wirtz@parasitstudio.de>"));
+  Serial.println(F("(c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>"));
   Serial.println(F("https://github.com/dcoredump/MicroDexed"));
   Serial.println(F("<setup start>"));
+
+  //init_eeprom();
   initial_values_from_eeprom();
 
   setup_midi_devices();
@@ -185,7 +186,7 @@ void setup()
   Serial.println(F("PT8211 enabled."));
 #endif
 
-  set_volume(vol, vol_left, vol_right);
+  set_volume(vol, pan);
 
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
@@ -366,6 +367,13 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
 {
   if (checkMidiChannel(inChannel))
   {
+#ifdef DEBUG
+    Serial.print(F("CC#"));
+    Serial.print(inCtrl, DEC);
+    Serial.print(F(":"));
+    Serial.println(inValue, DEC);
+#endif
+
     switch (inCtrl) {
       case 0:
         if (inValue < MAX_BANKS)
@@ -388,27 +396,11 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
         break;
       case 7: // Volume
         vol = float(inValue) / 0x7f;
-        set_volume(vol, vol_left, vol_right);
+        set_volume(vol, pan);
         break;
       case 10: // Pan
-        if (inValue < 64)
-        {
-          vol_left = 1.0;
-          vol_right = float(inValue) / 0x40;
-          set_volume(vol, vol_left, vol_right);
-        }
-        else if (inValue > 64)
-        {
-          vol_left = float(0x7f - inValue) / 0x40;
-          vol_right = 1.0;
-          set_volume(vol, vol_left, vol_right);
-        }
-        else
-        {
-          vol_left = 1.0;
-          vol_right = 1.0;
-          set_volume(vol, vol_left, vol_right);
-        }
+        pan = float(inValue) / 128;
+        set_volume(vol, pan);
         break;
       case 32: // BankSelect LSB
         bank = inValue;
@@ -507,6 +499,18 @@ void handleProgramChange(byte inChannel, byte inProgram)
 
 void handleSystemExclusive(byte *sysex, uint len)
 {
+#ifdef DEBUG
+  Serial.print(F("SYSEX-Data["));
+  Serial.print(len, DEC);
+  Serial.print(F("]"));
+  for (uint8_t i = 0; i < len; i++)
+  {
+    Serial.print(F(" "));
+    Serial.print(sysex[i], DEC);
+  }
+  Serial.println();
+#endif
+
   if (sysex[1] != 0x43) // check for Yamaha sysex
   {
 #ifdef DEBUG
@@ -660,11 +664,10 @@ bool checkMidiChannel(byte inChannel)
   return (true);
 }
 
-void set_volume(float v, float vr, float vl)
+void set_volume(float v, float p)
 {
   vol = v;
-  vol_right = vr;
-  vol_left = vl;
+  pan = p;
 
 #ifdef DEBUG
   uint8_t tmp;
@@ -675,31 +678,28 @@ void set_volume(float v, float vr, float vl)
   Serial.print(tmp, DEC);
   Serial.print(F("/"));
   Serial.print(float(tmp) / UCHAR_MAX, DEC);
-  Serial.print(F("] VOL_L="));
-  Serial.print(vl, DEC);
+  Serial.print(F("] PAN="));
   Serial.print(F("["));
-  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR);
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_PAN_ADDR);
   Serial.print(tmp, DEC);
   Serial.print(F("/"));
-  Serial.print(float(tmp) / UCHAR_MAX, DEC);
-  Serial.print(F("] VOL_R="));
-  Serial.print(vr, DEC);
-  Serial.print(F("["));
-  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR);
-  Serial.print(tmp, DEC);
-  Serial.print(F("/"));
-  Serial.print(float(tmp) / UCHAR_MAX, DEC);
+  Serial.print(float(tmp) / SCHAR_MAX, DEC);
   Serial.println(F("]"));
 #endif
 
 #ifdef TEENSY_AUDIO_BOARD
-  //sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
-  sgtl5000_1.dacVolume(pow(vol * vol_left, 0.2), pow(vol * vol_right, 0.2));
+  sgtl5000_1.dacVolume(v * sinf(p * PI / 2), v * cosf(p * PI / 2));
 #else
-  volume_master.gain(pow(vol, 0.2));
-  volume_r.gain(pow(vr, 0.2));
-  volume_l.gain(pow(vl, 0.2));
+  volume_master.gain(v);
+  volume_r.gain(sinf(p * PI / 2));
+  volume_l.gain(cosf(p * PI / 2));
 #endif
+}
+
+// https://www.dr-lex.be/info-stuff/volumecontrols.html#table1
+inline float logvol(float x)
+{
+  return (0.001 * expf(6.908 * x));
 }
 
 void initial_values_from_eeprom(void)
@@ -718,16 +718,17 @@ void initial_values_from_eeprom(void)
 #ifdef DEBUG
     Serial.print(F(" - mismatch -> initializing EEPROM!"));
 #endif
-    eeprom_write(EEPROM_UPDATE_BANK & EEPROM_UPDATE_VOICE & EEPROM_UPDATE_VOL & EEPROM_UPDATE_VOL_R & EEPROM_UPDATE_VOL_L & EEPROM_UPDATE_MIDICHANNEL);
+    eeprom_write(EEPROM_UPDATE_BANK + EEPROM_UPDATE_VOICE + EEPROM_UPDATE_VOL + EEPROM_UPDATE_PAN + EEPROM_UPDATE_MIDICHANNEL);
   }
   else
   {
     bank = EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR);
     voice = EEPROM.read(EEPROM_OFFSET + EEPROM_VOICE_ADDR);
     vol = float(EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR)) / UCHAR_MAX;
-    vol_right = float(EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR)) / UCHAR_MAX;
-    vol_left = float(EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR)) / UCHAR_MAX;
+    pan = float(EEPROM.read(EEPROM_OFFSET + EEPROM_PAN_ADDR)) / SCHAR_MAX;
     midi_channel = EEPROM.read(EEPROM_OFFSET + EEPROM_MIDICHANNEL_ADDR);
+    if (midi_channel > 16)
+      midi_channel = MIDI_CHANNEL_OMNI;
   }
 #ifdef DEBUG
   Serial.println();
@@ -782,8 +783,8 @@ void eeprom_write(uint8_t status)
   if (eeprom_update_status != 0)
     autostore = 0;
 #ifdef DEBUG
-  Serial.print(F("Updating EEPROM to state to: "));
-  Serial.println(eeprom_update_status);
+  Serial.print(F("Updating EEPROM state to: "));
+  Serial.println(eeprom_update_status, DEC);
 #endif
 }
 
@@ -815,21 +816,13 @@ void eeprom_update(void)
 #endif
     eeprom_update_status &= ~EEPROM_UPDATE_VOL;
   }
-  else if (eeprom_update_status & EEPROM_UPDATE_VOL_R)
+  else if (eeprom_update_status & EEPROM_UPDATE_PAN)
   {
-    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
+    EEPROM.update(EEPROM_OFFSET + EEPROM_PAN_ADDR, uint8_t(pan * SCHAR_MAX));
 #ifdef DEBUG
-    Serial.println(F("Volume right written to EEPROM"));
+    Serial.println(F("Panorama written to EEPROM"));
 #endif
-    eeprom_update_status &= ~EEPROM_UPDATE_VOL_R;
-  }
-  else if (eeprom_update_status & EEPROM_UPDATE_VOL_L)
-  {
-    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
-#ifdef DEBUG
-    Serial.println(F("Volume left written to EEPROM"));
-#endif
-    eeprom_update_status &= ~EEPROM_UPDATE_VOL_L;
+    eeprom_update_status &= ~EEPROM_UPDATE_PAN;
   }
   else if (eeprom_update_status & EEPROM_UPDATE_MIDICHANNEL )
   {
@@ -853,6 +846,14 @@ void eeprom_update(void)
 
   if (eeprom_update_status == 0)
     eeprom_update_status |= EEPROM_UPDATE_CHECKSUM;
+}
+
+void init_eeprom(void)
+{
+  for (uint8_t i = 0; i < EEPROM_DATA_LENGTH; i++)
+  {
+    EEPROM.update(EEPROM_OFFSET + i, 0);
+  }
 }
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)

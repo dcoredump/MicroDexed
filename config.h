@@ -5,7 +5,7 @@
    (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
-   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+   (c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -142,29 +142,26 @@
 
 // EEPROM address
 #define EEPROM_OFFSET 0
-#define EEPROM_DATA_LENGTH 6
+#define EEPROM_DATA_LENGTH 5
 
-#define EEPROM_CRC32_ADDR EEPROM.length()-sizeof(uint32_t)
+#define EEPROM_CRC32_ADDR EEPROM.length()-sizeof(uint32_t)-33
 #define EEPROM_BANK_ADDR 0
 #define EEPROM_VOICE_ADDR 1
 #define EEPROM_MASTER_VOLUME_ADDR 2
-#define EEPROM_VOLUME_RIGHT_ADDR 3
-#define EEPROM_VOLUME_LEFT_ADDR 4
-#define EEPROM_MIDICHANNEL_ADDR 5
+#define EEPROM_PAN_ADDR 3
+#define EEPROM_MIDICHANNEL_ADDR 4
 
 #define EEPROM_UPDATE_BANK (1<<0)
 #define EEPROM_UPDATE_VOICE (1<<1)
 #define EEPROM_UPDATE_VOL (1<<2)
-#define EEPROM_UPDATE_VOL_R (1<<3)
-#define EEPROM_UPDATE_VOL_L (1<<4)
-#define EEPROM_UPDATE_MIDICHANNEL (1<<5)
+#define EEPROM_UPDATE_PAN (1<<3)
+#define EEPROM_UPDATE_MIDICHANNEL (1<<4)
 #define EEPROM_UPDATE_CHECKSUM (1<<7)
 
 #define MAX_BANKS 100
 #define MAX_VOICES 32 // voices per bank
 #define BANK_NAME_LEN 13 // FAT12 filenames (plus '\0')
 #define VOICE_NAME_LEN 11 // 10 (plus '\0')
-
 
 //*************************************************************************************************
 //* DO NO CHANGE ANYTHING BEYOND IF YOU DON'T KNOW WHAT YOU ARE DOING !!!
