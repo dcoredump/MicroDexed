@@ -1593,12 +1593,12 @@ void check_midi_devices(void)
 #ifdef MIDI_DEVICE_DIN
   midi_serial.read();
 #endif
+#ifdef MIDI_DEVICE_USB
+  midi_onboard_usb.read();
+#endif
 #ifdef MIDI_DEVICE_USB_HOST
   usb_host.Task();
   midi_usb.read();
-#endif
-#ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.read();
 #endif
 }
 #endif // MIDI_DEVICES_H

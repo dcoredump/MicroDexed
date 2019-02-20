@@ -351,6 +351,9 @@ void loop()
 #endif
 }
 
+/******************************************************************************
+ * MIDI MESSAGE HANDLER
+ ******************************************************************************/
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity)
 {
   if (checkMidiChannel(inChannel))
@@ -647,6 +650,10 @@ void handleSystemReset(void)
   dexed->resetControllers();
 }
 
+/******************************************************************************
+ * END OF MIDI MESSAGE HANDLER
+ ******************************************************************************/
+ 
 bool checkMidiChannel(byte inChannel)
 {
   // check for MIDI channel

@@ -84,7 +84,7 @@
 #define AUDIO_MEM 450
 #endif
 #define DELAY_MAX_TIME 1200.0
-#define REDUCE_LOUDNESS 0
+#define REDUCE_LOUDNESS 1
 #endif
 #define SAMPLE_RATE 44100
 
