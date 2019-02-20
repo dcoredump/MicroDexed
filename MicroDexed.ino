@@ -170,13 +170,17 @@ void setup()
 
 #ifdef TEENSY_AUDIO_BOARD
   sgtl5000_1.enable();
-  sgtl5000_1.dacVolumeRamp();
-  //sgtl5000_1.dacVolumeRampLinear();
+  //sgtl5000_1.dacVolumeRamp();
+  sgtl5000_1.dacVolumeRampLinear();
+  //sgtl5000_1.dacVolumeRampDisable();
   sgtl5000_1.unmuteHeadphone();
   sgtl5000_1.unmuteLineout();
   sgtl5000_1.autoVolumeDisable(); // turn off AGC
   sgtl5000_1.volume(1.0, 1.0);
   sgtl5000_1.lineOutLevel(31);
+  sgtl5000_1.audioPostProcessorEnable();
+  sgtl5000_1.autoVolumeControl(1, 1, 1, 0.9, 0.01, 0.05);
+  sgtl5000_1.autoVolumeEnable();
   Serial.println(F("Teensy-Audio-Board enabled."));
 #elif defined(TGA_AUDIO_BOARD)
   wm8731_1.enable();
@@ -684,11 +688,15 @@ void set_volume(float v, float p)
   Serial.print(tmp, DEC);
   Serial.print(F("/"));
   Serial.print(float(tmp) / SCHAR_MAX, DEC);
-  Serial.println(F("]"));
+  Serial.print(F("] "));
+  Serial.print(sinf(p * PI / 2), 3);
+  Serial.print(F("/"));
+  Serial.println(cosf(p * PI / 2), 3);
 #endif
 
+  // http://files.csound-tutorial.net/floss_manual/Release03/Cs_FM_03_ScrapBook/b-panning-and-spatialization.html
 #ifdef TEENSY_AUDIO_BOARD
-  sgtl5000_1.dacVolume(v * sinf(p * PI / 2), v * cosf(p * PI / 2));
+  sgtl5000_1.dacVolume(pow(v * sinf(p * PI / 2), 0.1), pow(v * cosf(p * PI / 2), 0.1));
 #else
   volume_master.gain(v);
   volume_r.gain(sinf(p * PI / 2));

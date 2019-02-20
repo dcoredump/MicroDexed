@@ -76,6 +76,7 @@
 #define AUDIO_MEM 225
 #endif
 #define DELAY_MAX_TIME 600.0
+#define REDUCE_LOUDNESS 1
 #else
 #if AUDIO_BLOCK_SAMPLES == 64
 #define AUDIO_MEM 900
@@ -83,9 +84,10 @@
 #define AUDIO_MEM 450
 #endif
 #define DELAY_MAX_TIME 1200.0
+#define REDUCE_LOUDNESS 0
 #endif
 #define SAMPLE_RATE 44100
-#define REDUCE_LOUDNESS 1
+
 
 //*************************************************************************************************
 //* DEBUG OUTPUT SETTINGS
