@@ -703,7 +703,7 @@ void set_volume(float v, float p)
 
   // http://files.csound-tutorial.net/floss_manual/Release03/Cs_FM_03_ScrapBook/b-panning-and-spatialization.html
 #ifdef TEENSY_AUDIO_BOARD
-  sgtl5000_1.dacVolume(pow(v * sinf(p * PI / 2), 0.1), pow(v * cosf(p * PI / 2), 0.1));
+  sgtl5000_1.dacVolume(pow(v,0.2) * sinf(p * PI / 2), pow(v,0.2) * cosf(p * PI / 2));
 #else
   volume_master.gain(v);
   volume_r.gain(sinf(p * PI / 2));
