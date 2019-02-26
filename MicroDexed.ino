@@ -696,14 +696,14 @@ void set_volume(float v, float p)
   Serial.print(F("/"));
   Serial.print(float(tmp) / SCHAR_MAX, DEC);
   Serial.print(F("] "));
-  Serial.print(sinf(p * PI / 2), 3);
+  Serial.print(pow(v * sinf(p * PI / 2), VOLUME_CURVE), 3);
   Serial.print(F("/"));
-  Serial.println(cosf(p * PI / 2), 3);
+  Serial.println(pow(v * cosf(p * PI / 2), VOLUME_CURVE), 3);
 #endif
 
   // http://files.csound-tutorial.net/floss_manual/Release03/Cs_FM_03_ScrapBook/b-panning-and-spatialization.html
 #ifdef TEENSY_AUDIO_BOARD
-  sgtl5000_1.dacVolume(pow(v,VOLUME_CURVE) * sinf(p * PI / 2), pow(v, VOLUME_CURVE) * cosf(p * PI / 2));
+  sgtl5000_1.dacVolume(pow(v * sinf(p * PI / 2), VOLUME_CURVE), pow(v * cosf(p * PI / 2), VOLUME_CURVE));
 #else
   volume_master.gain(VOLUME_CURVE);
   volume_r.gain(sinf(p * PI / 2));
