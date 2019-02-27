@@ -69,7 +69,7 @@
 //*************************************************************************************************
 // https://rechneronline.de/funktionsgraphen/
 #define VOLUME 0.8
-#define VOLUME_CURVE 0.25
+#define VOLUME_CURVE 0.07
 #ifndef TEENSY_AUDIO_BOARD
 #if AUDIO_BLOCK_SAMPLES == 64
 #define AUDIO_MEM 450
