@@ -63,7 +63,7 @@ Dexed::Dexed(int rate)
     voices[i].live = false;
   }
 
-  max_notes = 16;
+  max_notes = MAX_NOTES;
   currentNote = 0;
   resetControllers();
   controllers.masterTune = 0;
@@ -389,6 +389,51 @@ void Dexed::setMaxNotes(uint8_t n) {
 uint8_t Dexed::getMaxNotes(void)
 {
   return max_notes;
+}
+
+uint8_t Dexed::getNumNotesPlaying(void)
+{
+  uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
+  uint8_t i;
+  
+  for (i = 0; i < max_notes; i++)
+  {
+    if (voices[i].live == true)
+    {
+      uint8_t op_amp = 0;
+      uint8_t op_carrier_num = 0;
+
+      memset(&voiceStatus, 0, sizeof(VoiceStatus));
+
+      voices[i].dx7_note->peekVoiceStatus(voiceStatus);
+
+      for (uint8_t op = 0; op < 6; op++)
+      {
+        uint8_t op_bit = static_cast<uint8_t>(pow(2, op));
+
+        if ((op_carrier & op_bit) > 0)
+        {
+          {
+            // this voice is a carrier!
+            op_carrier_num++;
+
+            if (voiceStatus.amp[op] <= 1069 && voiceStatus.ampStep[op] == 4) // this voice produces no audio output
+              op_amp++;
+          }
+        }
+        if (op_amp == op_carrier_num)
+        {
+          // all carrier-operators are silent -> disable the voice
+          voices[i].live = false;
+          voices[i].sustained = false;
+          voices[i].keydown = false;
+          Serial.print("Voice shutdown [");
+          Serial.print(i,DEC);
+          Serial.println(F("]"));
+        }
+      }
+    }
+  }
 }
 
 bool Dexed::loadSysexVoice(uint8_t* new_data)

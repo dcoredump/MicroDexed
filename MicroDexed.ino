@@ -123,6 +123,7 @@ uint8_t effect_delay_feedback = 0;
 uint8_t effect_delay_volume = 0;
 bool effect_delay_sync = 0;
 elapsedMicros fill_audio_buffer;
+elapsedMillis control_rate;
 
 #ifdef SHOW_CPU_LOAD_MSEC
 elapsedMillis cpu_mem_millis;
@@ -335,6 +336,13 @@ void loop()
   // MIDI input handling
   check_midi_devices();
 
+  // Shutdown unused voices
+  if (control_rate > CONTROL_RATE_MS)
+  {
+    control_rate = 0;
+    uint8_t shutdown_voices = dexed->getNumNotesPlaying();
+  }
+
 #ifdef I2C_DISPLAY
   // UI
   if (master_timer >= TIMER_UI_HANDLING_MS)
@@ -355,7 +363,7 @@ void loop()
 }
 
 /******************************************************************************
- * MIDI MESSAGE HANDLER
+   MIDI MESSAGE HANDLER
  ******************************************************************************/
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity)
 {
@@ -654,9 +662,9 @@ void handleSystemReset(void)
 }
 
 /******************************************************************************
- * END OF MIDI MESSAGE HANDLER
+   END OF MIDI MESSAGE HANDLER
  ******************************************************************************/
- 
+
 bool checkMidiChannel(byte inChannel)
 {
   // check for MIDI channel
