@@ -26,9 +26,9 @@
 
 #include "config.h"
 
-#if defined(MIDI_DEVICE_USB)
+/* #if defined(MIDI_DEVICE_USB)
 #include <midi_UsbTransport.h>
-#endif
+#endif */
 #ifdef MIDI_DEVICE_USB_HOST
 #include <USBHost_t36.h>
 #endif
@@ -40,12 +40,12 @@ MIDI_CREATE_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial);
 USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
 #endif
-#ifdef MIDI_DEVICE_USB
+/* #ifdef MIDI_DEVICE_USB
 static const unsigned sUsbTransportBufferSize = 16;
 typedef midi::UsbTransport<sUsbTransportBufferSize> UsbTransport;
 UsbTransport sUsbTransport;
 MIDI_CREATE_INSTANCE(UsbTransport, sUsbTransport, midi_onboard_usb);
-#endif
+#endif */
 
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity);
 void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity);
@@ -85,7 +85,7 @@ void handleNoteOn_MIDI_DEVICE_DIN(byte inChannel, byte inNumber, byte inVelocity
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendNoteOn(inNumber, inVelocity, inChannel);
+  usbMIDI.sendNoteOn(inNumber, inVelocity, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -110,7 +110,7 @@ void handleNoteOff_MIDI_DEVICE_DIN(byte inChannel, byte inNumber, byte inVelocit
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendNoteOff(inNumber, inVelocity, inChannel);
+  usbMIDI.sendNoteOff(inNumber, inVelocity, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -135,7 +135,7 @@ void handleControlChange_MIDI_DEVICE_DIN(byte inChannel, byte inData1, byte inDa
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendControlChange(inData1, inData2, inChannel);
+  usbMIDI.sendControlChange(inData1, inData2, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -160,7 +160,7 @@ void handleAfterTouch_MIDI_DEVICE_DIN(byte inChannel, byte inPressure)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendAfterTouch(inPressure, inChannel);
+  usbMIDI.sendAfterTouch(inPressure, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -185,7 +185,7 @@ void handlePitchBend_MIDI_DEVICE_DIN(byte inChannel, int inPitch)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendPitchBend(inPitch, inChannel);
+  usbMIDI.sendPitchBend(inPitch, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -210,7 +210,7 @@ void handleProgramChange_MIDI_DEVICE_DIN(byte inChannel, byte inProgram)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendProgramChange(inProgram, inChannel);
+  usbMIDI.sendProgramChange(inProgram, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -235,7 +235,7 @@ void handleSystemExclusive_MIDI_DEVICE_DIN(byte *data, uint len)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendSysEx(len, data);
+  usbMIDI.sendSysEx(len, data);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -260,7 +260,7 @@ void handleSystemExclusive_MIDI_DEVICE_DIN(byte *data, uint len)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendSysEx(len, data, last);
+  usbMIDI.sendSysEx(len, data, last);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -285,7 +285,7 @@ void handleTimeCodeQuarterFrame_MIDI_DEVICE_DIN(byte data)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendTimeCodeQuarterFrame(data);
+  usbMIDI.sendTimeCodeQuarterFrame(0xF1,data);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -310,7 +310,7 @@ void handleAfterTouchPoly_MIDI_DEVICE_DIN(byte inChannel, byte inNumber, byte in
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendAfterTouch(inNumber, inVelocity, inChannel);
+  usbMIDI.sendAfterTouch(inNumber, inVelocity, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -335,7 +335,7 @@ void handleSongSelect_MIDI_DEVICE_DIN(byte inSong)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendSongSelect(inSong);
+  usbMIDI.sendSongSelect(inSong);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -360,7 +360,7 @@ void handleTuneRequest_MIDI_DEVICE_DIN(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendTuneRequest();
+  usbMIDI.sendTuneRequest();
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -385,7 +385,7 @@ void handleClock_MIDI_DEVICE_DIN(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::Clock);
+  usbMIDI.sendRealTime(midi::Clock);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -410,7 +410,7 @@ void handleStart_MIDI_DEVICE_DIN(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::Start);
+  usbMIDI.sendRealTime(midi::Start);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -435,7 +435,7 @@ void handleContinue_MIDI_DEVICE_DIN(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::Continue);
+  usbMIDI.sendRealTime(midi::Continue);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -460,7 +460,7 @@ void handleStop_MIDI_DEVICE_DIN(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::Stop);
+  usbMIDI.sendRealTime(midi::Stop);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -485,7 +485,7 @@ void handleActiveSensing_MIDI_DEVICE_DIN(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::ActiveSensing);
+  usbMIDI.sendRealTime(midi::ActiveSensing);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -510,7 +510,7 @@ void handleSystemReset_MIDI_DEVICE_DIN(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::SystemReset);
+  usbMIDI.sendRealTime(midi::SystemReset);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -535,7 +535,7 @@ void handleSystemReset_MIDI_DEVICE_DIN(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  //midi_onboard_usb.sendRealTime(inRealTIme);
+  //usbMIDI.sendRealTime(inRealTIme);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB[NOTSUPPORTED]"));
 #endif
@@ -565,7 +565,7 @@ void handleNoteOn_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNumber, byte inVel
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendNoteOn(inNumber, inVelocity, inChannel);
+  usbMIDI.sendNoteOn(inNumber, inVelocity, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -590,7 +590,7 @@ void handleNoteOff_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNumber, byte inVe
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendNoteOff(inNumber, inVelocity, inChannel);
+  usbMIDI.sendNoteOff(inNumber, inVelocity, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -615,7 +615,7 @@ void handleControlChange_MIDI_DEVICE_USB_HOST(byte inChannel, byte inData1, byte
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendControlChange(inData1, inData2, inChannel);
+  usbMIDI.sendControlChange(inData1, inData2, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -640,7 +640,7 @@ void handleAfterTouch_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPressure)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendAfterTouch(inPressure, inChannel);
+  usbMIDI.sendAfterTouch(inPressure, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -665,7 +665,7 @@ void handlePitchBend_MIDI_DEVICE_USB_HOST(byte inChannel, int inPitch)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendPitchBend(inPitch, inChannel);
+  usbMIDI.sendPitchBend(inPitch, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -690,7 +690,7 @@ void handleProgramChange_MIDI_DEVICE_USB_HOST(byte inChannel, byte inProgram)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendProgramChange(inProgram, inChannel);
+  usbMIDI.sendProgramChange(inProgram, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -715,7 +715,7 @@ void handleSystemExclusive_MIDI_DEVICE_USB_HOST(byte *data, uint len)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendSysEx(len, data);
+  usbMIDI.sendSysEx(len, data);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -740,7 +740,7 @@ void handleSystemExclusive_MIDI_DEVICE_USB_HOST(byte *data, uint len)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendSysEx(len, data, last);
+  usbMIDI.sendSysEx(len, data, last);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -765,7 +765,7 @@ void handleTimeCodeQuarterFrame_MIDI_DEVICE_USB_HOST(midi::DataByte data)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendTimeCodeQuarterFrame(data);
+  usbMIDI.sendTimeCodeQuarterFrame(0xF1,data);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -790,7 +790,7 @@ void handleAfterTouchPoly_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNumber, by
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendAfterTouch(inNumber, inVelocity, inChannel);
+  usbMIDI.sendAfterTouch(inNumber, inVelocity, inChannel);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -815,7 +815,7 @@ void handleSongSelect_MIDI_DEVICE_USB_HOST(byte inSong)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendSongSelect(inSong);
+  usbMIDI.sendSongSelect(inSong);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -840,7 +840,7 @@ void handleTuneRequest_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendTuneRequest();
+  usbMIDI.sendTuneRequest();
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -865,7 +865,7 @@ void handleClock_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::Clock);
+  usbMIDI.sendRealTime(midi::Clock);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -890,7 +890,7 @@ void handleStart_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::Start);
+  usbMIDI.sendRealTime(midi::Start);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -915,7 +915,7 @@ void handleContinue_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::Continue);
+  usbMIDI.sendRealTime(midi::Continue);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -940,7 +940,7 @@ void handleStop_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::Stop);
+  usbMIDI.sendRealTime(midi::Stop);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -965,7 +965,7 @@ void handleActiveSensing_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::ActiveSensing);
+  usbMIDI.sendRealTime(midi::ActiveSensing);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -990,7 +990,7 @@ void handleSystemReset_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(midi::SystemReset);
+  usbMIDI.sendRealTime(midi::SystemReset);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -1015,7 +1015,7 @@ void handleSystemReset_MIDI_DEVICE_USB_HOST(void)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.sendRealTime(inRealTime);
+  usbMIDI.sendRealTime(inRealTime);
 #ifdef DEBUG
   Serial.print(F(" THRU->MIDI_USB"));
 #endif
@@ -1564,26 +1564,26 @@ void setup_midi_devices(void)
 
   // check for onboard USB-MIDI
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.begin();
-  midi_onboard_usb.setHandleNoteOn(handleNoteOn_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleNoteOff(handleNoteOff_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleControlChange(handleControlChange_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleAfterTouchChannel(handleAfterTouch_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandlePitchBend(handlePitchBend_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleProgramChange(handleProgramChange_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleSystemExclusive(handleSystemExclusive_MIDI_DEVICE_USB);
-  //midi_onboard_usb.setHandleSystemExclusiveChunk(handleSystemExclusiveChunk_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleTimeCodeQuarterFrame(handleTimeCodeQuarterFrame_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleAfterTouchPoly(handleAfterTouchPoly_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleSongSelect(handleSongSelect_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleTuneRequest(handleTuneRequest_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleClock(handleClock_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleStart(handleStart_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleContinue(handleContinue_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleStop(handleStop_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleActiveSensing(handleActiveSensing_MIDI_DEVICE_USB);
-  midi_onboard_usb.setHandleSystemReset(handleSystemReset_MIDI_DEVICE_USB);
-  //midi_onboard_usb.setHandleRealTimeSystem(handleRealTimeSystem_MIDI_DEVICE_USB);
+  usbMIDI.begin();
+  usbMIDI.setHandleNoteOn(handleNoteOn_MIDI_DEVICE_USB);
+  usbMIDI.setHandleNoteOff(handleNoteOff_MIDI_DEVICE_USB);
+  usbMIDI.setHandleControlChange(handleControlChange_MIDI_DEVICE_USB);
+  usbMIDI.setHandleAfterTouchChannel(handleAfterTouch_MIDI_DEVICE_USB);
+  usbMIDI.setHandlePitchChange(handlePitchBend_MIDI_DEVICE_USB);
+  usbMIDI.setHandleProgramChange(handleProgramChange_MIDI_DEVICE_USB);
+  usbMIDI.setHandleSystemExclusive(handleSystemExclusive_MIDI_DEVICE_USB);
+  //usbMIDI.setHandleSystemExclusiveChunk(handleSystemExclusiveChunk_MIDI_DEVICE_USB);
+  usbMIDI.setHandleTimeCodeQuarterFrame(handleTimeCodeQuarterFrame_MIDI_DEVICE_USB);
+  usbMIDI.setHandleAfterTouchPoly(handleAfterTouchPoly_MIDI_DEVICE_USB);
+  usbMIDI.setHandleSongSelect(handleSongSelect_MIDI_DEVICE_USB);
+  usbMIDI.setHandleTuneRequest(handleTuneRequest_MIDI_DEVICE_USB);
+  usbMIDI.setHandleClock(handleClock_MIDI_DEVICE_USB);
+  usbMIDI.setHandleStart(handleStart_MIDI_DEVICE_USB);
+  usbMIDI.setHandleContinue(handleContinue_MIDI_DEVICE_USB);
+  usbMIDI.setHandleStop(handleStop_MIDI_DEVICE_USB);
+  usbMIDI.setHandleActiveSensing(handleActiveSensing_MIDI_DEVICE_USB);
+  usbMIDI.setHandleSystemReset(handleSystemReset_MIDI_DEVICE_USB);
+  //usbMIDI.setHandleRealTimeSystem(handleRealTimeSystem_MIDI_DEVICE_USB);
   Serial.println(F("MIDI_DEVICE_USB enabled."));
 #endif
 }
@@ -1594,7 +1594,7 @@ void check_midi_devices(void)
   midi_serial.read();
 #endif
 #ifdef MIDI_DEVICE_USB
-  midi_onboard_usb.read();
+  usbMIDI.read();
 #endif
 #ifdef MIDI_DEVICE_USB_HOST
   usb_host.Task();
