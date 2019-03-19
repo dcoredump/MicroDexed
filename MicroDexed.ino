@@ -355,7 +355,7 @@ void loop()
 }
 
 /******************************************************************************
- * MIDI MESSAGE HANDLER
+   MIDI MESSAGE HANDLER
  ******************************************************************************/
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity)
 {
@@ -509,6 +509,24 @@ void handleProgramChange(byte inChannel, byte inProgram)
 
 void handleSystemExclusive(byte *sysex, uint len)
 {
+  /*
+    SYSEX MESSAGE: Parameter Change
+    -------------------------------
+       bits    hex  description
+
+     11110000  F0   Status byte - start sysex
+     0iiiiiii  43   ID # (i=67; Yamaha)
+     0sssnnnn  10   Sub-status (s=1) & channel number (n=0; ch 1)
+     0gggggpp  **   parameter group # (g=0; voice, g=2; function)
+     0ppppppp  **   parameter # (these are listed in next section)
+                     Note that voice parameter #'s can go over 128 so
+                     the pp bits in the group byte are either 00 for
+                     par# 0-127 or 01 for par# 128-155. In the latter case
+                     you add 128 to the 0ppppppp byte to compute par#.
+     0ddddddd  **   data byte
+     11110111  F7   Status - end sysex
+  */
+
 #ifdef DEBUG
   Serial.print(F("SYSEX-Data["));
   Serial.print(len, DEC);
@@ -521,6 +539,14 @@ void handleSystemExclusive(byte *sysex, uint len)
   Serial.println();
 #endif
 
+  if (!checkMidiChannel((sysex[2] & 0x0f) + 1 ))
+  {
+#ifdef DEBUG
+    Serial.println(F("SYSEX-MIDI-Channel mismatch"));
+#endif
+    return;
+  }
+
   if (sysex[1] != 0x43) // check for Yamaha sysex
   {
 #ifdef DEBUG
@@ -529,10 +555,16 @@ void handleSystemExclusive(byte *sysex, uint len)
     return;
   }
 
+#ifdef DEBUG
+  Serial.print(F("Substatus: ["));
+  Serial.print((sysex[2] & 0x70) >> 4);
+  Serial.println(F("]"));
+#endif
+
   // parse parameter change
   if (len == 7)
   {
-    if ((sysex[3] & 0x7c) != 0 || (sysex[3] & 0x7c) != 2)
+    if (((sysex[3] & 0x7c) >> 2) != 0 && ((sysex[3] & 0x7c) >> 2) != 2)
     {
 #ifdef DEBUG
       Serial.println(F("E: Not a SysEx parameter or function parameter change."));
@@ -546,11 +578,18 @@ void handleSystemExclusive(byte *sysex, uint len)
 #endif
       return;
     }
-    if ((sysex[3] & 0x7c) == 0)
+
+    sysex[4] &= 0x7f;
+    sysex[5] &= 0x7f;
+
+    uint8_t data_index;
+
+    if (((sysex[3] & 0x7c) >> 2) == 0)
     {
       dexed->notesOff();
-      dexed->data[sysex[4]] = sysex[5]; // set parameter
+      dexed->data[sysex[4] + ((sysex[3] & 0x03) * 128)] = sysex[5]; // set parameter
       dexed->doRefreshVoice();
+      data_index = sysex[4] + ((sysex[3] & 0x03) * 128);
     }
     else
     {
@@ -567,15 +606,18 @@ void handleSystemExclusive(byte *sysex, uint len)
       dexed->controllers.at.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN]);
       dexed->controllers.masterTune = (dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE] * 0x4000 << 11) * (1.0 / 12);
       dexed->controllers.refresh();
+      data_index = DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4];
     }
 #ifdef DEBUG
     Serial.print(F("SysEx"));
-    if ((sysex[3] & 0x7c) == 0)
+    if (((sysex[3] & 0x7c) >> 2) == 0)
       Serial.print(F(" function"));
     Serial.print(F(" parameter "));
     Serial.print(sysex[4], DEC);
     Serial.print(F(" = "));
-    Serial.println(sysex[5], DEC);
+    Serial.print(sysex[5], DEC);
+    Serial.print(F(", data_index = "));
+    Serial.println(data_index,DEC);
 #endif
   }
 #ifdef DEBUG
@@ -654,9 +696,9 @@ void handleSystemReset(void)
 }
 
 /******************************************************************************
- * END OF MIDI MESSAGE HANDLER
+   END OF MIDI MESSAGE HANDLER
  ******************************************************************************/
- 
+
 bool checkMidiChannel(byte inChannel)
 {
   // check for MIDI channel
