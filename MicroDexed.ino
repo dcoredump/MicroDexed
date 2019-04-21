@@ -124,7 +124,7 @@ uint8_t effect_delay_volume = 0;
 bool effect_delay_sync = 0;
 elapsedMicros fill_audio_buffer;
 elapsedMillis control_rate;
-uint8_t shutdown_voices = 0;
+uint8_t active_voices = 0;
 
 #ifdef SHOW_CPU_LOAD_MSEC
 elapsedMillis cpu_mem_millis;
@@ -340,16 +340,8 @@ void loop()
   // Shutdown unused voices
   if (control_rate > CONTROL_RATE_MS)
   {
-    uint8_t tmp = shutdown_voices;
     control_rate = 0;
-    dexed->getNumNotesPlaying();
-
-    if (tmp != shutdown_voices)
-    {
-      Serial.print(F("Active voices ["));
-      Serial.print(shutdown_voices);
-      Serial.println(F("]"));
-    }
+    active_voices = dexed->getNumNotesPlaying();
   }
 
 #ifdef I2C_DISPLAY
@@ -954,6 +946,8 @@ void show_cpu_and_mem_usage(void)
   Serial.print(peak, DEC);
   Serial.print(F(" BLOCKSIZE: "));
   Serial.print(AUDIO_BLOCK_SAMPLES, DEC);
+  Serial.print(F(" ACTIVE_VOICES: "));
+  Serial.print(active_voices, DEC);
   Serial.println();
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();

@@ -395,7 +395,7 @@ uint8_t Dexed::getNumNotesPlaying(void)
 {
   uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
   uint8_t i;
-  uint8_t count_playing_voices=0;
+  uint8_t count_playing_voices = 0;
 
   for (i = 0; i < max_notes; i++)
   {
@@ -405,19 +405,18 @@ uint8_t Dexed::getNumNotesPlaying(void)
       uint8_t op_carrier_num = 0;
 
       memset(&voiceStatus, 0, sizeof(VoiceStatus));
-
       voices[i].dx7_note->peekVoiceStatus(voiceStatus);
 
       for (uint8_t op = 0; op < 6; op++)
       {
-        if ((op_carrier & (1 >> op)) == 1)
+        if ((op_carrier & (1 << op)))
         {
+          // this voice is a carrier!
+          op_carrier_num++;
+          if (voiceStatus.amp[op] <= 1069 && voiceStatus.ampStep[op] == 4)
           {
-            // this voice is a carrier!
-            op_carrier_num++;
-
-            if (voiceStatus.amp[op] <= 1069 && voiceStatus.ampStep[op] == 4) // this voice produces no audio output
-              op_amp++;
+            // this voice produces no audio output
+            op_amp++;
           }
         }
       }
@@ -428,14 +427,16 @@ uint8_t Dexed::getNumNotesPlaying(void)
         voices[i].live = false;
         voices[i].sustained = false;
         voices[i].keydown = false;
-        Serial.print(F("Voice shutdown: "));
+#ifdef DEBUG
+        Serial.print(F("Shutdown voice: "));
         Serial.println(i, DEC);
+#endif
       }
       else
         count_playing_voices++;
     }
   }
-  return(count_playing_voices);
+  return (count_playing_voices);
 }
 
 bool Dexed::loadSysexVoice(uint8_t* new_data)
