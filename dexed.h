@@ -160,6 +160,7 @@ class Dexed
     void keydown(uint8_t pitch, uint8_t velo);
     void setSustain(bool sustain);
     bool getSustain(void);
+    uint8_t getNumNotesPlaying(void);
 
     ProcessorVoice voices[MAX_NOTES];
     Controllers controllers;
@@ -190,6 +191,7 @@ class Dexed
     bool monoMode;
     bool refreshVoice;
     uint8_t engineType;
+    VoiceStatus voiceStatus;
     Lfo lfo;
     FmCore* engineMsfa;
     EngineMkI* engineMkI;

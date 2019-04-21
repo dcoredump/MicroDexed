@@ -235,6 +235,11 @@ void handle_ui(void)
         case 1: // right encoder moved
           switch (ui_state)
           {
+            case UI_VOLUME:
+              ui_state = UI_MAIN;
+              lcd.clear();
+              ui_show_main();
+              break;
             case UI_MAIN:
               switch (ui_main_state)
               {

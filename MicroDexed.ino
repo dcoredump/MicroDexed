@@ -123,6 +123,8 @@ uint8_t effect_delay_feedback = 0;
 uint8_t effect_delay_volume = 0;
 bool effect_delay_sync = 0;
 elapsedMicros fill_audio_buffer;
+elapsedMillis control_rate;
+uint8_t shutdown_voices = 0;
 
 #ifdef SHOW_CPU_LOAD_MSEC
 elapsedMillis cpu_mem_millis;
@@ -334,6 +336,21 @@ void loop()
 
   // MIDI input handling
   check_midi_devices();
+
+  // Shutdown unused voices
+  if (control_rate > CONTROL_RATE_MS)
+  {
+    uint8_t tmp = shutdown_voices;
+    control_rate = 0;
+    dexed->getNumNotesPlaying();
+
+    if (tmp != shutdown_voices)
+    {
+      Serial.print(F("Active voices ["));
+      Serial.print(shutdown_voices);
+      Serial.println(F("]"));
+    }
+  }
 
 #ifdef I2C_DISPLAY
   // UI
@@ -617,7 +634,7 @@ void handleSystemExclusive(byte *sysex, uint len)
     Serial.print(F(" = "));
     Serial.print(sysex[5], DEC);
     Serial.print(F(", data_index = "));
-    Serial.println(data_index,DEC);
+    Serial.println(data_index, DEC);
 #endif
   }
 #ifdef DEBUG
