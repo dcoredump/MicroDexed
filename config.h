@@ -31,7 +31,7 @@
 // ATTENTION! For better latency you have to redefine AUDIO_BLOCK_SAMPLES from
 // 128 to 64 in <ARDUINO-IDE-DIR>/cores/teensy3/AudioStream.h
 
-#define VERSION "0.9.2"
+#define VERSION "0.9.3"
 
 //*************************************************************************************************
 //* DEVICE SETTINGS

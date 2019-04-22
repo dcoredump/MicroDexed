@@ -238,6 +238,7 @@ void handle_ui(void)
             case UI_VOLUME:
               ui_state = UI_MAIN;
               lcd.clear();
+              enc[1].write(voice);
               ui_show_main();
               break;
             case UI_MAIN:
