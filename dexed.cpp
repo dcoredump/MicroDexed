@@ -33,6 +33,7 @@
 #include "sin.h"
 #include "freqlut.h"
 #include "controllers.h"
+#include "PluginFx.h"
 #include <unistd.h>
 #include <limits.h>
 #ifdef USE_TEENSY_DSP
@@ -51,6 +52,7 @@ Dexed::Dexed(int rate)
   Lfo::init(rate);
   PitchEnv::init(rate);
   Env::init_sr(rate);
+  fx.init(rate);
 
   engineMkI = new EngineMkI;
   engineOpl = new EngineOpl;
@@ -187,6 +189,15 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
       buffer[i + j] = static_cast<int16_t>(sumbuf[j] * 0x8000);
     }
 #endif
+  }
+
+  float fbuffer[n_samples];
+  for (i = 0; i < n_samples; ++i) {
+    fbuffer[i] = static_cast<float>(buffer[i] / 0x8000);
+  }
+  fx.process(fbuffer, n_samples);
+  for (i = 0; i < n_samples; ++i) {
+    buffer[i] = static_cast<int16_t>(fbuffer[i] * 0x8000);
   }
 }
 

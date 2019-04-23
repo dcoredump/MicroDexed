@@ -60,7 +60,6 @@
 //* DEXED AND EFECTS SETTINGS
 //*************************************************************************************************
 #define DEXED_ENGINE DEXED_ENGINE_MODERN // DEXED_ENGINE_MARKI // DEXED_ENGINE_OPL
-#define CONTROL_RATE_MS 200
 
 // EFFECTS
 #define FILTER_MAX_FREQ 10000
@@ -90,6 +89,11 @@
 #endif
 #define SAMPLE_RATE 44100
 
+//*************************************************************************************************
+//* UI AND DATA-STORE SETTINGS
+//*************************************************************************************************
+#define CONTROL_RATE_MS 200
+#define TIMER_UI_HANDLING_MS 100
 
 //*************************************************************************************************
 //* DEBUG OUTPUT SETTINGS
@@ -121,7 +125,6 @@
 #define ENC_DELAY_TIME_STEPS 50
 #define ENC_DELAY_FB_STEPS 35
 #define ENC_DELAY_VOLUME_STEPS 50
-#define TIMER_UI_HANDLING_MS 100
 #define NUM_ENCODER 2
 #define ENC_L_PIN_A  3
 #define ENC_L_PIN_B  2

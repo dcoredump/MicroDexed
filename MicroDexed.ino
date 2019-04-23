@@ -34,7 +34,7 @@
 #include <limits.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
-
+#include "PluginFx.h"
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 #include "UI.h"
 #include <Bounce.h>
@@ -240,6 +240,11 @@ void setup()
     mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delayed signal (including feedback)
     mixer2.gain(2, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // only delayed signal (without feedback)
 
+    // just for testing:
+    dexed->fx.uiReso=0.5;
+    dexed->fx.uiGain=0.5;
+    dexed->fx.uiCutoff=0.5;
+
     // load default SYSEX data
     load_sysex(configuration.bank, configuration.voice);
   }
@@ -327,15 +332,17 @@ void loop()
   // MIDI input handling
   check_midi_devices();
 
-  // Shutdown unused voices
+  // CONTROL-RATE-EVENT-HANDLING
   if (control_rate > CONTROL_RATE_MS)
   {
     control_rate = 0;
+    
+    // Shutdown unused voices
     active_voices = dexed->getNumNotesPlaying();
   }
 
 #ifdef I2C_DISPLAY
-  // UI
+  // UI-HANDLING
   if (master_timer >= TIMER_UI_HANDLING_MS)
   {
     master_timer -= TIMER_UI_HANDLING_MS;
