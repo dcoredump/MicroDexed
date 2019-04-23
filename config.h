@@ -145,22 +145,7 @@
 #define AUTOSTORE_FAST_MS 50
 
 // EEPROM address
-#define EEPROM_OFFSET 0
-#define EEPROM_DATA_LENGTH 5
-
-#define EEPROM_CRC32_ADDR EEPROM.length()-sizeof(uint32_t)-33
-#define EEPROM_BANK_ADDR 0
-#define EEPROM_VOICE_ADDR 1
-#define EEPROM_MASTER_VOLUME_ADDR 2
-#define EEPROM_PAN_ADDR 3
-#define EEPROM_MIDICHANNEL_ADDR 4
-
-#define EEPROM_UPDATE_BANK (1<<0)
-#define EEPROM_UPDATE_VOICE (1<<1)
-#define EEPROM_UPDATE_VOL (1<<2)
-#define EEPROM_UPDATE_PAN (1<<3)
-#define EEPROM_UPDATE_MIDICHANNEL (1<<4)
-#define EEPROM_UPDATE_CHECKSUM (1<<7)
+#define EEPROM_START_ADDRESS 0
 
 #define MAX_BANKS 100
 #define MAX_VOICES 32 // voices per bank
@@ -194,4 +179,13 @@
 #define USE_TEENSY_DSP 1
 #define SUM_UP_AS_INT 1
 
+// struct for holding the current configuration
+struct config_t {
+  uint32_t checksum;
+  uint8_t bank;
+  uint8_t voice;
+  float vol;
+  float pan;
+  uint8_t midi_channel;
+};
 #endif // CONFIG_H_INCLUDED

@@ -29,6 +29,7 @@
 #include <SD.h>
 #include <MIDI.h>
 #include <EEPROM.h>
+#include "EEPROMAnything.h"
 #include "midi_devices.hpp"
 #include <limits.h>
 #include "dexed.h"
@@ -94,16 +95,11 @@ AudioConnection          patchCord15(volume_l, 0, pt8211_1, 1);
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
-uint8_t midi_channel = DEFAULT_MIDI_CHANNEL;
 uint32_t xrun = 0;
 uint32_t overload = 0;
 uint32_t peak = 0;
 uint16_t render_time_max = 0;
-uint8_t bank = 0;
 uint8_t max_loaded_banks = 0;
-uint8_t voice = 0;
-float vol = VOLUME;
-float pan = 0.5f;
 char bank_name[BANK_NAME_LEN];
 char voice_name[VOICE_NAME_LEN];
 char bank_names[MAX_BANKS][BANK_NAME_LEN];
@@ -125,16 +121,10 @@ bool effect_delay_sync = 0;
 elapsedMicros fill_audio_buffer;
 elapsedMillis control_rate;
 uint8_t active_voices = 0;
-
 #ifdef SHOW_CPU_LOAD_MSEC
 elapsedMillis cpu_mem_millis;
 #endif
-
-#ifdef TEST_NOTE
-IntervalTimer sched_note_on;
-IntervalTimer sched_note_off;
-uint8_t _voice_counter = 0;
-#endif
+config_t configuration = {0xffff, 0, 0, VOLUME, 0.5f, DEFAULT_MIDI_CHANNEL};
 
 void setup()
 {
@@ -194,7 +184,7 @@ void setup()
   Serial.println(F("PT8211 enabled."));
 #endif
 
-  set_volume(vol, pan);
+  set_volume(configuration.vol, configuration.pan);
 
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
@@ -212,13 +202,13 @@ void setup()
 
     // read all bank names
     max_loaded_banks = get_bank_names();
-    strip_extension(bank_names[bank], bank_name);
+    strip_extension(bank_names[configuration.bank], bank_name);
 
     // read all voice name for actual bank
-    get_voice_names_from_bank(bank);
+    get_voice_names_from_bank(configuration.bank);
 #ifdef DEBUG
     Serial.print(F("Bank ["));
-    Serial.print(bank_names[bank]);
+    Serial.print(bank_names[configuration.bank]);
     Serial.print(F("/"));
     Serial.print(bank_name);
     Serial.println(F("]"));
@@ -251,13 +241,13 @@ void setup()
     mixer2.gain(2, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // only delayed signal (without feedback)
 
     // load default SYSEX data
-    load_sysex(bank, voice);
+    load_sysex(configuration.bank, configuration.voice);
   }
 
 #ifdef I2C_DISPLAY
-  enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+  enc[0].write(map(configuration.vol * 100, 0, 100, 0, ENC_VOL_STEPS));
   enc_val[0] = enc[0].read();
-  enc[1].write(voice);
+  enc[1].write(configuration.voice);
   enc_val[1] = enc[1].read();
   but[0].update();
   but[1].update();
@@ -271,9 +261,9 @@ void setup()
 
 #ifdef DEBUG
   Serial.print(F("Bank/Voice from EEPROM ["));
-  Serial.print(EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR), DEC);
+  Serial.print(configuration.bank, DEC);
   Serial.print(F("/"));
-  Serial.print(EEPROM.read(EEPROM_OFFSET +  EEPROM_VOICE_ADDR), DEC);
+  Serial.print(configuration.voice, DEC);
   Serial.println(F("]"));
   show_patch();
 #endif
@@ -322,15 +312,15 @@ void loop()
     }
 #ifndef TEENSY_AUDIO_BOARD
     for (uint8_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
-      audio_buffer[i] *= vol;
+      audio_buffer[i] *= configuration.vol;
 #endif
     queue1.playBuffer();
   }
 
   // EEPROM update handling
-  if (eeprom_update_status > 0 && autostore >= autostore_value)
+  if (autostore >= AUTOSTORE_MS && active_voices == 0)
   {
-    autostore = 0;
+    // only store configuration data to EEPROM when AUTOSTORE_MS is reached and no voices are activated anymore
     eeprom_update();
   }
 
@@ -397,7 +387,7 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
       case 0:
         if (inValue < MAX_BANKS)
         {
-          bank = inValue;
+          configuration.bank = inValue;
           handle_ui();
         }
         break;
@@ -414,15 +404,15 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
         dexed->controllers.refresh();
         break;
       case 7: // Volume
-        vol = float(inValue) / 0x7f;
-        set_volume(vol, pan);
+        configuration.vol = float(inValue) / 0x7f;
+        set_volume(configuration.vol, configuration.pan);
         break;
       case 10: // Pan
-        pan = float(inValue) / 128;
-        set_volume(vol, pan);
+        configuration.pan = float(inValue) / 128;
+        set_volume(configuration.vol, configuration.pan);
         break;
       case 32: // BankSelect LSB
-        bank = inValue;
+        configuration.bank = inValue;
         break;
       case 64:
         dexed->setSustain(inValue > 63);
@@ -511,12 +501,12 @@ void handleProgramChange(byte inChannel, byte inProgram)
 {
   if (inProgram < MAX_VOICES)
   {
-    load_sysex(bank, inProgram);
+    load_sysex(configuration.bank, inProgram);
     handle_ui();
   }
 }
 
-void handleSystemExclusive(byte *sysex, uint len)
+void handleSystemExclusive(byte * sysex, uint len)
 {
   /*
     SYSEX MESSAGE: Parameter Change
@@ -705,23 +695,23 @@ void handleSystemReset(void)
 }
 
 /******************************************************************************
-   END OF MIDI MESSAGE HANDLER
+   MIDI HELPER
  ******************************************************************************/
 
 bool checkMidiChannel(byte inChannel)
 {
   // check for MIDI channel
-  if (midi_channel == MIDI_CHANNEL_OMNI)
+  if (configuration.midi_channel == MIDI_CHANNEL_OMNI)
   {
     return (true);
   }
-  else if (inChannel != midi_channel)
+  else if (inChannel != configuration.midi_channel)
   {
 #ifdef DEBUG
     Serial.print(F("Ignoring MIDI data on channel "));
     Serial.print(inChannel);
     Serial.print(F("(listening on "));
-    Serial.print(midi_channel);
+    Serial.print(configuration.midi_channel);
     Serial.println(F(")"));
 #endif
     return (false);
@@ -729,30 +719,27 @@ bool checkMidiChannel(byte inChannel)
   return (true);
 }
 
+/******************************************************************************
+   VOLUME HELPER
+ ******************************************************************************/
+
 void set_volume(float v, float p)
 {
-  vol = v;
-  pan = p;
+  configuration.vol = v;
+  configuration.pan = p;
 
 #ifdef DEBUG
-  uint8_t tmp;
   Serial.print(F("Setting volume: VOL="));
   Serial.print(v, DEC);
   Serial.print(F("["));
-  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR);
-  Serial.print(tmp, DEC);
-  Serial.print(F("/"));
-  Serial.print(float(tmp) / UCHAR_MAX, DEC);
+  Serial.print(configuration.vol, DEC);
   Serial.print(F("] PAN="));
   Serial.print(F("["));
-  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_PAN_ADDR);
-  Serial.print(tmp, DEC);
-  Serial.print(F("/"));
-  Serial.print(float(tmp) / SCHAR_MAX, DEC);
+  Serial.print(configuration.pan, DEC);
   Serial.print(F("] "));
-  Serial.print(pow(v * sinf(p * PI / 2), VOLUME_CURVE), 3);
+  Serial.print(pow(configuration.vol * sinf(configuration.pan * PI / 2), VOLUME_CURVE), 3);
   Serial.print(F("/"));
-  Serial.println(pow(v * cosf(p * PI / 2), VOLUME_CURVE), 3);
+  Serial.println(pow(configuration.vol * cosf( configuration.pan * PI / 2), VOLUME_CURVE), 3);
 #endif
 
   // http://files.csound-tutorial.net/floss_manual/Release03/Cs_FM_03_ScrapBook/b-panning-and-spatialization.html
@@ -771,58 +758,49 @@ inline float logvol(float x)
   return (0.001 * expf(6.908 * x));
 }
 
+
+/******************************************************************************
+   EEPROM HELPER
+ ******************************************************************************/
+
 void initial_values_from_eeprom(void)
 {
-  uint32_t crc_eeprom = read_eeprom_checksum();
-  uint32_t crc = eeprom_crc32(EEPROM_OFFSET, EEPROM_DATA_LENGTH);
+  uint32_t checksum;
+
+  EEPROM_readAnything(EEPROM_START_ADDRESS, configuration);
+  checksum = crc32((byte*)&configuration + 4, sizeof(configuration) - 4);
 
 #ifdef DEBUG
   Serial.print(F("EEPROM checksum: 0x"));
-  Serial.print(crc_eeprom, HEX);
+  Serial.print(configuration.checksum, HEX);
   Serial.print(F(" / 0x"));
-  Serial.print(crc, HEX);
+  Serial.print(checksum, HEX);
 #endif
-  if (crc_eeprom != crc)
+
+  if (checksum != configuration.checksum)
   {
 #ifdef DEBUG
     Serial.print(F(" - mismatch -> initializing EEPROM!"));
 #endif
-    eeprom_write(EEPROM_UPDATE_BANK + EEPROM_UPDATE_VOICE + EEPROM_UPDATE_VOL + EEPROM_UPDATE_PAN + EEPROM_UPDATE_MIDICHANNEL);
-  }
-  else
-  {
-    bank = EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR);
-    voice = EEPROM.read(EEPROM_OFFSET + EEPROM_VOICE_ADDR);
-    vol = float(EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR)) / UCHAR_MAX;
-    pan = float(EEPROM.read(EEPROM_OFFSET + EEPROM_PAN_ADDR)) / SCHAR_MAX;
-    midi_channel = EEPROM.read(EEPROM_OFFSET + EEPROM_MIDICHANNEL_ADDR);
-    if (midi_channel > 16)
-      midi_channel = MIDI_CHANNEL_OMNI;
+    eeprom_update();
   }
 #ifdef DEBUG
   Serial.println();
 #endif
 }
 
-uint32_t read_eeprom_checksum(void)
+void eeprom_write(void)
 {
-  return (EEPROM.read(EEPROM_CRC32_ADDR) << 24 | EEPROM.read(EEPROM_CRC32_ADDR + 1) << 16 | EEPROM.read(EEPROM_CRC32_ADDR + 2) << 8 | EEPROM.read(EEPROM_CRC32_ADDR + 3));
+  autostore = 0;
 }
 
-void update_eeprom_checksum(void)
+void eeprom_update(void)
 {
-  write_eeprom_checksum(eeprom_crc32(EEPROM_OFFSET, EEPROM_DATA_LENGTH)); // recalculate crc and write to eeprom
+  autostore = 0;
+  EEPROM_writeAnything(EEPROM_START_ADDRESS, configuration);
 }
 
-void write_eeprom_checksum(uint32_t crc)
-{
-  EEPROM.update(EEPROM_CRC32_ADDR, (crc & 0xff000000) >> 24);
-  EEPROM.update(EEPROM_CRC32_ADDR + 1, (crc & 0x00ff0000) >> 16);
-  EEPROM.update(EEPROM_CRC32_ADDR + 2, (crc & 0x0000ff00) >> 8);
-  EEPROM.update(EEPROM_CRC32_ADDR + 3, crc & 0x000000ff);
-}
-
-uint32_t eeprom_crc32(uint16_t calc_start, uint16_t calc_bytes) // base code from https://www.arduino.cc/en/Tutorial/EEPROMCrc
+uint32_t crc32(byte * calc_start, uint16_t calc_bytes) // base code from https://www.arduino.cc/en/Tutorial/EEPROMCrc
 {
   const uint32_t crc_table[16] =
   {
@@ -833,97 +811,19 @@ uint32_t eeprom_crc32(uint16_t calc_start, uint16_t calc_bytes) // base code fro
   };
   uint32_t crc = ~0L;
 
-  if (calc_start + calc_bytes > EEPROM.length())
-    calc_bytes = EEPROM.length() - calc_start;
-
-  for (uint16_t index = calc_start ; index < (calc_start + calc_bytes) ; ++index)
+  for (byte* index = calc_start ; index < (calc_start + calc_bytes) ; ++index)
   {
-    crc = crc_table[(crc ^ EEPROM[index]) & 0x0f] ^ (crc >> 4);
-    crc = crc_table[(crc ^ (EEPROM[index] >> 4)) & 0x0f] ^ (crc >> 4);
+    crc = crc_table[(crc ^ *index) & 0x0f] ^ (crc >> 4);
+    crc = crc_table[(crc ^ (*index >> 4)) & 0x0f] ^ (crc >> 4);
     crc = ~crc;
   }
 
   return (crc);
 }
 
-void eeprom_write(uint8_t status)
-{
-  eeprom_update_status |= status;
-  if (eeprom_update_status != 0)
-    autostore = 0;
-#ifdef DEBUG
-  Serial.print(F("Updating EEPROM state to: "));
-  Serial.println(eeprom_update_status, DEC);
-#endif
-}
-
-void eeprom_update(void)
-{
-  autostore_value = AUTOSTORE_FAST_MS;
-
-  if (eeprom_update_status & EEPROM_UPDATE_BANK)
-  {
-    EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
-#ifdef DEBUG
-    Serial.println(F("Bank written to EEPROM"));
-#endif
-    eeprom_update_status &= ~EEPROM_UPDATE_BANK;
-  }
-  else if (eeprom_update_status & EEPROM_UPDATE_VOICE)
-  {
-    EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
-#ifdef DEBUG
-    Serial.println(F("Voice written to EEPROM"));
-#endif
-    eeprom_update_status &= ~EEPROM_UPDATE_VOICE;
-  }
-  else if (eeprom_update_status & EEPROM_UPDATE_VOL)
-  {
-    EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
-#ifdef DEBUG
-    Serial.println(F("Volume written to EEPROM"));
-#endif
-    eeprom_update_status &= ~EEPROM_UPDATE_VOL;
-  }
-  else if (eeprom_update_status & EEPROM_UPDATE_PAN)
-  {
-    EEPROM.update(EEPROM_OFFSET + EEPROM_PAN_ADDR, uint8_t(pan * SCHAR_MAX));
-#ifdef DEBUG
-    Serial.println(F("Panorama written to EEPROM"));
-#endif
-    eeprom_update_status &= ~EEPROM_UPDATE_PAN;
-  }
-  else if (eeprom_update_status & EEPROM_UPDATE_MIDICHANNEL )
-  {
-    EEPROM.update(EEPROM_OFFSET + EEPROM_MIDICHANNEL_ADDR, midi_channel);
-    update_eeprom_checksum();
-#ifdef DEBUG
-    Serial.println(F("MIDI channel written to EEPROM"));
-#endif
-    eeprom_update_status &= ~EEPROM_UPDATE_MIDICHANNEL;
-  }
-  else if (eeprom_update_status & EEPROM_UPDATE_CHECKSUM)
-  {
-    update_eeprom_checksum();
-#ifdef DEBUG
-    Serial.println(F("Checksum written to EEPROM"));
-#endif
-    eeprom_update_status &= ~EEPROM_UPDATE_CHECKSUM;
-    autostore_value = AUTOSTORE_MS;
-    return;
-  }
-
-  if (eeprom_update_status == 0)
-    eeprom_update_status |= EEPROM_UPDATE_CHECKSUM;
-}
-
-void init_eeprom(void)
-{
-  for (uint8_t i = 0; i < EEPROM_DATA_LENGTH; i++)
-  {
-    EEPROM.update(EEPROM_OFFSET + i, 0);
-  }
-}
+/******************************************************************************
+   DEBUG HELPER
+ ******************************************************************************/
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
 void show_cpu_and_mem_usage(void)

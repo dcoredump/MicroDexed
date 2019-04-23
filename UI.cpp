@@ -38,7 +38,7 @@ void handle_ui(void)
 {
   if (ui_back_to_main >= UI_AUTO_BACK_MS && (ui_state != UI_MAIN && ui_state != UI_EFFECTS_FILTER && ui_state != UI_EFFECTS_DELAY))
   {
-    enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+    enc[0].write(map(configuration.vol * 100, 0, 100, 0, ENC_VOL_STEPS));
     enc_val[0] = enc[0].read();
     ui_show_main();
   }
@@ -97,7 +97,7 @@ void handle_ui(void)
                 break;
               case UI_EFFECTS_DELAY:
                 ui_main_state = UI_MAIN_VOICE;
-                enc[i].write(voice);
+                enc[i].write(configuration.voice);
                 enc_val[i] = enc[i].read();
                 ui_show_main();
                 break;
@@ -114,17 +114,17 @@ void handle_ui(void)
             switch (ui_state)
             {
               case UI_MAIN:
-                enc[i].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+                enc[i].write(map(configuration.vol * 100, 0, 100, 0, ENC_VOL_STEPS));
                 enc_val[i] = enc[i].read();
                 ui_show_volume();
                 break;
               case UI_VOLUME:
-                enc[i].write(midi_channel);
+                enc[i].write(configuration.midi_channel);
                 enc_val[i] = enc[i].read();
                 ui_show_midichannel();
                 break;
               case UI_MIDICHANNEL:
-                enc[i].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+                enc[i].write(map(configuration.vol * 100, 0, 100, 0, ENC_VOL_STEPS));
                 enc_val[i] = enc[i].read();
                 ui_show_main();
                 break;
@@ -139,13 +139,13 @@ void handle_ui(void)
                   case UI_MAIN_BANK:
                   case UI_MAIN_BANK_SELECTED:
                     ui_main_state = UI_MAIN_VOICE;
-                    enc[i].write(voice);
+                    enc[i].write(configuration.voice);
                     enc_val[i] = enc[i].read();
                     break;
                   case UI_MAIN_VOICE:
                   case UI_MAIN_VOICE_SELECTED:
                     ui_main_state = UI_MAIN_BANK;
-                    enc[i].write(bank);
+                    enc[i].write(configuration.bank);
                     enc_val[i] = enc[i].read();
                     break;
                 }
@@ -217,8 +217,8 @@ void handle_ui(void)
                 enc[i].write(0);
               else if (enc[i].read() >= ENC_VOL_STEPS)
                 enc[i].write(ENC_VOL_STEPS);
-              set_volume(float(map(enc[i].read(), 0, ENC_VOL_STEPS, 0, 100)) / 100, pan);
-              eeprom_write(EEPROM_UPDATE_VOL);
+              set_volume(float(map(enc[i].read(), 0, ENC_VOL_STEPS, 0, 100)) / 100, configuration.pan);
+              eeprom_write();
               ui_show_volume();
               break;
             case UI_MIDICHANNEL:
@@ -226,8 +226,8 @@ void handle_ui(void)
                 enc[i].write(0);
               else if (enc[i].read() >= 16)
                 enc[i].write(16);
-              midi_channel = enc[i].read();
-              eeprom_write(EEPROM_UPDATE_MIDICHANNEL);
+              configuration.midi_channel = enc[i].read();
+              eeprom_write();
               ui_show_midichannel();
               break;
           }
@@ -238,7 +238,7 @@ void handle_ui(void)
             case UI_VOLUME:
               ui_state = UI_MAIN;
               lcd.clear();
-              enc[1].write(voice);
+              enc[1].write(configuration.voice);
               ui_show_main();
               break;
             case UI_MAIN:
@@ -251,39 +251,39 @@ void handle_ui(void)
                     enc[i].write(0);
                   else if (enc[i].read() > max_loaded_banks - 1)
                     enc[i].write(max_loaded_banks - 1);
-                  bank = enc[i].read();
-                  get_voice_names_from_bank(bank);
-                  load_sysex(bank, voice);
-                  eeprom_write(EEPROM_UPDATE_BANK);
+                  configuration.bank = enc[i].read();
+                  get_voice_names_from_bank(configuration.bank);
+                  load_sysex(configuration.bank, configuration.voice);
+                  eeprom_write();
                   break;
                 case UI_MAIN_VOICE:
                   ui_main_state = UI_MAIN_VOICE_SELECTED;
                 case UI_MAIN_VOICE_SELECTED:
                   if (enc[i].read() <= 0)
                   {
-                    if (bank > 0)
+                    if (configuration.bank > 0)
                     {
                       enc[i].write(MAX_VOICES - 1);
-                      bank--;
-                      get_voice_names_from_bank(bank);
+                      configuration.bank--;
+                      get_voice_names_from_bank(configuration.bank);
                     }
                     else
                       enc[i].write(0);
                   }
                   else if (enc[i].read() > MAX_VOICES - 1)
                   {
-                    if (bank < MAX_BANKS - 1)
+                    if (configuration.bank < MAX_BANKS - 1)
                     {
                       enc[i].write(0);
-                      bank++;
-                      get_voice_names_from_bank(bank);
+                      configuration.bank++;
+                      get_voice_names_from_bank(configuration.bank);
                     }
                     else
                       enc[i].write(MAX_VOICES - 1);
                   }
-                  voice = enc[i].read();
-                  load_sysex(bank, voice);
-                  eeprom_write(EEPROM_UPDATE_VOICE);
+                  configuration.voice = enc[i].read();
+                  load_sysex(configuration.bank, configuration.voice);
+                  eeprom_write();
                   break;
               }
               ui_show_main();
@@ -411,9 +411,9 @@ void ui_show_main(void)
     lcd.clear();
   }
 
-  lcd.show(0, 0, 2, bank);
+  lcd.show(0, 0, 2, configuration.bank);
   lcd.show(0, 2, 1, " ");
-  strip_extension(bank_names[bank], bank_name);
+  strip_extension(bank_names[configuration.bank], bank_name);
 
   if (ui_main_state == UI_MAIN_BANK || ui_main_state == UI_MAIN_BANK_SELECTED)
   {
@@ -428,18 +428,18 @@ void ui_show_main(void)
     lcd.show(0, 11, 1, " ");
   }
 
-  lcd.show(1, 0, 2, voice + 1);
+  lcd.show(1, 0, 2, configuration.voice + 1);
   lcd.show(1, 2, 1, " ");
   if (ui_main_state == UI_MAIN_VOICE || ui_main_state == UI_MAIN_VOICE_SELECTED)
   {
     lcd.show(1, 2, 1, "[");
-    lcd.show(1, 3, 10, voice_names[voice]);
+    lcd.show(1, 3, 10, voice_names[configuration.voice]);
     lcd.show(1, 14, 1, "]");
   }
   else
   {
     lcd.show(1, 2, 1, " ");
-    lcd.show(1, 3, 10, voice_names[voice]);
+    lcd.show(1, 3, 10, voice_names[configuration.voice]);
     lcd.show(1, 14, 1, " ");
   }
 
@@ -456,18 +456,18 @@ void ui_show_volume(void)
     lcd.show(0, 0, LCD_CHARS, "Volume");
   }
 
-  lcd.show(0, LCD_CHARS - 3, 3, vol * 100);
-  if (vol == 0.0)
+  lcd.show(0, LCD_CHARS - 3, 3, configuration.vol * 100);
+  if (configuration.vol == 0.0)
     lcd.show(1, 0, LCD_CHARS , " ");
   else
   {
-    if (vol < (float(LCD_CHARS) / 100))
+    if (configuration.vol < (float(LCD_CHARS) / 100))
       lcd.show(1, 0, LCD_CHARS, "*");
     else
     {
-      for (uint8_t i = 0; i < map(vol * 100, 0, 100, 0, LCD_CHARS); i++)
+      for (uint8_t i = 0; i < map(configuration.vol * 100, 0, 100, 0, LCD_CHARS); i++)
         lcd.show(1, i, 1, "*");
-      for (uint8_t i = map(vol * 100, 0, 100, 0, LCD_CHARS); i < LCD_CHARS; i++)
+      for (uint8_t i = map(configuration.vol * 100, 0, 100, 0, LCD_CHARS); i < LCD_CHARS; i++)
         lcd.show(1, i, 1, " ");
     }
   }
@@ -485,12 +485,12 @@ void ui_show_midichannel(void)
     lcd.show(0, 0, LCD_CHARS, "MIDI Channel");
   }
 
-  if (midi_channel == MIDI_CHANNEL_OMNI)
+  if (configuration.midi_channel == MIDI_CHANNEL_OMNI)
     lcd.show(1, 0, 4, "OMNI");
   else
   {
-    lcd.show(1, 0, 2, midi_channel);
-    if (midi_channel == 1)
+    lcd.show(1, 0, 2, configuration.midi_channel);
+    if (configuration.midi_channel == 1)
       lcd.show(1, 2, 2, "  ");
   }
 
