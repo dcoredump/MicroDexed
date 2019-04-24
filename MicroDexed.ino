@@ -123,7 +123,7 @@ uint8_t active_voices = 0;
 elapsedMillis cpu_mem_millis;
 #endif
 config_t configuration = {0xffff, 0, 0, VOLUME, 0.5f, DEFAULT_MIDI_CHANNEL};
-bool update_flag = false;
+bool eeprom_update_flag = false;
 
 void setup()
 {
@@ -150,6 +150,8 @@ void setup()
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
   Serial.println(F("(c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>"));
   Serial.println(F("https://github.com/dcoredump/MicroDexed"));
+  Serial.print(F("Version: "));
+  Serial.println(VERSION);
   Serial.println(F("<setup start>"));
 
   initial_values_from_eeprom();
@@ -321,7 +323,7 @@ void loop()
   }
 
   // EEPROM update handling
-  if (autostore >= AUTOSTORE_MS && active_voices == 0 && update_flag == true)
+  if (autostore >= AUTOSTORE_MS && active_voices == 0 && eeprom_update_flag == true)
   {
     // only store configuration data to EEPROM when AUTOSTORE_MS is reached and no voices are activated anymore
     eeprom_update();
@@ -803,12 +805,12 @@ void initial_values_from_eeprom(void)
 void eeprom_write(void)
 {
   autostore = 0;
-  update_flag = true;
+  eeprom_update_flag = true;
 }
 
 void eeprom_update(void)
 {
-  update_flag = false;
+  eeprom_update_flag = false;
   configuration.checksum = crc32((byte*)&configuration + 4, sizeof(configuration) - 4);
   EEPROM_writeAnything(EEPROM_START_ADDRESS, configuration);
   Serial.println(F("Updating EEPROM with configuration data"));
