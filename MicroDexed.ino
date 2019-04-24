@@ -105,8 +105,6 @@ char voice_name[VOICE_NAME_LEN];
 char bank_names[MAX_BANKS][BANK_NAME_LEN];
 char voice_names[MAX_VOICES][VOICE_NAME_LEN];
 elapsedMillis autostore;
-uint8_t eeprom_update_status = 0;
-uint16_t autostore_value = AUTOSTORE_MS;
 uint8_t midi_timing_counter = 0; // 24 per qarter
 elapsedMillis midi_timing_timestep;
 uint16_t midi_timing_quarter = 0;
@@ -125,6 +123,7 @@ uint8_t active_voices = 0;
 elapsedMillis cpu_mem_millis;
 #endif
 config_t configuration = {0xffff, 0, 0, VOLUME, 0.5f, DEFAULT_MIDI_CHANNEL};
+bool update_flag = false;
 
 void setup()
 {
@@ -153,7 +152,6 @@ void setup()
   Serial.println(F("https://github.com/dcoredump/MicroDexed"));
   Serial.println(F("<setup start>"));
 
-  //init_eeprom();
   initial_values_from_eeprom();
 
   setup_midi_devices();
@@ -241,9 +239,9 @@ void setup()
     mixer2.gain(2, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // only delayed signal (without feedback)
 
     // just for testing:
-    dexed->fx.uiReso=0.5;
-    dexed->fx.uiGain=0.5;
-    dexed->fx.uiCutoff=0.5;
+    dexed->fx.uiReso = 0.5;
+    dexed->fx.uiGain = 0.5;
+    dexed->fx.uiCutoff = 0.5;
 
     // load default SYSEX data
     load_sysex(configuration.bank, configuration.voice);
@@ -323,7 +321,7 @@ void loop()
   }
 
   // EEPROM update handling
-  if (autostore >= AUTOSTORE_MS && active_voices == 0)
+  if (autostore >= AUTOSTORE_MS && active_voices == 0 && update_flag == true)
   {
     // only store configuration data to EEPROM when AUTOSTORE_MS is reached and no voices are activated anymore
     eeprom_update();
@@ -336,7 +334,7 @@ void loop()
   if (control_rate > CONTROL_RATE_MS)
   {
     control_rate = 0;
-    
+
     // Shutdown unused voices
     active_voices = dexed->getNumNotesPlaying();
   }
@@ -773,23 +771,29 @@ inline float logvol(float x)
 void initial_values_from_eeprom(void)
 {
   uint32_t checksum;
+  config_t tmp_conf;
 
-  EEPROM_readAnything(EEPROM_START_ADDRESS, configuration);
-  checksum = crc32((byte*)&configuration + 4, sizeof(configuration) - 4);
+  EEPROM_readAnything(EEPROM_START_ADDRESS, tmp_conf);
+  checksum = crc32((byte*)&tmp_conf + 4, sizeof(tmp_conf) - 4);
 
 #ifdef DEBUG
   Serial.print(F("EEPROM checksum: 0x"));
-  Serial.print(configuration.checksum, HEX);
+  Serial.print(tmp_conf.checksum, HEX);
   Serial.print(F(" / 0x"));
   Serial.print(checksum, HEX);
 #endif
 
-  if (checksum != configuration.checksum)
+  if (checksum != tmp_conf.checksum)
   {
 #ifdef DEBUG
     Serial.print(F(" - mismatch -> initializing EEPROM!"));
 #endif
     eeprom_update();
+  }
+  else
+  {
+    EEPROM_readAnything(EEPROM_START_ADDRESS, configuration);
+    Serial.print(F(" - OK, loading!"));
   }
 #ifdef DEBUG
   Serial.println();
@@ -799,12 +803,15 @@ void initial_values_from_eeprom(void)
 void eeprom_write(void)
 {
   autostore = 0;
+  update_flag = true;
 }
 
 void eeprom_update(void)
 {
-  autostore = 0;
+  update_flag = false;
+  configuration.checksum = crc32((byte*)&configuration + 4, sizeof(configuration) - 4);
   EEPROM_writeAnything(EEPROM_START_ADDRESS, configuration);
+  Serial.println(F("Updating EEPROM with configuration data"));
 }
 
 uint32_t crc32(byte * calc_start, uint16_t calc_bytes) // base code from https://www.arduino.cc/en/Tutorial/EEPROMCrc

@@ -31,7 +31,7 @@
 // ATTENTION! For better latency you have to redefine AUDIO_BLOCK_SAMPLES from
 // 128 to 64 in <ARDUINO-IDE-DIR>/cores/teensy3/AudioStream.h
 
-#define VERSION "0.9.3"
+#define VERSION "0.9.4"
 
 //*************************************************************************************************
 //* DEVICE SETTINGS
@@ -41,6 +41,7 @@
 #define MIDI_DEVICE_DIN Serial1
 #define MIDI_DEVICE_USB 1
 #define MIDI_DEVICE_USB_HOST 1
+#define MIDI_DEVICE_NUMBER 0
 
 // AUDIO
 // If nothing is defined PT8211 is used as audio output device!
