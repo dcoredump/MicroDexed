@@ -5,7 +5,7 @@
    (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
-   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+   (c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -34,10 +34,10 @@
 #include "fm_core.h"
 #include "EngineMkI.h"
 #include "EngineOpl.h"
+#include "PluginFx.h"
 #include <Audio.h>
 #include "config.h"
 
-extern uint8_t bank;
 extern uint32_t overload;
 extern bool load_sysex(uint8_t bank, uint8_t voice_number);
 extern AudioControlSGTL5000 sgtl5000_1;
@@ -149,16 +149,23 @@ class Dexed
     bool isMonoMode(void);
     void setMonoMode(bool mode);
     void getSamples(uint16_t n_samples, int16_t* buffer);
-    bool processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2);
     void panic(void);
     void notesOff(void);
     void resetControllers(void);
     void setMaxNotes(uint8_t n);
+    uint8_t getMaxNotes(void);
     void doRefreshVoice(void);
     void setOPs(uint8_t ops);
     bool loadSysexVoice(uint8_t* data);
+    void keyup(uint8_t pitch);
+    void keydown(uint8_t pitch, uint8_t velo);
+    void setSustain(bool sustain);
+    bool getSustain(void);
+    uint8_t getNumNotesPlaying(void);
 
+    ProcessorVoice voices[MAX_NOTES];
     Controllers controllers;
+    PluginFx fx;
 
     uint8_t data[173] = {
       95, 29, 20, 50, 99, 95, 00, 00, 41, 00, 19, 00, 00, 03, 00, 06, 79, 00, 01, 00, 14, // OP6 eg_rate_1-4, level_1-4, kbd_lev_scl_brk_pt, kbd_lev_scl_lft_depth, kbd_lev_scl_rht_depth, kbd_lev_scl_lft_curve, kbd_lev_scl_rht_curve, kbd_rate_scaling, amp_mod_sensitivity, key_vel_sensitivity, operator_output_level, osc_mode, osc_freq_coarse, osc_freq_fine, osc_detune
@@ -179,18 +186,14 @@ class Dexed
     }; // FM-Piano
 
   protected:
-    //void onParam(uint8_t param_num,float param_val);
-    void keyup(uint8_t pitch);
-    void keydown(uint8_t pitch, uint8_t velo);
-
     static const uint8_t MAX_ACTIVE_NOTES = MAX_NOTES;
     uint8_t max_notes = MAX_ACTIVE_NOTES;
-    ProcessorVoice voices[MAX_ACTIVE_NOTES];
     uint8_t currentNote;
     bool sustain;
     bool monoMode;
     bool refreshVoice;
     uint8_t engineType;
+    VoiceStatus voiceStatus;
     Lfo lfo;
     FmCore* engineMsfa;
     EngineMkI* engineMkI;

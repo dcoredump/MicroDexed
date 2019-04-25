@@ -5,7 +5,7 @@
    (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
-   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+   (c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,20 +36,15 @@
 extern Encoder4 enc[2];
 extern int32_t enc_val[2];
 extern Bounce but[2];
-extern float vol;
-extern float vol_left;
-extern float vol_right;
 extern LiquidCrystalPlus_I2C lcd;
-extern uint8_t bank;
+extern config_t configuration;
 extern uint8_t max_loaded_banks;
-extern uint8_t voice;
 extern char bank_name[BANK_NAME_LEN];
 extern char voice_name[VOICE_NAME_LEN];
 extern uint8_t ui_state;
 extern uint8_t ui_main_state;
-extern uint8_t midi_channel;
-extern void eeprom_write(uint8_t status);
-extern void set_volume(float v, float vr, float vl);
+extern void eeprom_write(void);
+extern void set_volume(float v, float pan);
 extern elapsedMillis autostore;
 extern elapsedMillis long_button_pressed;
 extern uint8_t effect_filter_frq;
@@ -59,7 +54,6 @@ extern uint8_t effect_delay_time;
 extern uint8_t effect_delay_feedback;
 extern uint8_t effect_delay_volume;
 extern bool effect_delay_sync;
-extern AudioFilterStateVariable filter1;
 extern AudioEffectDelay delay1;
 extern AudioMixer4 mixer1;
 extern AudioMixer4 mixer2;

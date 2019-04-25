@@ -5,7 +5,7 @@
    (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
-   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
+   (c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #include "sin.h"
 #include "freqlut.h"
 #include "controllers.h"
+#include "PluginFx.h"
 #include <unistd.h>
 #include <limits.h>
 #ifdef USE_TEENSY_DSP
@@ -51,6 +52,7 @@ Dexed::Dexed(int rate)
   Lfo::init(rate);
   PitchEnv::init(rate);
   Env::init_sr(rate);
+  fx.init(rate);
 
   engineMkI = new EngineMkI;
   engineOpl = new EngineOpl;
@@ -63,7 +65,7 @@ Dexed::Dexed(int rate)
     voices[i].live = false;
   }
 
-  max_notes = 16;
+  max_notes = MAX_NOTES;
   currentNote = 0;
   resetControllers();
   controllers.masterTune = 0;
@@ -76,7 +78,7 @@ Dexed::Dexed(int rate)
 
   sustain = false;
 
-  setEngineType(DEXED_ENGINE_MODERN);
+  setEngineType(DEXED_ENGINE);
 }
 
 Dexed::~Dexed()
@@ -107,41 +109,41 @@ void Dexed::deactivate(void)
 void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 {
   uint16_t i;
+  float sumbuf[n_samples];
 
-  if (refreshVoice) {
-    for (i = 0; i < max_notes; i++) {
+  if (refreshVoice)
+  {
+    for (i = 0; i < max_notes; i++)
+    {
       if ( voices[i].live )
         voices[i].dx7_note->update(data, voices[i].midi_note, voices[i].velocity);
     }
+
     lfo.reset(data + 137);
     refreshVoice = false;
   }
 
-  for (i = 0; i < n_samples; i += _N_) {
+  for (i = 0; i < n_samples; i += _N_)
+  {
     AlignedBuf<int32_t, _N_> audiobuf;
-#ifndef SUM_UP_AS_INT
-    float sumbuf[_N_];
-#endif
 
-    for (uint8_t j = 0; j < _N_; ++j) {
+    for (uint8_t j = 0; j < _N_; ++j)
+    {
       audiobuf.get()[j] = 0;
-#ifndef SUM_UP_AS_INT
-      sumbuf[j] = 0.0;
-#else
-      buffer[i + j] = 0;
-#endif
+      sumbuf[i + j] = 0.0;
     }
 
     int32_t lfovalue = lfo.getsample();
     int32_t lfodelay = lfo.getdelay();
-#ifdef SUM_UP_AS_INT
-    int32_t sum;
-#endif
 
-    for (uint8_t note = 0; note < max_notes; ++note) {
-      if (voices[note].live) {
+    for (uint8_t note = 0; note < max_notes; ++note)
+    {
+      if (voices[note].live)
+      {
         voices[note].dx7_note->compute(audiobuf.get(), lfovalue, lfodelay, &controllers);
-        for (uint8_t j = 0; j < _N_; ++j) {
+
+        for (uint8_t j = 0; j < _N_; ++j)
+        {
           int32_t val = audiobuf.get()[j];
           val = val >> 4;
 #ifdef USE_TEENSY_DSP
@@ -149,158 +151,29 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 #else
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
 #endif
-#ifdef SUM_UP_AS_INT
-          //sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS)*(float(data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_VOICE_VOLUME])/255);
-          sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS);
-          if (buffer[i + j] > 0 && clip_val > 0 && sum < 0)
-          {
-            sum = INT_MAX;
-            overload++;
-          }
-          else if (buffer[i + j] < 0 && clip_val < 0 && sum > 0)
-          {
-            sum = INT_MIN;
-            overload++;
-          }
-          buffer[i + j] = sum;
-          audiobuf.get()[j] = 0;
-#else
+
           float f = static_cast<float>(clip_val >> REDUCE_LOUDNESS) / 0x8000;
-          if (f > 1)
+          if (f > 1.0)
           {
-            f = 1;
+            f = 1.0;
             overload++;
           }
-          else if (f < -1)
+          else if (f < -1.0)
           {
-            f = -1;
+            f = -1.0;
             overload++;
           }
-          sumbuf[j] += f;
+          sumbuf[i + j] += f;
           audiobuf.get()[j] = 0;
-#endif
         }
       }
     }
-#ifndef SUM_UP_AS_INT
-    for (uint8_t j = 0; j < _N_; ++j) {
-      buffer[i + j] = static_cast<int16_t>(sumbuf[j] * 0x8000);
-    }
-#endif
-  }
-}
-
-bool Dexed::processMidiMessage(uint8_t type, uint8_t data1, uint8_t data2)
-{
-  switch (type & 0xf0) {
-    case 0x80 :
-      keyup(data1);
-      return (false);
-      break;
-    case 0x90 :
-      keydown(data1, data2);
-      return (false);
-      break;
-    case 0xb0 : {
-        uint8_t ctrl = data1;
-        uint8_t value = data2;
-
-        switch (ctrl) {
-          case 0: // ignore BankSelect MSB
-            break;
-          case 1:
-            controllers.modwheel_cc = value;
-            controllers.refresh();
-            break;
-          case 2:
-            controllers.breath_cc = value;
-            controllers.refresh();
-            break;
-          case 4:
-            controllers.foot_cc = value;
-            controllers.refresh();
-            break;
-          case 7: // Volume
-            vol = float(value) / 0x7f;
-            set_volume(vol, vol_left, vol_right);
-            break;
-          case 10: // Pan
-            if (value < 64)
-            {
-              vol_left = 1.0;
-              vol_right = float(value) / 0x40;
-              set_volume(vol, vol_left, vol_right);
-            }
-            else if (value > 64)
-            {
-              vol_left = float(0x7f - value) / 0x40;
-              vol_right = 1.0;
-              set_volume(vol, vol_left, vol_right);
-            }
-            else
-            {
-              vol_left = 1.0;
-              vol_right = 1.0;
-              set_volume(vol, vol_left, vol_right);
-            }
-            break;
-          case 32: // BankSelect LSB
-            bank = data2;
-            break;
-          case 64:
-            sustain = value > 63;
-            if (!sustain) {
-              for (uint8_t note = 0; note < max_notes; note++) {
-                if (voices[note].sustained && !voices[note].keydown) {
-                  voices[note].dx7_note->keyup();
-                  voices[note].sustained = false;
-                }
-              }
-            }
-            break;
-          case 120:
-            panic();
-            return (true);
-            break;
-          case 121:
-            resetControllers();
-            return (true);
-            break;
-          case 123:
-            notesOff();
-            return (true);
-            break;
-          case 126:
-            setMonoMode(true);
-            return (true);
-            break;
-          case 127:
-            setMonoMode(false);
-            return (true);
-            break;
-        }
-        break;
-      }
-
-    case 0xc0 : // ProgramChange
-      load_sysex(bank, data1);
-      break;
-
-    // channel aftertouch
-    case 0xd0 :
-      controllers.aftertouch_cc = data1;
-      controllers.refresh();
-      break;
-    // pitchbend
-    case 0xe0 :
-      controllers.values_[kControllerPitch] = data1 | (data2 << 7);
-      break;
-
-    default:
-      break;
   }
 
-  return (false);
+  fx.process(sumbuf, n_samples);
+
+  for (i = 0; i < n_samples; ++i)
+    buffer[i] = static_cast<int16_t>(sumbuf[i] * 0x8000);
 }
 
 void Dexed::keydown(uint8_t pitch, uint8_t velo) {
@@ -357,7 +230,7 @@ void Dexed::keydown(uint8_t pitch, uint8_t velo) {
 }
 
 void Dexed::keyup(uint8_t pitch) {
-  pitch += data[144] - 24;
+  pitch += data[144] - TRANSPOSE_FIX;
 
   uint8_t note;
   for (note = 0; note < max_notes; ++note) {
@@ -400,99 +273,11 @@ void Dexed::doRefreshVoice(void)
 {
   refreshVoice = true;
 }
+
 void Dexed::setOPs(uint8_t ops)
 {
   controllers.opSwitch = ops;
 }
-
-/*
-  void Dexed::onParam(uint8_t param_num, float param_val)
-  {
-  int32_t tune;
-
-  if (param_val != data_float[param_num])
-  {
-  #ifdef DEBUG
-    uint8_t tmp = data[param_num];
-  #endif
-
-    _param_change_counter++;
-
-    if (param_num == 144 || param_num == 134 || param_num == 172)
-      panic();
-
-    refreshVoice = true;
-    data[param_num] = static_cast<uint8_t>(param_val);
-    data_float[param_num] = param_val;
-
-    switch (param_num)
-    {
-      case 155:
-        controllers.values_[kControllerPitchRange] = data[param_num];
-        break;
-      case 156:
-        controllers.values_[kControllerPitchStep] = data[param_num];
-        break;
-      case 157:
-        controllers.wheel.setRange(data[param_num]);
-        controllers.wheel.setTarget(data[param_num + 1]);
-        controllers.refresh();
-        break;
-      case 158:
-        controllers.wheel.setRange(data[param_num - 1]);
-        controllers.wheel.setTarget(data[param_num]);
-        controllers.refresh();
-        break;
-      case 159:
-        controllers.foot.setRange(data[param_num]);
-        controllers.foot.setTarget(data[param_num + 1]);
-        controllers.refresh();
-        break;
-      case 160:
-        controllers.foot.setRange(data[param_num - 1]);
-        controllers.foot.setTarget(data[param_num]);
-        controllers.refresh();
-        break;
-      case 161:
-        controllers.breath.setRange(data[param_num]);
-        controllers.breath.setTarget(data[param_num + 1]);
-        controllers.refresh();
-        break;
-      case 162:
-        controllers.breath.setRange(data[param_num - 1]);
-        controllers.breath.setTarget(data[param_num]);
-        controllers.refresh();
-        break;
-      case 163:
-        controllers.at.setRange(data[param_num]);
-        controllers.at.setTarget(data[param_num + 1]);
-        controllers.refresh();
-        break;
-      case 164:
-        controllers.at.setRange(data[param_num - 1]);
-        controllers.at.setTarget(data[param_num]);
-        controllers.refresh();
-        break;
-      case 165:
-        tune = param_val * 0x4000;
-        controllers.masterTune = (tune << 11) * (1.0 / 12);
-        break;
-      case 166:
-      case 167:
-      case 168:
-      case 169:
-      case 170:
-      case 171:
-        controllers.opSwitch = (data[166] << 5) | (data[167] << 4) | (data[168] << 3) | (data[169] << 2) | (data[170] << 1) | data[171];
-        break;
-      case 172:
-        max_notes = data[param_num];
-        break;
-    }
-
-  }
-  }
-*/
 
 uint8_t Dexed::getEngineType() {
   return engineType;
@@ -528,6 +313,19 @@ void Dexed::setMonoMode(bool mode) {
     return;
 
   monoMode = mode;
+}
+
+void Dexed::setSustain(bool s)
+{
+  if (sustain == s)
+    return;
+
+  sustain = s;
+}
+
+bool Dexed::getSustain(void)
+{
+  return sustain;
 }
 
 void Dexed::panic(void) {
@@ -572,6 +370,59 @@ void Dexed::setMaxNotes(uint8_t n) {
     panic();
     controllers.refresh();
   }
+}
+
+uint8_t Dexed::getMaxNotes(void)
+{
+  return max_notes;
+}
+
+uint8_t Dexed::getNumNotesPlaying(void)
+{
+  uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
+  uint8_t i;
+  uint8_t count_playing_voices = 0;
+
+  for (i = 0; i < max_notes; i++)
+  {
+    if (voices[i].live == true)
+    {
+      uint8_t op_amp = 0;
+      uint8_t op_carrier_num = 0;
+
+      memset(&voiceStatus, 0, sizeof(VoiceStatus));
+      voices[i].dx7_note->peekVoiceStatus(voiceStatus);
+
+      for (uint8_t op = 0; op < 6; op++)
+      {
+        if ((op_carrier & (1 << op)))
+        {
+          // this voice is a carrier!
+          op_carrier_num++;
+          if (voiceStatus.amp[op] <= 1069 && voiceStatus.ampStep[op] == 4)
+          {
+            // this voice produces no audio output
+            op_amp++;
+          }
+        }
+      }
+
+      if (op_amp == op_carrier_num)
+      {
+        // all carrier-operators are silent -> disable the voice
+        voices[i].live = false;
+        voices[i].sustained = false;
+        voices[i].keydown = false;
+#ifdef DEBUG
+        Serial.print(F("Shutdown voice: "));
+        Serial.println(i, DEC);
+#endif
+      }
+      else
+        count_playing_voices++;
+    }
+  }
+  return (count_playing_voices);
 }
 
 bool Dexed::loadSysexVoice(uint8_t* new_data)
@@ -680,7 +531,7 @@ bool Dexed::loadSysexVoice(uint8_t* new_data)
   //activate();
 
   strncpy(voice_name, (char *)&data[145], sizeof(voice_name) - 1);
-  
+
 #ifdef DEBUG
   //char voicename[11];
   //memset(voicename, 0, sizeof(voicename));
