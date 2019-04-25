@@ -5,7 +5,7 @@
    (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
-   (c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>
+   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
