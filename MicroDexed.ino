@@ -5,7 +5,7 @@
    (https://github.com/asb2m10/dexed) for the Teensy-3.5/3.6 with audio shield.
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
-   (c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>
+   (c)2018 H. Wirtz <wirtz@parasitstudio.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -29,12 +29,16 @@
 #include <SD.h>
 #include <MIDI.h>
 #include <EEPROM.h>
-#include "EEPROMAnything.h"
-#include "midi_devices.hpp"
+#if defined(USBCON)
+#include <midi_UsbTransport.h>
+#endif
 #include <limits.h>
 #include "dexed.h"
 #include "dexed_sysex.h"
-#include "PluginFx.h"
+#ifdef USE_ONBOARD_USB_HOST
+#include <USBHost_t36.h>
+#endif
+
 #ifdef I2C_DISPLAY // selecting sounds by encoder, button and display
 #include "UI.h"
 #include <Bounce.h>
@@ -49,55 +53,61 @@ uint8_t ui_state = UI_MAIN;
 uint8_t ui_main_state = UI_MAIN_VOICE;
 #endif
 
-AudioPlayQueue           queue1;
-AudioAnalyzePeak         peak1;
-AudioEffectDelay         delay1;
-AudioMixer4              mixer1;
-AudioMixer4              mixer2;
-AudioConnection          patchCord0(queue1, peak1);
-AudioConnection          patchCord9(queue1, 0, mixer1, 0);
+// GUItool: begin automatically generated code
+AudioPlayQueue           queue1;         //xy=179,325
+AudioAnalyzePeak         peak1;          //xy=348,478
+AudioFilterStateVariable filter1;        //xy=415,334
+AudioEffectDelay         delay1;         //xy=732,485
+AudioMixer4              mixer1;         //xy=734,245
+AudioMixer4              mixer2;         //xy=1055,317
+AudioConnection          patchCord1(queue1, peak1);
+AudioConnection          patchCord2(queue1, 0, filter1, 0);
+AudioConnection          patchCord3(filter1, 0, delay1, 0);
+AudioConnection          patchCord4(filter1, 0, mixer1, 0);
+AudioConnection          patchCord5(filter1, 0, mixer2, 0);
 AudioConnection          patchCord6(delay1, 0, mixer1, 1);
 AudioConnection          patchCord7(delay1, 0, mixer2, 2);
 AudioConnection          patchCord8(mixer1, delay1);
+AudioConnection          patchCord9(queue1, 0, mixer1, 3); // for disabling the filter
 AudioConnection          patchCord10(mixer1, 0, mixer2, 1);
-#if defined(TEENSY_AUDIO_BOARD)
-AudioOutputI2S           i2s1;
-AudioConnection          patchCord111(mixer2, 0, i2s1, 0);
-AudioConnection          patchCord112(mixer2, 0, i2s1, 1);
-AudioControlSGTL5000     sgtl5000_1;
-#elif defined(TGA_AUDIO_BOARD)
-AudioOutputI2S           i2s1;
-AudioAmplifier           volume_r;
-AudioAmplifier           volume_l;
-AudioConnection          patchCord11(mixer2, volume_r);
-AudioConnection          patchCord12(mixer2, volume_l);
-AudioConnection          patchCord13(volume_r, 0, i2s1, 1);
-AudioConnection          patchCord14(volume_l, 0, i2s1, 0);
-AudioControlWM8731master wm8731_1;
+#ifdef TEENSY_AUDIO_BOARD
+AudioOutputI2S           i2s1;           //xy=1200,432
+AudioControlSGTL5000     sgtl5000_1;     //xy=197,554
+AudioConnection          patchCord11(mixer2, 0, i2s1, 0);
+AudioConnection          patchCord12(mixer2, 0, i2s1, 1);
 #else
-AudioOutputPT8211        pt8211_1;
-AudioAmplifier           volume_master;
-AudioAmplifier           volume_r;
-AudioAmplifier           volume_l;
+AudioOutputPT8211        pt8211_1;       //xy=1079,320
+AudioAmplifier           volume_master;           //xy=678,393
+AudioAmplifier           volume_r;           //xy=818,370
+AudioAmplifier           volume_l;           //xy=818,411
 AudioConnection          patchCord11(mixer2, 0, volume_master, 0);
 AudioConnection          patchCord12(volume_master, volume_r);
 AudioConnection          patchCord13(volume_master, volume_l);
 AudioConnection          patchCord14(volume_r, 0, pt8211_1, 0);
 AudioConnection          patchCord15(volume_l, 0, pt8211_1, 1);
 #endif
+// GUItool: end automatically generated code
 
 Dexed* dexed = new Dexed(SAMPLE_RATE);
 bool sd_card_available = false;
+uint8_t midi_channel = DEFAULT_MIDI_CHANNEL;
 uint32_t xrun = 0;
 uint32_t overload = 0;
 uint32_t peak = 0;
 uint16_t render_time_max = 0;
+uint8_t bank = 0;
 uint8_t max_loaded_banks = 0;
+uint8_t voice = 0;
+float vol = VOLUME;
+float vol_right = 1.0;
+float vol_left = 1.0;
 char bank_name[BANK_NAME_LEN];
 char voice_name[VOICE_NAME_LEN];
 char bank_names[MAX_BANKS][BANK_NAME_LEN];
 char voice_names[MAX_VOICES][VOICE_NAME_LEN];
 elapsedMillis autostore;
+uint8_t eeprom_update_status = 0;
+uint16_t autostore_value = AUTOSTORE_MS;
 uint8_t midi_timing_counter = 0; // 24 per qarter
 elapsedMillis midi_timing_timestep;
 uint16_t midi_timing_quarter = 0;
@@ -110,13 +120,34 @@ uint8_t effect_delay_feedback = 0;
 uint8_t effect_delay_volume = 0;
 bool effect_delay_sync = 0;
 elapsedMicros fill_audio_buffer;
-elapsedMillis control_rate;
-uint8_t active_voices = 0;
+
+#ifdef MASTER_KEY_MIDI
+bool master_key_enabled = false;
+#endif
+
 #ifdef SHOW_CPU_LOAD_MSEC
 elapsedMillis cpu_mem_millis;
 #endif
-config_t configuration = {0xffff, 0, 0, VOLUME, 0.5f, DEFAULT_MIDI_CHANNEL};
-bool eeprom_update_flag = false;
+
+#ifdef MIDI_DEVICE
+MIDI_CREATE_INSTANCE(HardwareSerial, MIDI_DEVICE, midi_serial);
+#endif
+#ifdef USE_ONBOARD_USB_HOST
+USBHost usb_host;
+MIDIDevice midi_usb(usb_host);
+#endif
+#if defined(USBCON)
+static const unsigned sUsbTransportBufferSize = 16;
+typedef midi::UsbTransport<sUsbTransportBufferSize> UsbTransport;
+UsbTransport sUsbTransport;
+MIDI_CREATE_INSTANCE(UsbTransport, sUsbTransport, midi_onboard_usb);
+#endif
+
+#ifdef TEST_NOTE
+IntervalTimer sched_note_on;
+IntervalTimer sched_note_off;
+uint8_t _voice_counter = 0;
+#endif
 
 void setup()
 {
@@ -141,43 +172,45 @@ void setup()
 
   delay(220);
   Serial.println(F("MicroDexed based on https://github.com/asb2m10/dexed"));
-  Serial.println(F("(c)2018,2019 H. Wirtz <wirtz@parasitstudio.de>"));
+  Serial.println(F("(c)2018 H. Wirtz <wirtz@parasitstudio.de>"));
   Serial.println(F("https://github.com/dcoredump/MicroDexed"));
-  Serial.print(F("Version: "));
-  Serial.println(VERSION);
   Serial.println(F("<setup start>"));
-
   initial_values_from_eeprom();
 
-  setup_midi_devices();
+  // start up USB host
+#ifdef USE_ONBOARD_USB_HOST
+  usb_host.begin();
+  Serial.println(F("USB-MIDI enabled."));
+#endif
+
+  // check for onboard USB-MIDI
+#if defined(USBCON)
+  midi_onboard_usb.begin();
+  Serial.println(F("Onboard USB-MIDI enabled."));
+#endif
+
+#ifdef MIDI_DEVICE
+  // Start serial MIDI
+  midi_serial.begin(DEFAULT_MIDI_CHANNEL);
+  Serial.println(F("Serial MIDI enabled"));
+#endif
 
   // start audio card
-  AudioNoInterrupts();
   AudioMemory(AUDIO_MEM);
-
 #ifdef TEENSY_AUDIO_BOARD
   sgtl5000_1.enable();
-  //sgtl5000_1.dacVolumeRamp();
-  sgtl5000_1.dacVolumeRampLinear();
-  //sgtl5000_1.dacVolumeRampDisable();
+  sgtl5000_1.dacVolumeRamp();
+  //sgtl5000_1.dacVolumeRampLinear();
   sgtl5000_1.unmuteHeadphone();
   sgtl5000_1.unmuteLineout();
   sgtl5000_1.autoVolumeDisable(); // turn off AGC
   sgtl5000_1.volume(1.0, 1.0);
   sgtl5000_1.lineOutLevel(31);
-  sgtl5000_1.audioPostProcessorEnable();
-  sgtl5000_1.autoVolumeControl(1, 1, 1, 0.9, 0.01, 0.05);
-  sgtl5000_1.autoVolumeEnable();
   Serial.println(F("Teensy-Audio-Board enabled."));
-#elif defined(TGA_AUDIO_BOARD)
-  wm8731_1.enable();
-  wm8731_1.volume(1.0);
-  Serial.println(F("TGA board enabled."));
 #else
   Serial.println(F("PT8211 enabled."));
 #endif
-
-  set_volume(configuration.vol, configuration.pan);
+  set_volume(vol, vol_left, vol_right);
 
   // start SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
@@ -195,13 +228,13 @@ void setup()
 
     // read all bank names
     max_loaded_banks = get_bank_names();
-    strip_extension(bank_names[configuration.bank], bank_name);
+    strip_extension(bank_names[bank], bank_name);
 
     // read all voice name for actual bank
-    get_voice_names_from_bank(configuration.bank);
+    get_voice_names_from_bank(bank);
 #ifdef DEBUG
     Serial.print(F("Bank ["));
-    Serial.print(bank_names[configuration.bank]);
+    Serial.print(bank_names[bank]);
     Serial.print(F("/"));
     Serial.print(bank_name);
     Serial.println(F("]"));
@@ -218,27 +251,28 @@ void setup()
 #endif
 
     // Init effects
+    filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
+    //filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
+    filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
+    filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
     delay1.delay(0, mapfloat(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
     // mixer1 is the feedback-adding mixer, mixer2 the whole delay (with/without feedback) mixer
     mixer1.gain(0, 1.0); // original signal
     mixer1.gain(1, mapfloat(effect_delay_feedback, 0, ENC_DELAY_FB_STEPS, 0.0, 1.0)); // amount of feedback
+    mixer1.gain(0, 0.0); // filtered signal off
+    mixer1.gain(3, 1.0); // original signal on
     mixer2.gain(0, 1.0 - mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // original signal
     mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delayed signal (including feedback)
     mixer2.gain(2, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // only delayed signal (without feedback)
 
-    // just for testing:
-    dexed->fx.Reso = 0.5;
-    dexed->fx.Gain = 0.5;
-    dexed->fx.Cutoff = 0.5;
-
     // load default SYSEX data
-    load_sysex(configuration.bank, configuration.voice);
+    load_sysex(bank, voice);
   }
 
 #ifdef I2C_DISPLAY
-  enc[0].write(map(configuration.vol * 100, 0, 100, 0, ENC_VOL_STEPS));
+  enc[0].write(map(vol * 100, 0, 100, 0, ENC_VOL_STEPS));
   enc_val[0] = enc[0].read();
-  enc[1].write(configuration.voice);
+  enc[1].write(voice);
   enc_val[1] = enc[1].read();
   but[0].update();
   but[1].update();
@@ -252,9 +286,9 @@ void setup()
 
 #ifdef DEBUG
   Serial.print(F("Bank/Voice from EEPROM ["));
-  Serial.print(configuration.bank, DEC);
+  Serial.print(EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR), DEC);
   Serial.print(F("/"));
-  Serial.print(configuration.voice, DEC);
+  Serial.print(EEPROM.read(EEPROM_OFFSET +  EEPROM_VOICE_ADDR), DEC);
   Serial.println(F("]"));
   show_patch();
 #endif
@@ -265,6 +299,12 @@ void setup()
   Serial.print(1000000 / (SAMPLE_RATE / AUDIO_BLOCK_SAMPLES));
   Serial.println(F("ms)"));
 
+#ifdef TEST_NOTE
+  Serial.println(F("MIDI test enabled"));
+  sched_note_on.begin(note_on, 2000000);
+  sched_note_off.begin(note_off, 6333333);
+#endif
+
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
 #endif
@@ -274,8 +314,21 @@ void setup()
   ui_show_main();
 #endif
 
-  AudioInterrupts();
   Serial.println(F("<setup end>"));
+
+#ifdef TEST_NOTE
+  //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_DEP] = 99;           // full pitch mod depth
+  //dexed->data[DEXED_VOICE_OFFSET+DEXED_LFO_PITCH_MOD_SENS] = 99;          // full pitch mod sense
+  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_MODWHEEL_ASSIGN] = 7;   // mod wheel assign all
+  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_FOOTCTRL_ASSIGN] = 7;   // foot ctrl assign all
+  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_BREATHCTRL_ASSIGN] = 7; // breath ctrl assign all
+  //dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET+AT_ASSIGN] = 7;               // at ctrl assign all
+  //queue_midi_event(0xb0, 1, 99); // test mod wheel
+  //queue_midi_event(0xb0, 2, 99); // test breath ctrl
+  //queue_midi_event(0xb0, 4, 99); // test food switch
+  //queue_midi_event(0xd0, 4, 99); // test at
+  //queue_midi_event(0xe0, 0xff, 0xff); // test pitch bend
+#endif
 }
 
 void loop()
@@ -303,32 +356,23 @@ void loop()
     }
 #ifndef TEENSY_AUDIO_BOARD
     for (uint8_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
-      audio_buffer[i] *= configuration.vol;
+      audio_buffer[i] *= vol;
 #endif
     queue1.playBuffer();
   }
 
   // EEPROM update handling
-  if (autostore >= AUTOSTORE_MS && active_voices == 0 && eeprom_update_flag == true)
+  if (eeprom_update_status > 0 && autostore >= autostore_value)
   {
-    // only store configuration data to EEPROM when AUTOSTORE_MS is reached and no voices are activated anymore
+    autostore = 0;
     eeprom_update();
   }
 
   // MIDI input handling
-  check_midi_devices();
-
-  // CONTROL-RATE-EVENT-HANDLING
-  if (control_rate > CONTROL_RATE_MS)
-  {
-    control_rate = 0;
-
-    // Shutdown unused voices
-    active_voices = dexed->getNumNotesPlaying();
-  }
+  handle_input();
 
 #ifdef I2C_DISPLAY
-  // UI-HANDLING
+  // UI
   if (master_timer >= TIMER_UI_HANDLING_MS)
   {
     master_timer -= TIMER_UI_HANDLING_MS;
@@ -346,463 +390,540 @@ void loop()
 #endif
 }
 
-/******************************************************************************
-   MIDI MESSAGE HANDLER
- ******************************************************************************/
-void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity)
+void handle_input(void)
 {
-  if (checkMidiChannel(inChannel))
-  {
-    dexed->keydown(inNumber, inVelocity);
-  }
-}
-
-void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity)
-{
-  if (checkMidiChannel(inChannel))
-  {
-    dexed->keyup(inNumber);
-  }
-}
-
-void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
-{
-  if (checkMidiChannel(inChannel))
+#if defined(USBCON)
+  while (midi_onboard_usb.read())
   {
 #ifdef DEBUG
-    Serial.print(F("CC#"));
-    Serial.print(inCtrl, DEC);
-    Serial.print(F(":"));
-    Serial.println(inValue, DEC);
+    Serial.println(F("[ONBOARD-MIDI-USB]"));
 #endif
-
-    switch (inCtrl) {
-      case 0:
-        if (inValue < MAX_BANKS)
-        {
-          configuration.bank = inValue;
-          handle_ui();
-        }
-        break;
-      case 1:
-        dexed->controllers.modwheel_cc = inValue;
-        dexed->controllers.refresh();
-        break;
-      case 2:
-        dexed->controllers.breath_cc = inValue;
-        dexed->controllers.refresh();
-        break;
-      case 4:
-        dexed->controllers.foot_cc = inValue;
-        dexed->controllers.refresh();
-        break;
-      case 7: // Volume
-        configuration.vol = float(inValue) / 0x7f;
-        set_volume(configuration.vol, configuration.pan);
-        break;
-      case 10: // Pan
-        configuration.pan = float(inValue) / 128;
-        set_volume(configuration.vol, configuration.pan);
-        break;
-      case 32: // BankSelect LSB
-        configuration.bank = inValue;
-        break;
-      case 64:
-        dexed->setSustain(inValue > 63);
-        if (!dexed->getSustain()) {
-          for (uint8_t note = 0; note < dexed->getMaxNotes(); note++) {
-            if (dexed->voices[note].sustained && !dexed->voices[note].keydown) {
-              dexed->voices[note].dx7_note->keyup();
-              dexed->voices[note].sustained = false;
-            }
-          }
-        }
-        break;
-      case 102:  // CC 102: filter frequency
-/*        effect_filter_frq = map(inValue, 0, 127, 0, ENC_FILTER_FRQ_STEPS);
-        if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
-        {
-          // turn "off" filter
-          mixer1.gain(0, 0.0); // filtered signal off
-          mixer1.gain(3, 1.0); // original signal on
-        }
-        else
-        {
-          // turn "on" filter
-          mixer1.gain(0, 1.0); // filtered signal on
-          mixer1.gain(3, 0.0); // original signal off
-        }
-        filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
-        handle_ui(); */
-        break;
-      case 103:  // CC 103: filter resonance
-/*        effect_filter_resonance = map(inValue, 0, 127, 0, ENC_FILTER_RES_STEPS);
-        filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
-        handle_ui(); */
-        break;
-      case 104:  // CC 104: filter octave
-/*      effect_filter_octave = map(inValue, 0, 127, 0, ENC_FILTER_OCT_STEPS);
-        filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
-        handle_ui(); */
-        break;
-      case 105:  // CC 105: delay time
-        effect_delay_time = map(inValue, 0, 127, 0, ENC_DELAY_TIME_STEPS);
-        delay1.delay(0, mapfloat(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
-        handle_ui();
-        break;
-      case 106:  // CC 106: delay feedback
-        effect_delay_feedback = map(inValue, 0, 127, 0, ENC_DELAY_FB_STEPS);
-        mixer1.gain(1, mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
-        handle_ui();
-        break;
-      case 107:  // CC 107: delay volume
-        effect_delay_volume = map(inValue, 0, 127, 0, ENC_DELAY_VOLUME_STEPS);
-        mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delay tap1 signal (with added feedback)
-        handle_ui();
-        break;
-      case 120:
-        dexed->panic();
-        break;
-      case 121:
-        dexed->resetControllers();
-        break;
-      case 123:
-        dexed->notesOff();
-        break;
-      case 126:
-        dexed->setMonoMode(true);
-        break;
-      case 127:
-        dexed->setMonoMode(false);
-        break;
-    }
-  }
-}
-
-void handleAfterTouch(byte inChannel, byte inPressure)
-{
-  dexed->controllers.aftertouch_cc = inPressure;
-  dexed->controllers.refresh();
-}
-
-void handlePitchBend(byte inChannel, int inPitch)
-{
-  dexed->controllers.values_[kControllerPitch] = inPitch + 0x2000; // -8192 to +8191 --> 0 to 16383
-}
-
-void handleProgramChange(byte inChannel, byte inProgram)
-{
-  if (inProgram < MAX_VOICES)
-  {
-    load_sysex(configuration.bank, inProgram);
-    handle_ui();
-  }
-}
-
-void handleSystemExclusive(byte * sysex, uint len)
-{
-  /*
-    SYSEX MESSAGE: Parameter Change
-    -------------------------------
-       bits    hex  description
-
-     11110000  F0   Status byte - start sysex
-     0iiiiiii  43   ID # (i=67; Yamaha)
-     0sssnnnn  10   Sub-status (s=1) & channel number (n=0; ch 1)
-     0gggggpp  **   parameter group # (g=0; voice, g=2; function)
-     0ppppppp  **   parameter # (these are listed in next section)
-                     Note that voice parameter #'s can go over 128 so
-                     the pp bits in the group byte are either 00 for
-                     par# 0-127 or 01 for par# 128-155. In the latter case
-                     you add 128 to the 0ppppppp byte to compute par#.
-     0ddddddd  **   data byte
-     11110111  F7   Status - end sysex
-  */
-
-#ifdef DEBUG
-  Serial.print(F("SYSEX-Data["));
-  Serial.print(len, DEC);
-  Serial.print(F("]"));
-  for (uint8_t i = 0; i < len; i++)
-  {
-    Serial.print(F(" "));
-    Serial.print(sysex[i], DEC);
-  }
-  Serial.println();
-#endif
-
-  if (!checkMidiChannel((sysex[2] & 0x0f) + 1 ))
-  {
-#ifdef DEBUG
-    Serial.println(F("SYSEX-MIDI-Channel mismatch"));
-#endif
-    return;
-  }
-
-  if (sysex[1] != 0x43) // check for Yamaha sysex
-  {
-#ifdef DEBUG
-    Serial.println(F("E: SysEx vendor not Yamaha."));
-#endif
-    return;
-  }
-
-#ifdef DEBUG
-  Serial.print(F("Substatus: ["));
-  Serial.print((sysex[2] & 0x70) >> 4);
-  Serial.println(F("]"));
-#endif
-
-  // parse parameter change
-  if (len == 7)
-  {
-    if (((sysex[3] & 0x7c) >> 2) != 0 && ((sysex[3] & 0x7c) >> 2) != 2)
+    if (midi_onboard_usb.getType() >= 0xf0) // SysEX
     {
-#ifdef DEBUG
-      Serial.println(F("E: Not a SysEx parameter or function parameter change."));
-#endif
-      return;
-    }
-    if (sysex[6] != 0xf7)
-    {
-#ifdef DEBUG
-      Serial.println(F("E: SysEx end status byte not detected."));
-#endif
-      return;
-    }
-
-    sysex[4] &= 0x7f;
-    sysex[5] &= 0x7f;
-
-    uint8_t data_index;
-
-    if (((sysex[3] & 0x7c) >> 2) == 0)
-    {
-      dexed->notesOff();
-      dexed->data[sysex[4] + ((sysex[3] & 0x03) * 128)] = sysex[5]; // set parameter
-      dexed->doRefreshVoice();
-      data_index = sysex[4] + ((sysex[3] & 0x03) * 128);
+      handle_sysex_parameter(midi_onboard_usb.getSysExArray(), midi_onboard_usb.getSysExArrayLength());
     }
     else
     {
-      dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set function parameter
-      dexed->controllers.values_[kControllerPitchRange] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE];
-      dexed->controllers.values_[kControllerPitchStep] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP];
-      dexed->controllers.wheel.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE]);
-      dexed->controllers.wheel.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN]);
-      dexed->controllers.foot.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE]);
-      dexed->controllers.foot.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN]);
-      dexed->controllers.breath.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE]);
-      dexed->controllers.breath.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN]);
-      dexed->controllers.at.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE]);
-      dexed->controllers.at.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN]);
-      dexed->controllers.masterTune = (dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE] * 0x4000 << 11) * (1.0 / 12);
-      dexed->controllers.refresh();
-      data_index = DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4];
+      queue_midi_event(midi_onboard_usb.getType(), midi_onboard_usb.getData1(), midi_onboard_usb.getData2());
+#ifdef MIDI_MERGE_THRU
+#ifdef USB_CON
+      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+#ifdef USE_ONBOARD_USB_HOST
+      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
     }
-#ifdef DEBUG
-    Serial.print(F("SysEx"));
-    if (((sysex[3] & 0x7c) >> 2) == 0)
-      Serial.print(F(" function"));
-    Serial.print(F(" parameter "));
-    Serial.print(sysex[4], DEC);
-    Serial.print(F(" = "));
-    Serial.print(sysex[5], DEC);
-    Serial.print(F(", data_index = "));
-    Serial.println(data_index, DEC);
-#endif
   }
+#endif
+#ifdef USE_ONBOARD_USB_HOST
+  usb_host.Task();
+  while (midi_usb.read())
+  {
 #ifdef DEBUG
+    Serial.println(F("[MIDI-USB-HOST]"));
+#endif
+    if (midi_usb.getType() >= 0xf0) // SysEX
+    {
+      handle_sysex_parameter(midi_usb.getSysExArray(), midi_usb.getSysExArrayLength());
+    }
+    else
+    {
+      queue_midi_event(midi_usb.getType(), midi_usb.getData1(), midi_usb.getData2());
+#ifdef MIDI_MERGE_THRU
+#ifdef USB_CON
+      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+#ifdef USE_ONBOARD_USB_HOST
+      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+    }
+  }
+#endif
+#ifdef MIDI_DEVICE
+  while (midi_serial.read())
+  {
+#ifdef DEBUG
+    Serial.print(F("[MIDI-Serial] "));
+#endif
+    if (midi_serial.getType() >= 0xf0) // SYSEX
+    {
+      handle_sysex_parameter(midi_serial.getSysExArray(), midi_serial.getSysExArrayLength());
+    }
+    else
+    {
+      queue_midi_event(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2());
+#ifdef MIDI_MERGE_THRU
+#ifdef USB_CON
+      midi_onboard_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+      midi_usb.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+      midi_serial.send(midi_serial.getType(), midi_serial.getData1(), midi_serial.getData2(), midi_serial.getChannel());
+#endif
+    }
+  }
+#endif
+}
+
+#ifdef DEBUG
+#ifdef SHOW_MIDI_EVENT
+void print_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
+{
+  Serial.print(F("Listen MIDI-Channel: "));
+  if (midi_channel == MIDI_CHANNEL_OMNI)
+    Serial.print(F("OMNI"));
   else
-    Serial.println(F("E: SysEx parameter length wrong."));
+    Serial.print(midi_channel, DEC);
+  Serial.print(F(", MIDI event type: 0x"));
+  if (type < 16)
+    Serial.print(F("0"));
+  Serial.print(type, HEX);
+  Serial.print(F(", incoming MIDI channel: "));
+  Serial.print((type & 0x0f) + 1, DEC);
+  Serial.print(F(", data1: "));
+  Serial.print(data1, DEC);
+  Serial.print(F(", data2: "));
+  Serial.println(data2, DEC);
+}
 #endif
-}
+#endif
 
-void handleTimeCodeQuarterFrame(byte data)
+#ifdef MASTER_KEY_MIDI
+bool handle_master_key(uint8_t data)
 {
-  ;
-}
+  int8_t num = num_key_base_c(data);
 
-void handleAfterTouchPoly(byte inChannel, byte inNumber, byte inVelocity)
-{
-  ;
-}
-
-void handleSongSelect(byte inSong)
-{
-  ;
-}
-
-void handleTuneRequest(void)
-{
-  ;
-}
-
-void handleClock(void)
-{
-  midi_timing_counter++;
-  if (midi_timing_counter % 24 == 0)
-  {
-    midi_timing_quarter = midi_timing_timestep;
-    midi_timing_counter = 0;
-    midi_timing_timestep = 0;
-    // Adjust delay control here
 #ifdef DEBUG
-    Serial.print(F("MIDI Clock: "));
-    Serial.print(60000 / midi_timing_quarter, DEC);
-    Serial.print(F("bpm ("));
-    Serial.print(midi_timing_quarter, DEC);
-    Serial.println(F("ms per quarter)"));
+  Serial.print(F("Master-Key: "));
+  Serial.println(num, DEC);
 #endif
-  }
-}
 
-void handleStart(void)
-{
-  ;
-}
-
-void handleContinue(void)
-{
-  ;
-}
-
-void handleStop(void)
-{
-  ;
-}
-
-void handleActiveSensing(void)
-{
-  ;
-}
-
-void handleSystemReset(void)
-{
-#ifdef DEBUG
-  Serial.println(F("MIDI SYSEX RESET"));
-#endif
-  dexed->notesOff();
-  dexed->panic();
-  dexed->resetControllers();
-}
-
-/******************************************************************************
-   MIDI HELPER
- ******************************************************************************/
-
-bool checkMidiChannel(byte inChannel)
-{
-  // check for MIDI channel
-  if (configuration.midi_channel == MIDI_CHANNEL_OMNI)
+  if (num > 0)
   {
+    // a white key!
+    if (num <= 32)
+    {
+      if (load_sysex(bank, num))
+      {
+#ifdef DEBUG
+        Serial.print(F("Loading voice number "));
+        Serial.println(num, DEC);
+#endif
+        eeprom_write(EEPROM_UPDATE_VOICE);
+#ifdef I2C_DISPLAY
+        lcd.show(1, 0, 2, voice + 1);
+        lcd.show(1, 2, 1, " ");
+        lcd.show(1, 3, 10, voice_names[voice]);
+#endif
+      }
+#ifdef DEBUG
+      else
+      {
+        Serial.print(F("E: cannot load voice number "));
+        Serial.println(num, DEC);
+      }
+#endif
+    }
     return (true);
   }
-  else if (inChannel != configuration.midi_channel)
+  else
   {
+    // a black key!
+    num = abs(num);
+    if (num <= 10)
+    {
+      set_volume(float(num * 0.1), vol_left, vol_right);
+    }
+    else if (num > 10 && num <= 20)
+    {
+      bank = num - 10;
 #ifdef DEBUG
-    Serial.print(F("Ignoring MIDI data on channel "));
-    Serial.print(inChannel);
-    Serial.print(F("(listening on "));
-    Serial.print(configuration.midi_channel);
-    Serial.println(F(")"));
+      Serial.print(F("Bank switch to: "));
+      Serial.println(bank, DEC);
 #endif
-    return (false);
+      eeprom_write(EEPROM_UPDATE_BANK);
+#ifdef I2C_DISPLAY
+      if (get_voice_names_from_bank(bank))
+      {
+        strip_extension(bank_names[bank], bank_name);
+        lcd.show(0, 0, 2, bank);
+        lcd.show(0, 2, 1, " ");
+        lcd.show(0, 3, 10, bank_name);
+      }
+      else
+      {
+        lcd.show(0, 0, 2, bank);
+        lcd.show(0, 2, 10, " *ERROR*");
+      }
+#endif
+      return (true);
+    }
   }
-  return (true);
+  return (false);
+}
+#endif
+
+bool queue_midi_event(uint8_t type, uint8_t data1, uint8_t data2)
+{
+  bool ret = false;
+
+#if defined(DEBUG) && defined(SHOW_MIDI_EVENT)
+  print_midi_event(type, data1, data2);
+#endif
+
+  // check for MIDI channel
+  if (midi_channel != MIDI_CHANNEL_OMNI)
+  {
+    uint8_t c = type & 0x0f;
+    if (c != midi_channel - 1)
+    {
+#ifdef DEBUG
+      Serial.print(F("Ignoring MIDI data on channel "));
+      Serial.print(c);
+      Serial.print(F("(listening on "));
+      Serial.print(midi_channel);
+      Serial.println(F(")"));
+#endif
+      return (false);
+    }
+  }
+
+  // now throw away the MIDI channel information
+  type &= 0xf0;
+
+#ifdef MASTER_KEY_MIDI
+  if (type == 0x80 && data1 == MASTER_KEY_MIDI) // Master key released
+  {
+    master_key_enabled = false;
+#ifdef DEBUG
+    Serial.println(F("Master key disabled"));
+#endif
+  }
+  else if (type == 0x90 && data1 == MASTER_KEY_MIDI) // Master key pressed
+  {
+    master_key_enabled = true;
+#ifdef DEBUG
+    Serial.println(F("Master key enabled"));
+#endif
+  }
+  else
+  {
+    if (master_key_enabled)
+    {
+      if (type == 0x80) // handle when note is released
+      {
+        dexed->notesOff();
+        handle_master_key(data1);
+      }
+    }
+    else
+#endif
+    {
+      if (type == 0xb0)
+      {
+        switch (data1)
+        {
+          case 0x66:  // CC 102: filter frequency
+            effect_filter_frq = map(data2, 0, 127, 0, ENC_FILTER_FRQ_STEPS);
+            if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
+            {
+              // turn "off" filter
+              mixer1.gain(0, 0.0); // filtered signal off
+              mixer1.gain(3, 1.0); // original signal on
+            }
+            else
+            {
+              // turn "on" filter
+              mixer1.gain(0, 1.0); // filtered signal on
+              mixer1.gain(3, 0.0); // original signal off
+            }
+            filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
+            break;
+          case 0x67:  // CC 103: filter resonance
+            effect_filter_resonance = map(data2, 0, 127, 0, ENC_FILTER_RES_STEPS);
+            filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
+            break;
+          case 0x68:  // CC 104: filter octave
+            effect_filter_octave = map(data2, 0, 127, 0, ENC_FILTER_OCT_STEPS);
+            filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
+            break;
+          case 0x69:  // CC 105: delay time
+            effect_delay_time = map(data2, 0, 127, 0, ENC_DELAY_TIME_STEPS);
+            delay1.delay(0, mapfloat(effect_delay_time, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
+            break;
+          case 0x6A:  // CC 106: delay feedback
+            effect_delay_feedback = map(data2, 0, 127, 0, ENC_DELAY_FB_STEPS);
+            mixer1.gain(1, mapfloat(float(effect_delay_feedback), 0, ENC_DELAY_FB_STEPS, 0.0, 1.0));
+            break;
+          case 0x6B:  // CC 107: delay volume
+            effect_delay_volume = map(data2, 0, 127, 0, ENC_DELAY_VOLUME_STEPS);
+            mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delay tap1 signal (with added feedback)
+            break;
+          default:
+            ret = dexed->processMidiMessage(type, data1, data2);
+            break;
+        }
+      }
+      else
+        ret = dexed->processMidiMessage(type, data1, data2);
+    }
+
+#ifdef MASTER_KEY_MIDI
+  }
+#endif
+  return (ret);
 }
 
-/******************************************************************************
-   VOLUME HELPER
- ******************************************************************************/
-
-void set_volume(float v, float p)
+#ifdef MASTER_KEY_MIDI
+int8_t num_key_base_c(uint8_t midi_note)
 {
-  configuration.vol = v;
-  configuration.pan = p;
+  int8_t num = 0;
+
+  switch (midi_note % 12)
+  {
+    // positive numbers are white keys, negative black ones
+    case 0:
+      num = 1;
+      break;
+    case 1:
+      num = -1;
+      break;
+    case 2:
+      num = 2;
+      break;
+    case 3:
+      num = -2;
+      break;
+    case 4:
+      num = 3;
+      break;
+    case 5:
+      num = 4;
+      break;
+    case 6:
+      num = -3;
+      break;
+    case 7:
+      num = 5;
+      break;
+    case 8:
+      num = -4;
+      break;
+    case 9:
+      num = 6;
+      break;
+    case 10:
+      num = -5;
+      break;
+    case 11:
+      num = 7;
+      break;
+  }
+
+  if (num > 0)
+    return (num + (((midi_note - MASTER_NUM1) / 12) * 7));
+  else
+    return (num + ((((midi_note - MASTER_NUM1) / 12) * 5) * -1));
+}
+#endif
+
+void set_volume(float v, float vr, float vl)
+{
+  vol = v;
+  vol_right = vr;
+  vol_left = vl;
 
 #ifdef DEBUG
+  uint8_t tmp;
   Serial.print(F("Setting volume: VOL="));
   Serial.print(v, DEC);
   Serial.print(F("["));
-  Serial.print(configuration.vol, DEC);
-  Serial.print(F("] PAN="));
-  Serial.print(F("["));
-  Serial.print(configuration.pan, DEC);
-  Serial.print(F("] "));
-  Serial.print(pow(configuration.vol * sinf(configuration.pan * PI / 2), VOLUME_CURVE), 3);
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR);
+  Serial.print(tmp, DEC);
   Serial.print(F("/"));
-  Serial.println(pow(configuration.vol * cosf( configuration.pan * PI / 2), VOLUME_CURVE), 3);
+  Serial.print(float(tmp) / UCHAR_MAX, DEC);
+  Serial.print(F("] VOL_L="));
+  Serial.print(vl, DEC);
+  Serial.print(F("["));
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR);
+  Serial.print(tmp, DEC);
+  Serial.print(F("/"));
+  Serial.print(float(tmp) / UCHAR_MAX, DEC);
+  Serial.print(F("] VOL_R="));
+  Serial.print(vr, DEC);
+  Serial.print(F("["));
+  tmp = EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR);
+  Serial.print(tmp, DEC);
+  Serial.print(F("/"));
+  Serial.print(float(tmp) / UCHAR_MAX, DEC);
+  Serial.println(F("]"));
 #endif
 
-  // http://files.csound-tutorial.net/floss_manual/Release03/Cs_FM_03_ScrapBook/b-panning-and-spatialization.html
 #ifdef TEENSY_AUDIO_BOARD
-  sgtl5000_1.dacVolume(pow(v * sinf(p * PI / 2), VOLUME_CURVE), pow(v * cosf(p * PI / 2), VOLUME_CURVE));
+  //sgtl5000_1.dacVolume(vol * vol_left, vol * vol_right);
+  sgtl5000_1.dacVolume(pow(vol * vol_left, 0.2), pow(vol * vol_right, 0.2));
 #else
-  volume_master.gain(VOLUME_CURVE);
-  volume_r.gain(sinf(p * PI / 2));
-  volume_l.gain(cosf(p * PI / 2));
+  volume_master.gain(pow(vol, 0.2));
+  volume_r.gain(pow(vr, 0.2));
+  volume_l.gain(pow(vl, 0.2));
 #endif
 }
 
-// https://www.dr-lex.be/info-stuff/volumecontrols.html#table1
-inline float logvol(float x)
+void handle_sysex_parameter(const uint8_t* sysex, uint8_t len)
 {
-  return (0.001 * expf(6.908 * x));
+  if (sysex[0] != 240)
+  {
+    switch (sysex[0])
+    {
+      case 241: // MIDI Time Code Quarter Frame
+        break;
+      case 248: // Timing Clock (24 frames per quarter note)
+        midi_timing_counter++;
+        if (midi_timing_counter % 24 == 0)
+        {
+          midi_timing_quarter = midi_timing_timestep;
+          midi_timing_counter = 0;
+          midi_timing_timestep = 0;
+          // Adjust delay control here
+#ifdef DEBUG
+          Serial.print(F("MIDI Timing: "));
+          Serial.print(60000 / midi_timing_quarter, DEC);
+          Serial.print(F("bpm ("));
+          Serial.print(midi_timing_quarter, DEC);
+          Serial.println(F("ms per quarter)"));
+#endif
+        }
+        break;
+      case 255: // Reset To Power Up
+#ifdef DEBUG
+        Serial.println(F("MIDI SYSEX RESET"));
+#endif
+        dexed->notesOff();
+        dexed->panic();
+        dexed->resetControllers();
+        break;
+    }
+  }
+  else
+  {
+    if (sysex[1] != 0x43) // check for Yamaha sysex
+    {
+#ifdef DEBUG
+      Serial.println(F("E: SysEx vendor not Yamaha."));
+#endif
+      return;
+    }
+
+    // parse parameter change
+    if (len == 7)
+    {
+
+      if ((sysex[3] & 0x7c) != 0 || (sysex[3] & 0x7c) != 2)
+      {
+#ifdef DEBUG
+        Serial.println(F("E: Not a SysEx parameter or function parameter change."));
+#endif
+        return;
+      }
+      if (sysex[6] != 0xf7)
+      {
+#ifdef DEBUG
+        Serial.println(F("E: SysEx end status byte not detected."));
+#endif
+        return;
+      }
+      if ((sysex[3] & 0x7c) == 0)
+      {
+        dexed->data[sysex[4]] = sysex[5]; // set parameter
+        dexed->doRefreshVoice();
+      }
+      else
+      {
+        dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET - 63 + sysex[4]] = sysex[5]; // set function parameter
+        dexed->controllers.values_[kControllerPitchRange] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_RANGE];
+        dexed->controllers.values_[kControllerPitchStep] = dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_PITCHBEND_STEP];
+        dexed->controllers.wheel.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_RANGE]);
+        dexed->controllers.wheel.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MODWHEEL_ASSIGN]);
+        dexed->controllers.foot.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_RANGE]);
+        dexed->controllers.foot.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_FOOTCTRL_ASSIGN]);
+        dexed->controllers.breath.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_RANGE]);
+        dexed->controllers.breath.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_BREATHCTRL_ASSIGN]);
+        dexed->controllers.at.setRange(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_RANGE]);
+        dexed->controllers.at.setTarget(dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_AT_ASSIGN]);
+        dexed->controllers.masterTune = (dexed->data[DEXED_GLOBAL_PARAMETER_OFFSET + DEXED_MASTER_TUNE] * 0x4000 << 11) * (1.0 / 12);
+        dexed->controllers.refresh();
+      }
+#ifdef DEBUG
+      Serial.print(F("SysEx"));
+      if ((sysex[3] & 0x7c) == 0)
+        Serial.print(F(" function"));
+      Serial.print(F(" parameter "));
+      Serial.print(sysex[4], DEC);
+      Serial.print(F(" = "));
+      Serial.println(sysex[5], DEC);
+#endif
+    }
+#ifdef DEBUG
+    else
+      Serial.println(F("E: SysEx parameter length wrong."));
+#endif
+  }
 }
-
-
-/******************************************************************************
-   EEPROM HELPER
- ******************************************************************************/
 
 void initial_values_from_eeprom(void)
 {
-  uint32_t checksum;
-  config_t tmp_conf;
-
-  EEPROM_readAnything(EEPROM_START_ADDRESS, tmp_conf);
-  checksum = crc32((byte*)&tmp_conf + 4, sizeof(tmp_conf) - 4);
+  uint32_t crc_eeprom = read_eeprom_checksum();
+  uint32_t crc = eeprom_crc32(EEPROM_OFFSET, EEPROM_DATA_LENGTH);
 
 #ifdef DEBUG
   Serial.print(F("EEPROM checksum: 0x"));
-  Serial.print(tmp_conf.checksum, HEX);
+  Serial.print(crc_eeprom, HEX);
   Serial.print(F(" / 0x"));
-  Serial.print(checksum, HEX);
+  Serial.print(crc, HEX);
 #endif
-
-  if (checksum != tmp_conf.checksum)
+  if (crc_eeprom != crc)
   {
 #ifdef DEBUG
     Serial.print(F(" - mismatch -> initializing EEPROM!"));
 #endif
-    eeprom_update();
+    eeprom_write(EEPROM_UPDATE_BANK & EEPROM_UPDATE_VOICE & EEPROM_UPDATE_VOL & EEPROM_UPDATE_VOL_R & EEPROM_UPDATE_VOL_L & EEPROM_UPDATE_MIDICHANNEL);
   }
   else
   {
-    EEPROM_readAnything(EEPROM_START_ADDRESS, configuration);
-    Serial.print(F(" - OK, loading!"));
+    bank = EEPROM.read(EEPROM_OFFSET + EEPROM_BANK_ADDR);
+    voice = EEPROM.read(EEPROM_OFFSET + EEPROM_VOICE_ADDR);
+    vol = float(EEPROM.read(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR)) / UCHAR_MAX;
+    vol_right = float(EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR)) / UCHAR_MAX;
+    vol_left = float(EEPROM.read(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR)) / UCHAR_MAX;
+    midi_channel = EEPROM.read(EEPROM_OFFSET + EEPROM_MIDICHANNEL_ADDR);
   }
 #ifdef DEBUG
   Serial.println();
 #endif
 }
 
-void eeprom_write(void)
+uint32_t read_eeprom_checksum(void)
 {
-  autostore = 0;
-  eeprom_update_flag = true;
+  return (EEPROM.read(EEPROM_CRC32_ADDR) << 24 | EEPROM.read(EEPROM_CRC32_ADDR + 1) << 16 | EEPROM.read(EEPROM_CRC32_ADDR + 2) << 8 | EEPROM.read(EEPROM_CRC32_ADDR + 3));
 }
 
-void eeprom_update(void)
+void update_eeprom_checksum(void)
 {
-  eeprom_update_flag = false;
-  configuration.checksum = crc32((byte*)&configuration + 4, sizeof(configuration) - 4);
-  EEPROM_writeAnything(EEPROM_START_ADDRESS, configuration);
-  Serial.println(F("Updating EEPROM with configuration data"));
+  write_eeprom_checksum(eeprom_crc32(EEPROM_OFFSET, EEPROM_DATA_LENGTH)); // recalculate crc and write to eeprom
 }
 
-uint32_t crc32(byte * calc_start, uint16_t calc_bytes) // base code from https://www.arduino.cc/en/Tutorial/EEPROMCrc
+void write_eeprom_checksum(uint32_t crc)
+{
+  EEPROM.update(EEPROM_CRC32_ADDR, (crc & 0xff000000) >> 24);
+  EEPROM.update(EEPROM_CRC32_ADDR + 1, (crc & 0x00ff0000) >> 16);
+  EEPROM.update(EEPROM_CRC32_ADDR + 2, (crc & 0x0000ff00) >> 8);
+  EEPROM.update(EEPROM_CRC32_ADDR + 3, crc & 0x000000ff);
+}
+
+uint32_t eeprom_crc32(uint16_t calc_start, uint16_t calc_bytes) // base code from https://www.arduino.cc/en/Tutorial/EEPROMCrc
 {
   const uint32_t crc_table[16] =
   {
@@ -813,19 +934,97 @@ uint32_t crc32(byte * calc_start, uint16_t calc_bytes) // base code from https:/
   };
   uint32_t crc = ~0L;
 
-  for (byte* index = calc_start ; index < (calc_start + calc_bytes) ; ++index)
+  if (calc_start + calc_bytes > EEPROM.length())
+    calc_bytes = EEPROM.length() - calc_start;
+
+  for (uint16_t index = calc_start ; index < (calc_start + calc_bytes) ; ++index)
   {
-    crc = crc_table[(crc ^ *index) & 0x0f] ^ (crc >> 4);
-    crc = crc_table[(crc ^ (*index >> 4)) & 0x0f] ^ (crc >> 4);
+    crc = crc_table[(crc ^ EEPROM[index]) & 0x0f] ^ (crc >> 4);
+    crc = crc_table[(crc ^ (EEPROM[index] >> 4)) & 0x0f] ^ (crc >> 4);
     crc = ~crc;
   }
 
   return (crc);
 }
 
-/******************************************************************************
-   DEBUG HELPER
- ******************************************************************************/
+void eeprom_write(uint8_t status)
+{
+  eeprom_update_status |= status;
+  if (eeprom_update_status != 0)
+    autostore = 0;
+#ifdef DEBUG
+  Serial.print(F("Updating EEPROM to state to: "));
+  Serial.println(eeprom_update_status);
+#endif
+}
+
+void eeprom_update(void)
+{
+  autostore_value = AUTOSTORE_FAST_MS;
+
+  if (eeprom_update_status & EEPROM_UPDATE_BANK)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_BANK_ADDR, bank);
+#ifdef DEBUG
+    Serial.println(F("Bank written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_BANK;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_VOICE)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOICE_ADDR, voice);
+#ifdef DEBUG
+    Serial.println(F("Voice written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_VOICE;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_VOL)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_MASTER_VOLUME_ADDR, uint8_t(vol * UCHAR_MAX));
+#ifdef DEBUG
+    Serial.println(F("Volume written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_VOL;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_VOL_R)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_RIGHT_ADDR, uint8_t(vol_right * UCHAR_MAX));
+#ifdef DEBUG
+    Serial.println(F("Volume right written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_VOL_R;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_VOL_L)
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_VOLUME_LEFT_ADDR, uint8_t(vol_left * UCHAR_MAX));
+#ifdef DEBUG
+    Serial.println(F("Volume left written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_VOL_L;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_MIDICHANNEL )
+  {
+    EEPROM.update(EEPROM_OFFSET + EEPROM_MIDICHANNEL_ADDR, midi_channel);
+    update_eeprom_checksum();
+#ifdef DEBUG
+    Serial.println(F("MIDI channel written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_MIDICHANNEL;
+  }
+  else if (eeprom_update_status & EEPROM_UPDATE_CHECKSUM)
+  {
+    update_eeprom_checksum();
+#ifdef DEBUG
+    Serial.println(F("Checksum written to EEPROM"));
+#endif
+    eeprom_update_status &= ~EEPROM_UPDATE_CHECKSUM;
+    autostore_value = AUTOSTORE_MS;
+    return;
+  }
+
+  if (eeprom_update_status == 0)
+    eeprom_update_status |= EEPROM_UPDATE_CHECKSUM;
+}
 
 #if defined (DEBUG) && defined (SHOW_CPU_LOAD_MSEC)
 void show_cpu_and_mem_usage(void)
@@ -848,8 +1047,6 @@ void show_cpu_and_mem_usage(void)
   Serial.print(peak, DEC);
   Serial.print(F(" BLOCKSIZE: "));
   Serial.print(AUDIO_BLOCK_SAMPLES, DEC);
-  Serial.print(F(" ACTIVE_VOICES: "));
-  Serial.print(active_voices, DEC);
   Serial.println();
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
@@ -956,5 +1153,56 @@ void show_patch(void)
   }
 
   Serial.println();
+}
+#endif
+
+#ifdef TEST_NOTE
+void note_on(void)
+{
+  randomSeed(analogRead(A0));
+  queue_midi_event(0x90, TEST_NOTE, random(TEST_VEL_MIN, TEST_VEL_MAX));           // 1
+  queue_midi_event(0x90, TEST_NOTE + 5, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 2
+  queue_midi_event(0x90, TEST_NOTE + 8, random(TEST_VEL_MIN, TEST_VEL_MAX));       // 3
+  queue_midi_event(0x90, TEST_NOTE + 12, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 4
+  queue_midi_event(0x90, TEST_NOTE + 17, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 5
+  queue_midi_event(0x90, TEST_NOTE + 20, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 6
+  queue_midi_event(0x90, TEST_NOTE + 24, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 7
+  queue_midi_event(0x90, TEST_NOTE + 29, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 8
+  queue_midi_event(0x90, TEST_NOTE + 32, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 9
+  queue_midi_event(0x90, TEST_NOTE + 37, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 10
+  queue_midi_event(0x90, TEST_NOTE + 40, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 11
+  queue_midi_event(0x90, TEST_NOTE + 46, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 12
+  queue_midi_event(0x90, TEST_NOTE + 49, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 13
+  queue_midi_event(0x90, TEST_NOTE + 52, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 14
+  queue_midi_event(0x90, TEST_NOTE + 57, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 15
+  queue_midi_event(0x90, TEST_NOTE + 60, random(TEST_VEL_MIN, TEST_VEL_MAX));      // 16
+}
+
+void note_off(void)
+{
+  queue_midi_event(0x80, TEST_NOTE, 0);           // 1
+  queue_midi_event(0x80, TEST_NOTE + 5, 0);       // 2
+  queue_midi_event(0x80, TEST_NOTE + 8, 0);       // 3
+  queue_midi_event(0x80, TEST_NOTE + 12, 0);      // 4
+  queue_midi_event(0x80, TEST_NOTE + 17, 0);      // 5
+  queue_midi_event(0x80, TEST_NOTE + 20, 0);      // 6
+  queue_midi_event(0x80, TEST_NOTE + 24, 0);      // 7
+  queue_midi_event(0x80, TEST_NOTE + 29, 0);      // 8
+  queue_midi_event(0x80, TEST_NOTE + 32, 0);      // 9
+  queue_midi_event(0x80, TEST_NOTE + 37, 0);      // 10
+  queue_midi_event(0x80, TEST_NOTE + 40, 0);      // 11
+  queue_midi_event(0x80, TEST_NOTE + 46, 0);      // 12
+  queue_midi_event(0x80, TEST_NOTE + 49, 0);      // 13
+  queue_midi_event(0x80, TEST_NOTE + 52, 0);      // 14
+  queue_midi_event(0x80, TEST_NOTE + 57, 0);      // 15
+  queue_midi_event(0x80, TEST_NOTE + 60, 0);      // 16
+
+  bool success = load_sysex(DEFAULT_SYSEXBANK, (++_voice_counter) - 1);
+  if (success == false)
+#ifdef DEBUG
+    Serial.println(F("E: Cannot load SYSEX data"));
+#endif
+  else
+    show_patch();
 }
 #endif
