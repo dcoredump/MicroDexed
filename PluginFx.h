@@ -61,9 +61,9 @@ class PluginFx {
     PluginFx();
 
     // this is set directly by the ui / parameter
-    float uiCutoff;
-    float uiReso;
-    float uiGain;
+    float Cutoff;
+    float Reso;
+    float Gain;
 
     void init(int sampleRate);
     void process(float *work, int sampleSize);

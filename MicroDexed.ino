@@ -51,21 +51,14 @@ uint8_t ui_main_state = UI_MAIN_VOICE;
 
 AudioPlayQueue           queue1;
 AudioAnalyzePeak         peak1;
-AudioFilterStateVariable filter1;
 AudioEffectDelay         delay1;
 AudioMixer4              mixer1;
 AudioMixer4              mixer2;
-AudioFilterBiquad        antialias;
 AudioConnection          patchCord0(queue1, peak1);
-AudioConnection          patchCord1(queue1, antialias);
-AudioConnection          patchCord2(antialias, 0, filter1, 0);
-AudioConnection          patchCord3(filter1, 0, delay1, 0);
-AudioConnection          patchCord4(filter1, 0, mixer1, 0);
-AudioConnection          patchCord5(filter1, 0, mixer2, 0);
+AudioConnection          patchCord9(queue1, 0, mixer1, 0);
 AudioConnection          patchCord6(delay1, 0, mixer1, 1);
 AudioConnection          patchCord7(delay1, 0, mixer2, 2);
 AudioConnection          patchCord8(mixer1, delay1);
-AudioConnection          patchCord9(queue1, 0, mixer1, 3); // for disabling the filter
 AudioConnection          patchCord10(mixer1, 0, mixer2, 1);
 #if defined(TEENSY_AUDIO_BOARD)
 AudioOutputI2S           i2s1;
@@ -225,25 +218,18 @@ void setup()
 #endif
 
     // Init effects
-    antialias.setLowpass(0, 6000, 0.707);
-    filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
-    //filter1.resonance(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0));
-    filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
-    filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
     delay1.delay(0, mapfloat(effect_delay_feedback, 0, ENC_DELAY_TIME_STEPS, 0.0, DELAY_MAX_TIME));
     // mixer1 is the feedback-adding mixer, mixer2 the whole delay (with/without feedback) mixer
     mixer1.gain(0, 1.0); // original signal
     mixer1.gain(1, mapfloat(effect_delay_feedback, 0, ENC_DELAY_FB_STEPS, 0.0, 1.0)); // amount of feedback
-    mixer1.gain(0, 0.0); // filtered signal off
-    mixer1.gain(3, 1.0); // original signal on
     mixer2.gain(0, 1.0 - mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // original signal
     mixer2.gain(1, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // delayed signal (including feedback)
     mixer2.gain(2, mapfloat(effect_delay_volume, 0, ENC_DELAY_VOLUME_STEPS, 0.0, 1.0)); // only delayed signal (without feedback)
 
     // just for testing:
-    dexed->fx.uiReso = 0.5;
-    dexed->fx.uiGain = 0.5;
-    dexed->fx.uiCutoff = 0.5;
+    dexed->fx.Reso = 0.5;
+    dexed->fx.Gain = 0.5;
+    dexed->fx.Cutoff = 0.5;
 
     // load default SYSEX data
     load_sysex(configuration.bank, configuration.voice);
@@ -433,7 +419,7 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
         }
         break;
       case 102:  // CC 102: filter frequency
-        effect_filter_frq = map(inValue, 0, 127, 0, ENC_FILTER_FRQ_STEPS);
+/*        effect_filter_frq = map(inValue, 0, 127, 0, ENC_FILTER_FRQ_STEPS);
         if (effect_filter_frq == ENC_FILTER_FRQ_STEPS)
         {
           // turn "off" filter
@@ -447,17 +433,17 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           mixer1.gain(3, 0.0); // original signal off
         }
         filter1.frequency(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0);
-        handle_ui();
+        handle_ui(); */
         break;
       case 103:  // CC 103: filter resonance
-        effect_filter_resonance = map(inValue, 0, 127, 0, ENC_FILTER_RES_STEPS);
+/*        effect_filter_resonance = map(inValue, 0, 127, 0, ENC_FILTER_RES_STEPS);
         filter1.resonance(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61);
-        handle_ui();
+        handle_ui(); */
         break;
       case 104:  // CC 104: filter octave
-        effect_filter_octave = map(inValue, 0, 127, 0, ENC_FILTER_OCT_STEPS);
+/*      effect_filter_octave = map(inValue, 0, 127, 0, ENC_FILTER_OCT_STEPS);
         filter1.octaveControl(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0));
-        handle_ui();
+        handle_ui(); */
         break;
       case 105:  // CC 105: delay time
         effect_delay_time = map(inValue, 0, 127, 0, ENC_DELAY_TIME_STEPS);

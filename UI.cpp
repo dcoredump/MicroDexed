@@ -292,7 +292,7 @@ void handle_ui(void)
               switch (ui_main_state)
               {
                 case UI_MAIN_FILTER_FRQ:
-                  if (enc[i].read() <= 0)
+/*                  if (enc[i].read() <= 0)
                     enc[i].write(0);
                   else if (enc[i].read() > ENC_FILTER_FRQ_STEPS)
                     enc[i].write(ENC_FILTER_FRQ_STEPS);
@@ -314,9 +314,10 @@ void handle_ui(void)
                   Serial.print(F("Setting filter frequency to: "));
                   Serial.println(EXP_FUNC((float)map(effect_filter_frq, 0, ENC_FILTER_FRQ_STEPS, 0, 1024) / 150.0) * 10.0 + 80.0, DEC);
 #endif
+*/
                   break;
                 case UI_MAIN_FILTER_RES:
-                  if (enc[i].read() <= 0)
+/*                  if (enc[i].read() <= 0)
                     enc[i].write(0);
                   else if (enc[i].read() > ENC_FILTER_RES_STEPS)
                     enc[i].write(ENC_FILTER_RES_STEPS);
@@ -328,9 +329,10 @@ void handle_ui(void)
                   Serial.print(F("Setting filter resonance to: "));
                   Serial.println(EXP_FUNC(mapfloat(effect_filter_resonance, 0, ENC_FILTER_RES_STEPS, 0.7, 5.0)) * 0.044 + 0.61, 2);
 #endif
+*/
                   break;
                 case UI_MAIN_FILTER_OCT:
-                  if (enc[i].read() <= 0)
+/*                  if (enc[i].read() <= 0)
                     enc[i].write(0);
                   else if (enc[i].read() > ENC_FILTER_OCT_STEPS)
                     enc[i].write(ENC_FILTER_OCT_STEPS);
@@ -340,6 +342,7 @@ void handle_ui(void)
                   Serial.print(F("Setting filter octave control to: "));
                   Serial.println(mapfloat(effect_filter_octave, 0, ENC_FILTER_OCT_STEPS, 0.0, 7.0), 2);
 #endif
+*/
                   break;
               }
               ui_show_effects_filter();

@@ -54,7 +54,6 @@ extern uint8_t effect_delay_time;
 extern uint8_t effect_delay_feedback;
 extern uint8_t effect_delay_volume;
 extern bool effect_delay_sync;
-extern AudioFilterStateVariable filter1;
 extern AudioEffectDelay delay1;
 extern AudioMixer4 mixer1;
 extern AudioMixer4 mixer2;
