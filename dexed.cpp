@@ -109,41 +109,41 @@ void Dexed::deactivate(void)
 void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 {
   uint16_t i;
+  float sumbuf[n_samples];
 
-  if (refreshVoice) {
-    for (i = 0; i < max_notes; i++) {
+  if (refreshVoice)
+  {
+    for (i = 0; i < max_notes; i++)
+    {
       if ( voices[i].live )
         voices[i].dx7_note->update(data, voices[i].midi_note, voices[i].velocity);
     }
+
     lfo.reset(data + 137);
     refreshVoice = false;
   }
 
-  for (i = 0; i < n_samples; i += _N_) {
+  for (i = 0; i < n_samples; i += _N_)
+  {
     AlignedBuf<int32_t, _N_> audiobuf;
-#ifndef SUM_UP_AS_INT
-    float sumbuf[_N_];
-#endif
 
-    for (uint8_t j = 0; j < _N_; ++j) {
+    for (uint8_t j = 0; j < _N_; ++j)
+    {
       audiobuf.get()[j] = 0;
-#ifndef SUM_UP_AS_INT
-      sumbuf[j] = 0.0;
-#else
-      buffer[i + j] = 0;
-#endif
+      sumbuf[i + j] = 0.0;
     }
 
     int32_t lfovalue = lfo.getsample();
     int32_t lfodelay = lfo.getdelay();
-#ifdef SUM_UP_AS_INT
-    int32_t sum;
-#endif
 
-    for (uint8_t note = 0; note < max_notes; ++note) {
-      if (voices[note].live) {
+    for (uint8_t note = 0; note < max_notes; ++note)
+    {
+      if (voices[note].live)
+      {
         voices[note].dx7_note->compute(audiobuf.get(), lfovalue, lfodelay, &controllers);
-        for (uint8_t j = 0; j < _N_; ++j) {
+
+        for (uint8_t j = 0; j < _N_; ++j)
+        {
           int32_t val = audiobuf.get()[j];
           val = val >> 4;
 #ifdef USE_TEENSY_DSP
@@ -151,54 +151,29 @@ void Dexed::getSamples(uint16_t n_samples, int16_t* buffer)
 #else
           int32_t clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
 #endif
-#ifdef SUM_UP_AS_INT
-          //sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS)*(float(data[DEXED_GLOBAL_PARAMETER_OFFSET+DEXED_VOICE_VOLUME])/255);
-          sum = buffer[i + j] + (clip_val >> REDUCE_LOUDNESS);
-          if (buffer[i + j] > 0 && clip_val > 0 && sum < 0)
-          {
-            sum = INT_MAX;
-            overload++;
-          }
-          else if (buffer[i + j] < 0 && clip_val < 0 && sum > 0)
-          {
-            sum = INT_MIN;
-            overload++;
-          }
-          buffer[i + j] = sum;
-          audiobuf.get()[j] = 0;
-#else
+
           float f = static_cast<float>(clip_val >> REDUCE_LOUDNESS) / 0x8000;
-          if (f > 1)
+          if (f > 1.0)
           {
-            f = 1;
+            f = 1.0;
             overload++;
           }
-          else if (f < -1)
+          else if (f < -1.0)
           {
-            f = -1;
+            f = -1.0;
             overload++;
           }
-          sumbuf[j] += f;
+          sumbuf[i + j] += f;
           audiobuf.get()[j] = 0;
-#endif
         }
       }
     }
-#ifndef SUM_UP_AS_INT
-    for (uint8_t j = 0; j < _N_; ++j) {
-      buffer[i + j] = static_cast<int16_t>(sumbuf[j] * 0x8000);
-    }
-#endif
   }
 
-  float fbuffer[n_samples];
-  for (i = 0; i < n_samples; ++i) {
-    fbuffer[i] = static_cast<float>(buffer[i] / 0x8000);
-  }
-  fx.process(fbuffer, n_samples);
-  for (i = 0; i < n_samples; ++i) {
-    buffer[i] = static_cast<int16_t>(fbuffer[i] * 0x8000);
-  }
+  fx.process(sumbuf, n_samples);
+
+  for (i = 0; i < n_samples; ++i)
+    buffer[i] = static_cast<int16_t>(sumbuf[i] * 0x8000);
 }
 
 void Dexed::keydown(uint8_t pitch, uint8_t velo) {
